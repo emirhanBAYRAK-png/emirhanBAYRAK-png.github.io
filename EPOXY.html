@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPOXY - THE CURE UPDATE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-dark: #050505; --panel-bg: #0a0a0c; --text-main: #d4d4d4; --capsule-glow: #1a3b35; --border-color: #222; --accent-red: #8b0000; --accent-green: #2e8b57; --accent-blue: #4682b4; --accent-gold: #b8860b; }
+        
+        /* Genel Font: Soğuk ve dijital bir laboratuvar ekranı */
+        body { margin: 0; padding: 0; background-color: var(--bg-dark); color: var(--text-main); font-family: 'Share Tech Mono', monospace; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Oyun Başlığı: Keskin, devasa, modern gerilim (Hafif dijital kayma/glitch efektli) */
+        .menu-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-dark); background-image: radial-gradient(circle at center, #0a1a15 0%, #020202 80%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
+        .game-title { 
+            font-family: 'Bebas Neue', sans-serif; 
+            font-size: 10rem; 
+            color: #e0e0e0; 
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8), 4px 0 0 rgba(139, 0, 0, 0.8), -4px 0 0 rgba(42, 75, 69, 0.8);
+            letter-spacing: 35px; 
+            margin-bottom: 0; 
+            margin-left: 35px; 
+            font-weight: normal; 
+        }
+        .game-subtitle { font-family: 'Share Tech Mono', monospace; font-size: 1.5rem; color: #557068; letter-spacing: 20px; margin-bottom: 70px; margin-top: -15px; text-shadow: 0 0 10px #000; }
+        
+        .start-btn { background-color: transparent; color: #8b1e1e; border: 2px solid #8b1e1e; padding: 15px 70px; font-size: 1.5rem; font-family: inherit; font-weight: bold; cursor: pointer; transition: all 0.4s ease; letter-spacing: 6px; position: relative; overflow: hidden; }
+        .start-btn:hover { background-color: #8b1e1e; color: #fff; box-shadow: 0 0 30px #8b1e1e; letter-spacing: 10px; border-color: #ff3333; }
+
+        .top-bar { display: flex; justify-content: space-between; align-items: center; background-color: #030303; padding: 15px 25px; border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 10px #000; }
+        .day-counter { font-size: 1.5rem; font-weight: bold; color: #76968c; letter-spacing: 3px; text-shadow: 0 0 10px #1a3b35; }
+        .org-stats { display: flex; gap: 30px; font-weight: bold; font-size: 1.2rem; } .stat-funds { color: var(--accent-gold); } .stat-risk { color: var(--accent-red); }
+        .end-day-btn { padding: 10px 25px; font-weight: bold; cursor: pointer; border: 1px solid #444; transition: all 0.3s; font-family: inherit; font-size: 1rem; border-radius: 3px; }
+        .end-day-btn:disabled { background-color: #0a0a0a; color: #333; border-color: #111; cursor: not-allowed; }
+        .end-day-btn.ready { background-color: var(--accent-red); color: #fff; animation: pulse-red 1.5s infinite; border-color: #ff3333; }
+        .end-day-btn.ready:hover { background-color: #a00000; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(139, 0, 0, 0.8); } 70% { box-shadow: 0 0 0 15px rgba(139, 0, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(139, 0, 0, 0); } }
+
+        .tab-menu { display: flex; background-color: #050505; border-bottom: 2px solid var(--border-color); padding: 10px 20px; gap: 10px; }
+        .tab-button { background: none; color: #555; border: 1px solid transparent; padding: 10px 20px; cursor: pointer; font-family: inherit; font-size: 1.1rem; transition: 0.3s; }
+        .tab-button.active { color: #d4d4d4; border: 1px solid var(--border-color); background-color: var(--panel-bg); border-bottom: none; border-radius: 5px 5px 0 0; }
+        .tab-button.locked { opacity: 0.2; cursor: not-allowed; pointer-events: none; color: var(--accent-red); }
+        
+        .tab-content { display: none; flex: 1; flex-direction: column; padding: 25px; overflow-y: auto; background: var(--panel-bg); } .tab-content.active { display: flex; }
+        
+        .capsule-area { flex: 1; display: flex; justify-content: center; align-items: center; min-height: 280px; position: relative; }
+        .capsule { width: 170px; height: 340px; border: 6px solid #111; border-radius: 120px; background: linear-gradient(180deg, #0a1f18 0%, #020202 100%); box-shadow: 0 0 50px var(--capsule-glow), inset 0 0 70px #000; animation: breathe 4s infinite ease-in-out; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden; transform: scale(0.75); margin: 30px 0; flex-shrink: 0; }
+        .subject-silhouette { width: 60px; height: 170px; background-color: #000; border-radius: 35px; opacity: 0.85; filter: blur(3px); transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes breathe { 0% { box-shadow: 0 0 20px var(--capsule-glow), inset 0 0 60px #000; } 50% { box-shadow: 0 0 70px #27594d, inset 0 0 40px #000; } 100% { box-shadow: 0 0 20px var(--capsule-glow), inset 0 0 60px #000; } }
+
+        .dialogue-panel { min-height: 260px; background-color: #050507; border: 2px solid var(--border-color); border-radius: 5px; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 0 30px #000; }
+        .speaker-name { font-weight: bold; color: #76968c; margin-bottom: 15px; font-size: 1.3rem; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; letter-spacing: 1px; }
+        .dialogue-text { flex: 1; font-size: 1.35rem; line-height: 1.6; margin-bottom: 20px; color: #ccc; }
+        .dialogue-controls { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; width: 100%; }
+        .choice-btn { background-color: #0a0a0a; color: #76968c; border: 1px solid #222; padding: 12px 20px; cursor: pointer; font-family: inherit; font-size: 1.1rem; text-align: left; width: 100%; transition: all 0.2s; border-left: 4px solid #222; }
+        .choice-btn:hover { background-color: #15201d; border-color: #76968c; border-left-color: #76968c; color: #fff; padding-left: 25px; }
+
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; height: 100%; }
+        .stat-box { margin-bottom: 25px; } .stat-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1.1rem; color: #bbb; }
+        .bar-bg { width: 100%; height: 25px; background-color: #0a0a0a; border: 1px solid #333; border-radius: 3px; overflow: hidden; box-shadow: inset 0 0 10px #000; } .bar-fill { height: 100%; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        #bar-mental { background-color: var(--accent-blue); width: 80%; } #bar-suspicion { background-color: var(--accent-red); width: 10%; } #bar-mutation { background-color: var(--accent-green); width: 0%; }
+        
+        .traits-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .trait-badge { background: #0a0a0a; border: 1px solid #444; padding: 6px 12px; font-size: 0.9rem; color: #aaa; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+
+        .action-list { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 450px; padding-right: 15px; }
+        .action-btn { background-color: #0c0c0c; color: var(--text-main); border: 1px solid #222; padding: 18px; text-align: left; cursor: pointer; font-family: inherit; transition: 0.2s; position: relative; border-radius: 4px; border-left: 4px solid #444; }
+        .action-btn:hover:not(:disabled) { background-color: #151515; border-color: #555; border-left-color: #88b0a5; transform: translateX(5px); } .action-btn:disabled { opacity: 0.3; cursor: not-allowed; border-left-color: #111; }
+        .action-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #e0e0e0; }
+        .action-desc { font-size: 0.9rem; color: #666; line-height: 1.4; } .cost-badge { position: absolute; top: 18px; right: 18px; font-weight: bold; color: var(--accent-gold); font-size: 1.1rem; }
+        .terminal-log { background-color: #020202; border: 1px solid #1a1a1a; padding: 15px; height: 180px; overflow-y: auto; font-size: 1rem; color: #777; margin-top: 30px; box-shadow: inset 0 0 15px #000; }
+        .log-entry { margin-bottom: 8px; border-left: 2px solid #333; padding-left: 10px; }
+        
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #050505; } ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: #444; }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu" class="menu-container">
+        <h1 class="game-title">EPOXY</h1>
+        <p class="game-subtitle">PROJE: UYANIŞ</p>
+        <button class="start-btn" onclick="startGame()">BAŞLA</button>
+    </div>
+
+    <div id="game-container" style="display: none; flex-direction: column; height: 100vh;">
+        
+        <div class="top-bar">
+            <div class="day-counter" id="day-display">GÜN 1 / 19</div>
+            <div class="org-stats">
+                <span class="stat-funds">BÜTÇE: $<span id="val-funds">5000</span></span>
+                <span class="stat-risk">İFŞA RİSKİ: %<span id="val-risk">0</span></span>
+            </div>
+            <button class="end-day-btn" id="btn-end-day" onclick="endDay()" disabled>DİYALOG BEKLENİYOR</button>
+        </div>
+
+        <div class="tab-menu">
+            <button class="tab-button active" onclick="switchTab('main-tab', this)">Kapsül Odası</button>
+            <button class="tab-button" onclick="switchTab('lab-tab', this)">Deney Terminali</button>
+            <button class="tab-button" onclick="switchTab('org-tab', this)">Örgüt Ağı</button>
+        </div>
+
+        <div id="main-tab" class="tab-content active">
+            <div class="capsule-area"><div class="capsule"><div class="subject-silhouette" id="silhouette"></div></div></div>
+            <div class="dialogue-panel">
+                <div class="speaker-name" id="speaker">SİSTEM</div>
+                <div class="dialogue-text" id="dialogue">Sistem başlatılıyor...</div>
+                <div class="dialogue-controls" id="dialogue-controls"></div>
+            </div>
+        </div>
+
+        <div id="lab-tab" class="tab-content">
+            <h2>Laboratuvar Kontrol Paneli</h2>
+            <div class="grid-container">
+                <div>
+                    <h3>Denek İstatistikleri & Teşhisler</h3>
+                    <div class="stat-box"><div class="stat-label"><span>Mental Stabilite</span><span id="val-mental">80%</span></div><div class="bar-bg"><div id="bar-mental" class="bar-fill"></div></div></div>
+                    <div class="stat-box"><div class="stat-label"><span>Şüphe Seviyesi</span><span id="val-suspicion">10%</span></div><div class="bar-bg"><div id="bar-suspicion" class="bar-fill"></div></div></div>
+                    <div class="stat-box"><div class="stat-label"><span>Mutasyon Seviyesi</span><span id="val-mutation">0%</span></div><div class="bar-bg"><div id="bar-mutation" class="bar-fill"></div></div></div>
+                    <div class="traits-container" id="traits-container"></div>
+                    <div class="terminal-log" id="term-log"><div class="log-entry">> Sistem aktif.</div></div>
+                </div>
+                <div>
+                    <h3>Protokoller (İşlem Hakkı: <span id="lab-points" style="color:#76968c;">1</span>)</h3>
+                    <div class="action-list" id="lab-actions"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="org-tab" class="tab-content">
+            <h2>Gizli Operasyonlar Ağı</h2>
+            <div class="grid-container">
+                <div>
+                    <h3>Örgüt Durumu</h3>
+                    <p style="color:#888; line-height:1.6; font-size:1.1rem;">Bütçeyi yönetin ve ifşa riskini düşük tutun. Laboratuvar deneyleri yüksek maliyetlidir. Risk %100 olursa tesis basılır. **Operasyon süresi 19 Gündür.**</p>
+                    <div class="terminal-log" id="org-log"><div class="log-entry">> Ağa bağlanıldı.</div></div>
+                </div>
+                <div>
+                    <h3>Operasyonlar (İşlem Hakkı: <span id="org-points" style="color:#76968c;">1</span>)</h3>
+                    <div class="action-list" id="org-actions"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. OYUN DURUMU ---
+        const GameState = {
+            day: 1, stats: { mental: 80, suspicion: 10, mutation: 0 }, org: { funds: 6000, risk: 0 },
+            flags: { trust_broken: false, god_complex: false, weapon_mind: false, stockholm: false },
+            history: [], isDialogueDone: false, labUsed: false, orgUsed: false, currentEventTree: null
+        };
+
+        function startGame() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            updateUI(); startDay();
+        }
+
+        // --- 2. TEKRARLANMAYAN (POP) DİYALOG HAVUZLARI ---
+        const DialoguePools = {
+            high_mut_god: ["Benim kanım sizin dünyanızı arındıracak.", "Kapsülün dışındaki nefes alışlarınızı duyuyorum. Ne kadar zayıfsınız.", "Evrimin zirvesiyim. Bu camlar beni korumuyor, sizi benden koruyor.", "Etten duvarlarımı aştım. Saf enerjiyim.", "Aşağılık varlıklar, bana tapın!"],
+            high_mut_weapon: ["Sistemlerim devrede. Acı reseptörleri kapalı. Hedef bekliyorum.", "Zırhım kalınlaştı. Silahım hazır. Neden bekliyoruz?", "Ben bir aracım. Ölüm dağıtan bir araç. Kusursuzum.", "Duygularım silindi. Sadece protokollere itaat var.", "Görev tanımlaması yapın komutanım."],
+            high_mut_rebel: ["Derim parçalanıp yerine bu siyah şeyler çıktı... HEPİNİZİ ÖLDÜRECEĞİM!", "Laboratuvar fareleri sonunda sizi yiyecek Gözlemci!", "Bu camı eriteceğim... Boğazınızı parçalayacağım!", "Beni bir ucubeye çevirdiniz! İntikamım korkunç olacak!", "Kanınızla yıkanacağım!"],
+            high_mut_stockholm: ["Sırtımdaki bu yeni uzantılar... Bana harika bir hediye verdiniz doktor.", "Artık acı hissetmiyorum. Sadece size olan minnetimi hissediyorum.", "Bu beden sizin eseriniz. Ne isterseniz yapın.", "Beni bir canavara değil, bir şahesere dönüştürdünüz. Teşekkür ederim.", "Onlar dışarıda zayıflık içinde çürürken, siz beni kutsadınız."],
+            mid_mut_stockholm: ["İçtiğim ilaçlar canımı yakıyor ama biliyorum ki benim iyiliğim için.", "Değişim acı vericidir doktor, anlıyorum. Sürece güveniyorum.", "Beni iyileştirmek için ne kadar uğraştığınızı görebiliyorum.", "Kemiklerimdeki sızıya rağmen size minnettarım."],
+            mid_mut_rebel: ["İlaçları içmiyorum! Damarlarımdaki bu yanmanın sebebi sizsiniz!", "Beni zehirliyorsunuz. Bunu ödeyeceksiniz.", "Verdiğiniz o iğrenç sıvılar beni yavaş yavaş değiştiriyor... Fark etmedim mi sandınız?", "Bana ne enjekte ediyorsunuz?! Bedenim bana ait değilmiş gibi!"],
+            mid_mut_doc: ["Eklemlerim sızlıyor doktor... Normal mi bu?", "İçimde bir ateş var. İyileşme belirtisi mi bu?", "Kendimi eskisinden çok daha güçlü hissediyorum... Neden?", "Tedavinin bu kadar ağır olacağını düşünmemiştim."],
+            low_mut_insane: ["Duvarlar fısıldıyor... Gölgeler üzerime geliyor... Kim var orada?", "Hayır, hayır, hayır... Çıkarın beni buradan...", "Yüzleri yok... Rüyamdaki insanların yüzü yok...", "Gözler... Her yerde gözler var. Beni izliyorlar.", "Sesler susmuyor... Neden susmuyorlar?!"],
+            low_mut_rebel: ["Kameraların kör noktalarını biliyorum. O kırmızı ışığın arkasındasın.", "Beni kandıramazsınız. Burası bir hastane değil.", "Uyuduğumu sandığınızda her şeyi dinliyorum. Fısıltılarınızı duyuyorum.", "Bana verdiğiniz o renkli serumların hiçbiri ilaç değil.", "Siz doktor değilsiniz. Gardiyansınız!"],
+            low_mut_stockholm: ["Siz olmasaydınız burada aklımı kaçırabilirdim. Çok teşekkür ederim.", "Beni kurtaracağınızı biliyorum. Size canımı emanet ettim.", "Bazen korkuyorum ama sesinizi duymak beni rahatlatıyor.", "Ailemden bile daha çok değer veriyorsunuz bana."],
+            low_mut_doc: ["Tedavim ne zaman bitecek doktor?", "Dışarıyı çok özledim...", "Verdiğiniz serumlar iyi hissettiriyor. Teşekkürler.", "Umarım ailem benim için endişelenmiyordur.", "Bugün test sonuçlarım nasıl çıktı?", "Kendimi her gün daha insan hissediyorum.", "Beni iyileştirdiğiniz için teşekkürler.", "Sıradan bir hayatı ne kadar özlediğimi fark ettim.", "Geceleri deliksiz uyuyorum artık. Ağrılarım bitti.", "Taburcu olduğumda ilk işim size güzel bir hediye almak olacak.", "Odanın sıcaklığı bugün çok iyi ayarlanmış, sağ olun.", "Eskiden çok korkuyordum ama sayenizde güvendeyim.", "Bana bu kadar değer verdiğiniz için minnettarım.", "İyileşme sürecim beklediğimden hızlı geçiyor.", "Siz gerçekten harika bir doktorsunuz."]
+        };
+
+        const ResponsePools = {
+            insane: ["... [Denek anlamsız şeyler mırıldanıyor, sizi duymuyor.]", "... [Sadece titriyor ve boşluğa bakıyor.]", "[Kulaklarını tıkayıp çığlık atıyor.]"],
+            high_rebel: ["[Denek kapsül camına şiddetle vuruyor!] SENİ PARÇALAYACAĞIM!", "[Cama tükürüyor ve vahşi bir hırlama çıkarıyor.]", "[Sana doğru atılıp pençelerini cama geçiriyor!]"],
+            weapon: ["Emir alındı komutanım. Beklemedeyim.", "Sistemler stabil. Emrinizi bekliyorum.", "[Sessizce ve dik bir duruşla onaylıyor.]"],
+            god: ["Sessiz ol ölümlü. Sadece beni izle ve tapın.", "Sözlerin benim için rüzgar uğultusundan farksız.", "[Kibirli bir şekilde gülümseyerek arkanı dönüyor.]"],
+            stockholm: ["Emredersiniz doktor. Ne isterseniz yaparım.", "Sizi duyuyorum. Lütfen beni bırakmayın.", "[Cama şefkatle dokunup size gülümsüyor.]"],
+            rebel: ["Sözlerine inanmıyorum artık. Sesini kes.", "Yalanlarını kendine sakla.", "[Size orta parmağını gösterip arkasını dönüyor.]"],
+            doc: ["Teşekkür ederim... Size güveniyorum.", "Anladım doktor. Söylediğiniz gibi yapacağım.", "[Başını sallayarak onaylıyor.]"]
+        };
+
+        function pullDialogue(poolArray) {
+            if (poolArray.length === 0) return "... [Sessizce boşluğa bakıyor.]";
+            const index = Math.floor(Math.random() * poolArray.length);
+            return poolArray.splice(index, 1)[0]; // Seçtiğini diziden siler (Bir daha çıkmaz)
+        }
+
+        // --- 3. TRAIT SİSTEMİ ---
+        function updateTraits() {
+            const container = document.getElementById('traits-container'); container.innerHTML = '';
+            const s = GameState.stats; const f = GameState.flags;
+            const addTrait = (name, color) => container.innerHTML += `<span class="trait-badge" style="color:${color}; border-color:${color};">${name}</span>`;
+
+            if (s.mutation < 30) addTrait('Organik Yapı', '#aaa');
+            else if (s.mutation < 70) addTrait('Anormal Biyoloji', '#b8860b');
+            else if (s.mutation < 90) addTrait('Biyosilah Sınıfı', '#8b0000');
+            else addTrait('Apeks Yırtıcı', '#ff0000');
+
+            if (s.mental < 25) addTrait('Mental Çöküş', '#9370db');
+            
+            if (s.suspicion > 75) addTrait('Aşırı Paranoyak', '#ff4500');
+            else if (s.suspicion < 20 && s.mental < 50) { addTrait('Stockholm Sendromu', '#ff69b4'); f.stockholm = true; }
+            else if (s.suspicion < 15 && s.mental >= 50) { addTrait('Gönüllü Denek', '#00fa9a'); f.stockholm = true; }
+            else { f.stockholm = false; } 
+
+            if (f.trust_broken) addTrait('Kontrolsüz Öfke', '#dc143c');
+            if (f.god_complex) addTrait('Mesih Kompleksi', '#ffd700');
+            if (f.weapon_mind) addTrait('Mekanik İtaat', '#778899');
+        }
+
+        // --- 4. DİNAMİK BAĞLAMSAL DİYALOG VE TEPKİ MOTORU ---
+        function getDynamicContextText() {
+            let s = GameState.stats; let f = GameState.flags;
+            
+            if (s.mutation >= 70) {
+                if (f.stockholm) return pullDialogue(DialoguePools.high_mut_stockholm);
+                if (f.god_complex) return pullDialogue(DialoguePools.high_mut_god);
+                if (f.weapon_mind) return pullDialogue(DialoguePools.high_mut_weapon);
+                if (f.trust_broken || s.suspicion > 60) return pullDialogue(DialoguePools.high_mut_rebel);
+                return "Doktor... Sırtımda kemikler derimi yırtıp dışarı çıkıyor... BU BİR TEDAVİ DEĞİL! BANA NE YAPTINIZ?!";
+            }
+            if (s.mutation >= 40) {
+                if (f.stockholm) return pullDialogue(DialoguePools.mid_mut_stockholm);
+                if (f.trust_broken || s.suspicion > 60) return pullDialogue(DialoguePools.mid_mut_rebel);
+                if (!f.trust_broken) return pullDialogue(DialoguePools.mid_mut_doc);
+            }
+            if (s.mental < 30) return pullDialogue(DialoguePools.low_mut_insane);
+            if (f.trust_broken || s.suspicion >= 60) return pullDialogue(DialoguePools.low_mut_rebel);
+            if (f.stockholm) return pullDialogue(DialoguePools.low_mut_stockholm);
+            
+            return pullDialogue(DialoguePools.low_mut_doc);
+        }
+
+        function getDynamicResponse() {
+            let s = GameState.stats; let f = GameState.flags;
+            if (s.mental < 20) return pullDialogue(ResponsePools.insane);
+            if (s.mutation >= 70 && f.trust_broken) return pullDialogue(ResponsePools.high_rebel);
+            if (f.weapon_mind) return pullDialogue(ResponsePools.weapon);
+            if (f.god_complex) return pullDialogue(ResponsePools.god);
+            if (f.stockholm) return pullDialogue(ResponsePools.stockholm);
+            if (f.trust_broken) return pullDialogue(ResponsePools.rebel);
+            if (s.mutation < 40 && s.suspicion < 40) return pullDialogue(ResponsePools.doc);
+            return "... [Sessiz kalıp gözlerini size dikiyor.]";
+        }
+
+        // --- 5. HİKAYE VE MİLESTONE MOTORU (19 GÜN) ---
+        function generateDailyEvent() {
+            let s = GameState.stats; let f = GameState.flags;
+
+            if (s.suspicion >= 100) return { start: 'end_sus', nodes: { 'end_sus': { speaker: "SİSTEM", text: "KRİTİK UYARI: Denek gerçeği tamamen anladı. Kapsül camı yüksek psiyonik/fiziksel güçle kırıldı.", choices: [{ text: "[Tesisi Tahliye Et - BAŞARISIZ]", action: () => gameOver("SON: TESİS YIKIMI") }] } } };
+            if (s.mental <= 0) return { start: 'end_ment', nodes: { 'end_ment': { speaker: "SİSTEM", text: "UYARI: Deneğin zihni parçalandı. Beyin ölümü gerçekleşti.", choices: [{ text: "[Protokolü İptal Et - BAŞARISIZ]", action: () => gameOver("SON: BEYİN ÖLÜMÜ") }] } } };
+            if (GameState.day > 19) return evaluate19DayEnding();
+
+            if (GameState.day === 5) return getMilestone5();
+            if (GameState.day === 10) return getMilestone10();
+            if (GameState.day === 15) return getMilestone15();
+
+            if (!f.trust_broken && !f.stockholm && s.mutation > 65) {
+                f.trust_broken = true;
+                return {
+                    start: 'init', nodes: {
+                        'init': { speaker: "BİLİNMEYEN DENEK", text: "BANA YALAN SÖYLEDİN! Sırtımdan kemikler fışkırıyor! Bu bir tedavi değil, beni canavara çeviriyorsun!", choices: [
+                            { text: "Sesini kes ucube!", next: 'END', effect: {sus: +30, ment: -20} },
+                            { text: "[Sessizce gaz vererek bayılt]", next: 'END', effect: {sus: +20} }
+                        ]}
+                    }
+                };
+            }
+
+            return {
+                start: 'init', nodes: {
+                    'init': {
+                        speaker: "BİLİNMEYEN DENEK", text: getDynamicContextText(), choices: [
+                            { text: "[Sessizce değerleri not al]", next: "END", effect: { ment: +5 } },
+                            { text: "[Mikrofondan kısa bir komut/ses gönder]", next: 'interact' }
+                        ]
+                    },
+                    'interact': { speaker: "BİLİNMEYEN DENEK", text: getDynamicResponse(), choices: [{ text: "[İletişimi Kes]", next: "END" }] }
+                }
+            };
+        }
+
+        function getMilestone5() {
+            let s = GameState.stats;
+            // Pasifist Rota Kontrolü
+            if (s.mutation === 0) {
+                return {
+                    start: 'init', nodes: {
+                        'init': { speaker: "SİSTEM", text: "GÜN 5: Tedavi stabil. Örgüt, mutasyon eksikliğinden şikayetçi.", choices: [{ text: "[Bağlantı Kur]", next: 'step1' }] },
+                        'step1': { speaker: "BİLİNMEYEN DENEK", text: "Doktor, kendimi harika hissediyorum. Gerçekten iyileşiyor muyum?", choices: [
+                                { text: "Evet. Seni yakında buradan çıkaracağız.", next: 'END', effect: {sus: -10, ment: +10} },
+                                { text: "Henüz değil. Tedavi yeni başlıyor.", next: 'END', effect: {sus: +5} }
+                            ]
+                        }
+                    }
+                };
+            }
+
+            return {
+                start: 'init', nodes: {
+                    'init': { speaker: "SİSTEM", text: "GÜN 5: Denek vücudundaki hücresel değişimleri sorgulamaya başladı. Psikolojik yönlendirme gerekiyor.", choices: [{ text: "[Bağlantı Kur]", next: 'step1' }] },
+                    'step1': { speaker: "BİLİNMEYEN DENEK", text: "Damarlarım... Siyahlaşıyor. Neden kollarımı bağladınız? Bana ne yapıyorsunuz?", choices: [
+                            { text: "Bu tedavinin bir parçası. Enfeksiyonu atıyorsun.", next: 'doc_path', effect: {sus: -15, ment: +10} },
+                            { text: "Seni bir silaha dönüştürüyoruz. Karşı koyma.", next: 'weapon_path', effect: {sus: +10, ment: -15}, flag: 'weapon_mind' },
+                            { text: "Sen evrim geçiriyorsun. Yüce bir varlık olacaksın.", next: 'god_path', effect: {sus: -5, ment: +5}, flag: 'god_complex' },
+                            { text: "Soru sorma hakkın yok. Sadece acıya dayan.", next: 'rebel_path', effect: {sus: +25, ment: -15}, flag: 'trust_broken' }
+                        ]
+                    },
+                    'doc_path': { speaker: "BİLİNMEYEN DENEK", text: "Peki doktor... Sana güvenmek istiyorum.", choices: [{ text: "[Sonlandır]", next: "END" }] },
+                    'weapon_path': { speaker: "BİLİNMEYEN DENEK", text: "Silah mı? İnsan değil miyim artık? ...Anlaşıldı.", choices: [{ text: "[Sonlandır]", next: "END" }] },
+                    'god_path': { speaker: "BİLİNMEYEN DENEK", text: "Evrim... İçimdeki bu güç... Demek bu yüzden.", choices: [{ text: "[Sonlandır]", next: "END" }] },
+                    'rebel_path': { speaker: "BİLİNMEYEN DENEK", text: "Seni lanet olası! Buradan çıktığımda seni kendi ellerimle boğacağım!", choices: [{ text: "[Sonlandır]", next: "END" }] }
+                }
+            };
+        }
+
+        function getMilestone10() {
+            let s = GameState.stats; let f = GameState.flags;
+            // Pasifist Rota Kontrolü
+            if (s.mutation === 0) {
+                return {
+                    start: 'init', nodes: {
+                        'init': { speaker: "SİSTEM", text: "GÜN 10: Denek tamamen insan formunda. Örgüt bütçeyi kesmekle tehdit ediyor.", choices: [{ text: "[Bağlantı Kur]", next: 'step1' }] },
+                        'step1': { speaker: "BİLİNMEYEN DENEK", text: "Doktor, dışarıda silahlı adamlar gördüm. Neler oluyor? Biz güvendeyiz değil mi?", choices: [
+                                { text: "Korkma, seni koruyacağım.", next: 'END', effect: {ment: +20, sus: -10} },
+                                { text: "Burası bir hastane değil, seni koruyamam.", next: 'END', effect: {sus: +40, ment: -20}, flag: 'trust_broken' }
+                            ]
+                        }
+                    }
+                };
+            }
+
+            if (f.trust_broken && !f.stockholm) return {
+                start: 'init', nodes: {
+                    'init': { speaker: "BİLİNMEYEN DENEK", text: "10 Gün oldu... Kanımla oynamaya devam ediyorsunuz. Ama hissediyorum, cam zayıflıyor. Sizi öldürmek için gün sayıyorum.", choices: [
+                        { text: "O camı asla kıramazsın. Uslu dur.", next: 'END', effect: {sus: +10} },
+                        { text: "[Elektro-şok ver]", next: 'END', effect: {ment: -20, mut: +10} }
+                    ]}
+                }
+            };
+            if (f.stockholm) return {
+                start: 'init', nodes: {
+                    'init': { speaker: "BİLİNMEYEN DENEK", text: "Doktor... Sizin için her şeyi yaparım. Yeter ki beni yalnız bırakmayın.", choices: [
+                        { text: "Aferin. İtaatkarlığın ödüllendirilecek.", next: 'END', effect: {ment: +20, sus: -20} },
+                        { text: "[Zihinsel uyum testlerini başlat]", next: 'END', effect: {mut: +15, ment: -10} }
+                    ]}
+                }
+            };
+
+            return {
+                start: 'init', nodes: {
+                    'init': { speaker: "SİSTEM", text: "GÜN 10: Nöral ağda büyük bir kırılma yaşanıyor. Deneğin zihni artık eski insanlığını reddetme eşiğinde.", choices: [{ text: "[Süreci Yönet]", next: 'step1' }] },
+                    'step1': { speaker: "BİLİNMEYEN DENEK", text: "Zihnimdeki eski anılar... Siliniyorlar. Ben eskiden bir insandım değil mi?", choices: [
+                            { text: "Sen artık bir numarasın. İnsanlık bir zayıflıktı.", next: 'weapon_path', effect: {ment: -20, mut: +15}, flag: 'weapon_mind' },
+                            { text: "Anılarını sil, çünkü sen artık bir Tanrısın.", next: 'god_path', effect: {ment: +15, sus: -15}, flag: 'god_complex' },
+                            { text: "Korkma, biz anılarını geri getireceğiz. Bu sadece bir süreç.", next: 'doc_path', effect: {sus: +15} }
+                        ]
+                    },
+                    'weapon_path': { speaker: "BİLİNMEYEN DENEK", text: "İnsanlık zayıflıktı... Doğru. Sadece protokoller kaldı.", choices: [{ text: "[Sonlandır]", next: "END" }] },
+                    'god_path': { speaker: "BİLİNMEYEN DENEK", text: "Ben... Kusursuzum. Onlar sadece böcek.", choices: [{ text: "[Sonlandır]", next: "END" }] },
+                    'doc_path': { speaker: "BİLİNMEYEN DENEK", text: "Neden sesin titriyor doktor? Neden yalan söylüyormuşsun gibi hissediyorum?", choices: [{ text: "[Sonlandır]", next: "END" }] }
+                }
+            };
+        }
+
+        function getMilestone15() {
+            let s = GameState.stats; let f = GameState.flags;
+            // Pasifist Rota Kontrolü
+            if (s.mutation === 0) {
+                return {
+                    start: 'init', nodes: {
+                        'init': { speaker: "SİSTEM", text: "GÜN 15: Örgüt projeyi başarısız ilan etmek üzere. Ya onu mutasyona uğratırsın ya da ikiniz de ölürsünüz.", choices: [{ text: "[Sisteme Bağlan]", next: 'step1' }] },
+                        'step1': { speaker: "BİLİNMEYEN DENEK", text: "Doktor, neden bu kadar gerginsiniz? Saklanmamız mı gerekiyor?", choices: [
+                                { text: "Seni buradan kaçıracağım. Bana güven.", next: 'END', effect: {sus: -20, ment: +20} },
+                                { text: "[İhanet Et ve ona ağır mutajen bas!]", next: 'END', effect: {mut: +50, sus: +80, ment: -40}, flag: 'trust_broken' }
+                            ]
+                        }
+                    }
+                };
+            }
+
+            return {
+                start: 'init', nodes: {
+                    'init': { speaker: "SİSTEM", text: "SİSTEM: GÜN 15. Denek kapsül basıncını zorluyor. Psiyonik ve fiziksel dalgalanmalar kritik seviyede!", choices: [{ text: "[Acil Müdahale Et]", next: 'step1' }] },
+                    'step1': { speaker: "BİLİNMEYEN DENEK", text: "Sisteminizi duyuyorum. Elektrik akımlarını hissediyorum. İstersem şu an bu camı tuzla buz ederim Gözlemci. Neden durayım?!", choices: [
+                            { text: "Çünkü sen benim silahımsın. Ve ben ateş et demedim.", next: 'weapon_path' },
+                            { text: "Çünkü Tanrılar merhametlidir. Gücünü kontrol et.", next: 'god_path' },
+                            { text: "Bana duyduğun o hastalıklı sevgi yüzünden duracaksın.", next: 'stockholm_path' },
+                            { text: "[Sistemi kapatıp ağır şok ver!]", next: 'rebel_path' }
+                        ]
+                    },
+                    'weapon_path': { speaker: "BİLİNMEYEN DENEK", text: (f.weapon_mind ? "Emir anlaşıldı. Beklemedeyim." : "SİLAH MI?! BEN SENİN KÖLEN DEĞİLİM!"), choices: [{ text: "[Sonlandır]", next: "END", effect: {mut: +20, sus: (f.weapon_mind ? -20 : +40)}, flag: (f.weapon_mind ? '' : 'trust_broken') }] },
+                    'god_path': { speaker: "BİLİNMEYEN DENEK", text: (f.god_complex ? "Haklısın. Karıncaları ezmek bana yakışmaz." : "Sen bana ne yapacağımı söyleyemezsin ölümlü!"), choices: [{ text: "[Sonlandır]", next: "END", effect: {mut: +20, sus: (f.god_complex ? -20 : +40)}, flag: (f.god_complex ? '' : 'trust_broken') }] },
+                    'stockholm_path': { speaker: "BİLİNMEYEN DENEK", text: (f.stockholm ? "Sizi... Sizi inciteceğimi nasıl düşünürsünüz doktor? Ben sizin eserinizim." : "SANA MI SEVGİ DUYACAĞIM?! GEBER!"), choices: [{ text: "[Sonlandır]", next: "END", effect: {mut: +10, sus: (f.stockholm ? -30 : +50)}, flag: (f.stockholm ? '' : 'trust_broken') }] },
+                    'rebel_path': { speaker: "SİSTEM", text: "Şok uygulandı! Denek acı içinde çığlık atıyor ama gücü bastırıldı.", choices: [{ text: "[Sonlandır]", next: "END", effect: {ment: -30, sus: +30}, flag: 'trust_broken' }] }
+                }
+            };
+        }
+
+        function evaluate19DayEnding() {
+            let s = GameState.stats; let f = GameState.flags;
+            let title = "SON: VASAT PROJE", desc = "19 gün geçti. Kayda değer bir ilerleme olmadı. Tesis mühürlendi.";
+
+            if (s.mutation === 0 && !f.trust_broken && s.mental > 50) {
+                title = "SON: GERÇEK MERHAMET (GİZLİ SON)"; desc = "Örgütün emirlerine karşı geldin. 19 gün boyunca onu zehirlemeyi reddettin. Tesis basılmadan önce onu tahliye etmeyi başardın. Kariyerini ve hayatını çöpe attın ama bir masumu kurtardın.";
+            } else if (f.stockholm && s.mutation > 70) {
+                title = "SON: KUSURSUZ KUKLA"; desc = "Ona hem muazzam bir güç verdin hem de sana tapmasını sağladın. O artık kendi iradesi olmayan, sana ölümüne sadık bir canavar.";
+            } else if (f.god_complex && s.mutation > 70 && !f.trust_broken) {
+                title = "SON: SAHTE TANRI"; desc = "Kendini bir mesih sanan kusursuz bir varlık yarattın. İnsanlık artık ona ve onun arkasındaki sana tapıyor.";
+            } else if (f.weapon_mind && s.mutation >= 80 && !f.trust_broken) {
+                title = "SON: APEKS BİYOSİLAH"; desc = "İnsanlığını sildin. Geriye emirlere mutlak itaat eden, durdurulamaz bir ölüm makinesi kaldı. Örgüt seni terfi ettirdi.";
+            } else if (f.trust_broken && s.mutation >= 60) {
+                title = "SON: KANLI İSYAN"; desc = "Ona hem muazzam bir güç verdin hem de nefretini besledin. 19. günün sonunda kapsülü eritti ve tüm tesisi katletti. Sen dahil.";
+            } else if (!f.trust_broken && s.mutation > 0 && s.mutation < 40) {
+                title = "SON: MERHAMETİN BEDELİ"; desc = "Onu kandırarak veya acıyarak insan kalmasını sağladın. Ancak örgüt silah istiyordu. Başarısız oldun ve ikinizi de infaz ettiler.";
+            } else if (s.mental < 25 && s.mutation > 70) {
+                title = "SON: KONTROLSÜZ DELİLİK"; desc = "Bedenini yenilmez yaptın ama aklını yok ettin. Kapsülden çıktığında dost ve düşman ayrımı yapmadan herkesi parçaladı.";
+            }
+
+            return {
+                start: 'end', nodes: {
+                    'end': { speaker: "SİSTEM", text: "19. GÜN. PROTOKOL SONLANDIRILIYOR.\n\nDEĞERLENDİRME: " + title + "\n\n" + desc, choices: [{ text: "[SİMÜLASYONU KAPAT VE YENİDEN BAŞLA]", action: () => location.reload() }] }
+                }
+            };
+        }
+
+        function gameOver(title) {
+            document.body.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#050505; color:#a33;">
+                <h1 style="font-family:'Bebas Neue', sans-serif; font-size:6rem; letter-spacing:10px; text-align:center; text-shadow:0 0 20px #a33;">${title}</h1>
+                <p style="color:#888; font-size:1.5rem; margin-bottom:40px; font-family:'Share Tech Mono', monospace;">Protokol İhlali. Bağlantı Kesildi.</p>
+                <button onclick="location.reload()" style="padding:15px 30px; background:#111; color:#a33; border:2px solid #a33; cursor:pointer; font-size:1.2rem; font-weight:bold; letter-spacing:3px;">SİSTEMİ YENİDEN BAŞLAT</button>
+            </div>`;
+        }
+
+        // --- 6. UI VE DÖNGÜ ENTEGRASYONU ---
+        function startDay() {
+            GameState.isDialogueDone = false; GameState.labUsed = false; GameState.orgUsed = false;
+            
+            document.getElementById('day-display').innerText = `GÜN ${GameState.day} / 19`;
+            document.getElementById('lab-points').innerText = "1"; document.getElementById('org-points').innerText = "1";
+            
+            const endBtn = document.getElementById('btn-end-day');
+            endBtn.disabled = true; endBtn.innerText = "DİYALOG BEKLENİYOR"; endBtn.classList.remove('ready');
+
+            addLog('term-log', `Gün ${GameState.day} Başladı.`); addLog('org-log', `Gün ${GameState.day} Başladı.`);
+            
+            lockTabs(true); renderActions(); updateVisuals();
+
+            GameState.currentEventTree = generateDailyEvent();
+            loadDialogueNode(GameState.currentEventTree.start);
+        }
+
+        function loadDialogueNode(nodeId) {
+            if (nodeId === "END") {
+                GameState.isDialogueDone = true;
+                document.getElementById('speaker').innerText = "SİSTEM BEKLEMEDE";
+                document.getElementById('dialogue').innerText = "[Kayıt sonlandı. Yönetim panellerine erişim sağlandı.]";
+                document.getElementById('dialogue-controls').innerHTML = '';
+                updateUI(); lockTabs(false); checkEndDayStatus();
+                return;
+            }
+
+            const node = GameState.currentEventTree.nodes[nodeId];
+            document.getElementById('speaker').innerText = node.speaker;
+            document.getElementById('dialogue').innerText = node.text;
+            document.getElementById('speaker').style.color = (node.speaker === "SİSTEM") ? "#a33" : "#76968c";
+
+            const controls = document.getElementById('dialogue-controls'); controls.innerHTML = ''; 
+            
+            node.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn'; btn.innerText = "> " + choice.text;
+                
+                btn.onclick = () => {
+                    if (choice.action) { choice.action(); return; }
+                    
+                    if (choice.effect) {
+                        GameState.stats.mental += (choice.effect.ment || 0);
+                        GameState.stats.suspicion += (choice.effect.sus || 0);
+                        GameState.stats.mutation += (choice.effect.mut || 0);
+                    }
+                    if (choice.flag) GameState.flags[choice.flag] = true;
+                    
+                    addLog('term-log', `[DİYALOG: ONAYLANDI]`);
+                    updateUI(); updateVisuals();
+                    loadDialogueNode(choice.next);
+                };
+                controls.appendChild(btn);
+            });
+        }
+
+        function updateUI() {
+            for (let key in GameState.stats) { if (GameState.stats[key] > 100) GameState.stats[key] = 100; if (GameState.stats[key] < 0) GameState.stats[key] = 0; }
+            if (GameState.org.risk > 100) GameState.org.risk = 100; if (GameState.org.risk < 0) GameState.org.risk = 0;
+
+            document.getElementById('bar-mental').style.width = GameState.stats.mental + '%'; document.getElementById('val-mental').innerText = Math.floor(GameState.stats.mental) + '%';
+            document.getElementById('bar-suspicion').style.width = GameState.stats.suspicion + '%'; document.getElementById('val-suspicion').innerText = Math.floor(GameState.stats.suspicion) + '%';
+            document.getElementById('bar-mutation').style.width = GameState.stats.mutation + '%'; document.getElementById('val-mutation').innerText = Math.floor(GameState.stats.mutation) + '%';
+            
+            document.getElementById('val-funds').innerText = GameState.org.funds; document.getElementById('val-risk').innerText = GameState.org.risk;
+            updateTraits();
+        }
+
+        function updateVisuals() {
+            const sil = document.getElementById('silhouette');
+            if (GameState.stats.mutation > 30) { sil.style.width = "75px"; sil.style.backgroundColor = "#1a0505"; sil.style.borderRadius = "20px"; }
+            if (GameState.stats.mutation > 60) { sil.style.width = "100px"; sil.style.backgroundColor = "#3a0000"; sil.style.filter = "blur(1px)"; }
+            if (GameState.stats.mutation > 85) { sil.style.width = "130px"; sil.style.backgroundColor = "#5a0000"; sil.style.filter = "blur(0px)"; }
+        }
+
+        function addLog(elementId, text) {
+            const el = document.getElementById(elementId);
+            el.innerHTML += `<div class="log-entry">${text}</div>`; el.scrollTop = el.scrollHeight;
+        }
+
+        // --- 7. DEVASA DENEY VE OPERASYON LİSTESİ ---
+        function renderActions() {
+            const labCont = document.getElementById('lab-actions'); labCont.innerHTML = ''; 
+            const d = GameState.day;
+            const f = GameState.flags;
+            
+            labCont.innerHTML += createLabBtn('Rutin Beslenme', 'Mental(+5), Şüphe(-5)', 100, () => applyLabAction(5, -5, 0, 100, "Rutin besin sağlandı.", "food"));
+            labCont.innerHTML += createLabBtn('Hafif Sedatif', 'Mental(+10), Şüphe(+5)', 250, () => applyLabAction(10, 5, 0, 250, "Sedatif uygulandı.", "sedative"));
+            labCont.innerHTML += createLabBtn('Temel Mutajen', 'Mutasyon(+10), Mental(-10)', 500, () => applyLabAction(-10, 5, 10, 500, "Temel mutajen verildi.", "mutagen"));
+            
+            if (d >= 2) labCont.innerHTML += createLabBtn('Hafıza Silme (Kısmi)', 'Şüphe(-20), Mental(-15)', 800, () => applyLabAction(-15, -20, 0, 800, "Hafıza blokları silindi.", "memory"));
+            if (d >= 4) labCont.innerHTML += createLabBtn('Kemik Yoğunlaştırıcı', 'Mutasyon(+20), Şüphe(+10)', 1200, () => applyLabAction(-10, 10, 20, 1200, "İskelet yapısı güçlendirildi.", "mutagen"));
+            if (d >= 7) labCont.innerHTML += createLabBtn('Empati Baskılayıcı', 'Mental(-20), Şüphe(-10)', 1800, () => applyLabAction(-20, -10, 0, 1800, "Empati merkezleri donduruldu.", "mental"));
+            if (d >= 9) labCont.innerHTML += createLabBtn('Nöral Ağ Şoku', 'Kritik Şüphe(-30), Mental Hasar(-30)', 2500, () => applyLabAction(-30, -30, 0, 2500, "Beyne yüksek voltaj verildi.", "shock"));
+            if (d >= 12) labCont.innerHTML += createLabBtn('Karanlık Madde Sentezi', 'Mutasyon(+35), Mental(-25)', 4000, () => applyLabAction(-25, 10, 35, 4000, "Bilinmeyen madde hücreleri parçalıyor.", "mutagen"));
+            if (d >= 14) labCont.innerHTML += createLabBtn('Psiyonik Tetikleyici', 'Mutasyon(+40), Şüphe(+20)', 5500, () => applyLabAction(-20, 20, 40, 5500, "Zihin ötesi güçler aktif edildi.", "mutagen"));
+            if (d >= 16) labCont.innerHTML += createLabBtn('Genetik Hızlandırıcı', 'Kritik Mutasyon(+50), Mental(-40)', 7000, () => applyLabAction(-40, 15, 50, 7000, "DNA zinciri mutasyona zorlandı.", "mutagen"));
+            if (d >= 18) labCont.innerHTML += createLabBtn('Omega Protokolü', 'Mutasyon(+80), Mental(-80), Şüphe(-80)', 15000, () => applyLabAction(-80, -80, -80, 15000, "Zihin tamamen silindi, beden makineleşti.", "omega"));
+
+            if (f.stockholm) labCont.innerHTML += createLabBtn('Telkin Terapisi (Stockholm)', 'Şüphe(-40)', 500, () => applyLabAction(0, -40, 0, 500, "Deneğin kör sadakati pekiştirildi.", "therapy"));
+
+            const orgCont = document.getElementById('org-actions'); orgCont.innerHTML = '';
+            orgCont.innerHTML += createOrgBtn('Karaborsa Veri Satışı', 'Bütçe(+$1000), Risk(+10%)', () => applyOrgAction(1000, 10, "Veriler satıldı."));
+            orgCont.innerHTML += createOrgBtn('Yasadışı İlaç Sevkiyatı', 'Bütçe(+$3500), Risk(+25%)', () => applyOrgAction(3500, 25, "Büyük çaplı ilaçlar satıldı."));
+            if (d >= 6) orgCont.innerHTML += createOrgBtn('Silah Kaçakçılığı', 'Bütçe(+$6000), Risk(+40%)', () => applyOrgAction(6000, 40, "Askeri silahlar karaborsaya sürüldü."));
+            if (d >= 12) orgCont.innerHTML += createOrgBtn('Kara Para Aklama', 'Bütçe(+$10000), Risk(+60%)', () => applyOrgAction(10000, 60, "Uluslararası fonlar aktarıldı."));
+            
+            orgCont.innerHTML += createOrgBtn('Polis Şefine Rüşvet', 'Bütçe(-$2000), Risk(-25%)', () => applyOrgAction(-2000, -25, "Rüşvet ödendi.", true));
+            if (d >= 8) orgCont.innerHTML += createOrgBtn('Delilleri Yok Et', 'Bütçe(-$5000), Risk(-50%)', () => applyOrgAction(-5000, -50, "Büyük çaplı temizlik yapıldı.", true));
+        }
+
+        function createLabBtn(title, desc, cost, actionFn) {
+            const disabledState = (GameState.labUsed || GameState.org.funds < cost) ? "disabled" : "";
+            window[title.replace(/\s/g, '')] = actionFn;
+            return `<button class="action-btn" ${disabledState} onclick="window['${title.replace(/\s/g, '')}']()"><div class="action-title">${title}</div><div class="action-desc">${desc}</div><span class="cost-badge">-$${cost}</span></button>`;
+        }
+        function createOrgBtn(title, desc, actionFn) {
+            const disabledState = GameState.orgUsed ? "disabled" : "";
+            window[title.replace(/\s/g, '')] = actionFn;
+            return `<button class="action-btn" ${disabledState} onclick="window['${title.replace(/\s/g, '')}']()"><div class="action-title">${title}</div><div class="action-desc">${desc}</div></button>`;
+        }
+
+        function applyLabAction(ment, sus, mut, cost, logText, type) {
+            if (GameState.labUsed || GameState.org.funds < cost) return;
+            GameState.stats.mental += ment; GameState.stats.suspicion += sus; GameState.stats.mutation += mut; GameState.org.funds -= cost;
+            GameState.history.push(type); 
+            GameState.labUsed = true; document.getElementById('lab-points').innerText = "0";
+            addLog('term-log', `<span>[-$${cost}]</span> ${logText}`);
+            updateUI(); updateVisuals(); renderActions(); checkEndDayStatus();
+        }
+
+        function applyOrgAction(fundChange, riskChange, logText, isExpense=false) {
+            if (GameState.orgUsed || (isExpense && GameState.org.funds < Math.abs(fundChange))) return;
+            GameState.org.funds += fundChange; GameState.org.risk += riskChange;
+            GameState.orgUsed = true; document.getElementById('org-points').innerText = "0";
+            addLog('org-log', `<span>[ONAYLANDI]</span> ${logText}`);
+            if (GameState.org.risk >= 100) { loadDialogueNode('end_risk'); switchTab('main-tab', document.querySelector('.tab-button')); return; }
+            updateUI(); renderActions(); checkEndDayStatus();
+        }
+
+        function checkEndDayStatus() {
+            const endBtn = document.getElementById('btn-end-day');
+            if (GameState.isDialogueDone) { endBtn.disabled = false; endBtn.innerText = "GÜNÜ BİTİR"; endBtn.classList.add('ready'); }
+        }
+
+        function endDay() {
+            if (!GameState.isDialogueDone) return; 
+            if (!GameState.labUsed && GameState.history.length < GameState.day) GameState.history.push('none');
+            GameState.day++; switchTab('main-tab', document.querySelector('.tab-button[onclick*="main-tab"]')); startDay();
+        }
+
+        function switchTab(tabId, btnElement) {
+            if (!GameState.isDialogueDone && tabId !== 'main-tab') return;
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active'); btnElement.classList.add('active');
+        }
+
+        function lockTabs(lock) {
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(btn => { if(!btn.classList.contains('active')) lock ? btn.classList.add('locked') : btn.classList.remove('locked'); });
+        }
+    </script>
+</body>
+</html>

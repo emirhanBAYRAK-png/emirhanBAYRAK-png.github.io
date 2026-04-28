@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symbot: Manyetik Evrim</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #08090a; color: #c5c6c7; font-family: 'Segoe UI', Tahoma, sans-serif; user-select: none; }
+        canvas { display: block; cursor: crosshair; }
+        
+        #ui-layer { position: absolute; top: 20px; left: 20px; pointer-events: none; text-shadow: 1px 1px 2px #000; display: none; }
+        .highlight { color: #66fcf1; font-weight: bold; font-size: 1.3em; }
+        .skill-ready { color: #00ff66; font-weight: bold; }
+        .skill-cooldown { color: #ff0055; }
+        .skill-charging { color: #ffea00; font-weight: bold; }
+        #abilities { margin-top: 10px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border: 1px solid #1f2833; font-size: 0.95em; }
+        .ability-row { margin: 8px 0; border-bottom: 1px solid #1f2833; padding-bottom: 5px; }
+
+        #main-menu, #game-over { 
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: rgba(8, 9, 10, 0.95); display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 10;
+        }
+        #game-over { display: none; }
+        
+        h1 { color: #66fcf1; font-size: 5em; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 8px; text-shadow: 0 0 25px rgba(102, 252, 241, 0.6); text-align: center; }
+        h1.over-title { color: #ff0055; font-size: 4em; text-shadow: 0 0 20px rgba(255, 0, 85, 0.5); }
+        .subtitle { color: #888; margin-bottom: 40px; font-size: 1.2em; letter-spacing: 2px; }
+        
+        button { 
+            padding: 15px 40px; font-size: 1.5em; background: transparent; color: #66fcf1; 
+            border: 2px solid #66fcf1; cursor: pointer; font-weight: bold; border-radius: 5px; 
+            transition: all 0.2s; pointer-events: auto; letter-spacing: 2px;
+        }
+        button:hover { background: #66fcf1; color: #08090a; box-shadow: 0 0 20px #66fcf1; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <h1>SYMBOT</h1>
+        <div class="subtitle">Hücresel Evrim Arenası</div>
+        <button id="btn-start">BAŞLAT</button>
+    </div>
+
+    <div id="game-over">
+        <h1 class="over-title">ÇEKİRDEĞİN PARÇALANDI</h1>
+        <button id="btn-restart">YENİDEN DOĞ</button>
+    </div>
+
+    <div id="ui-layer">
+        <h2>Skor: <span id="score" class="highlight">0</span> | Kütle: <span id="massStats">100</span> Birim</h2>
+        <div id="abilities">
+            <div class="ability-row" style="color: #aaa;">Sprint (Sol Tık): <span style="color: #ffea00;">-%0.004 Kütle/Sn</span></div>
+            <div class="ability-row" id="skillStatus">Uzuv (Q): <span class="skill-cooldown">Kilitli (Min 200)</span></div>
+            <div class="ability-row" id="wStatus">Kemik Zırh (W): <span class="skill-cooldown">Kilitli (Min 150)</span></div>
+            <div class="ability-row" id="eStatus">Evrimsel İğne (E): <span class="skill-cooldown">Kilitli (Min 300)</span></div>
+            <div class="ability-row" id="dashStatus">Şarjlı Atılma (Space): <span class="skill-ready">Kaçış Formu</span></div>
+            <div class="ability-row" id="rStatus" style="border:none;">Parazit Klon (R): <span class="skill-cooldown">ULTİ Kilitli (Min 1000)</span></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); 
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let GAME_STATE = 'MENU'; 
+
+        const BLOCK_SIZE = 14; 
+        const WORLD_SIZE = 20000; 
+        const GRID_SIZE = 500; 
+        
+        const THRESHOLDS = { VINE: 200, W_ARMOR: 150, E_NOVA: 300, DASH: 980, R_ULTI: 1000 };
+
+        const CD_VINE_RECHARGE = 468; 
+        const CD_W_ARMOR = 780;       
+        const CD_E_NOVA = 1170;       
+        const CD_R_ULTI = 4680;       
+        const CD_DASH = 156;          
+        const CD_DASH_ESCAPE = 195;   
+
+        function randomInt(min, max) { return (Math.random() * (max - min + 1) + min) | 0; }
+        function randomColor() { 
+            const colors = ['#ff0055', '#00f0ff', '#ffea00', '#b600ff', '#00ff66'];
+            return colors[randomInt(0, colors.length - 1)]; 
+        }
+
+        function distSq(x1, y1, x2, y2) { return (x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1); }
+        function distToSegmentSq(px, py, vx, vy, wx, wy) {
+            let l2 = distSq(vx, vy, wx, wy);
+            if (l2 === 0) return distSq(px, py, vx, vy);
+            let t = ((px - vx) * (wx - vx) + (py - vy) * (wy - vy)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return distSq(px, py, vx + t * (wx - vx), vy + t * (wy - vy));
+        }
+
+        let foodGrid = new Map();
+        function getGridKey(x, y) { return ((x / GRID_SIZE) | 0) << 16 | ((y / GRID_SIZE) | 0); }
+        function addFood(f) {
+            let key = getGridKey(f.x, f.y);
+            let arr = foodGrid.get(key);
+            if(!arr) { arr = []; foodGrid.set(key, arr); }
+            arr.push(f);
+        }
+
+        const camera = { x: WORLD_SIZE/2, y: WORLD_SIZE/2 };
+        let currentZoom = 1.0; let targetZoom = 1.0;
+        const mouse = { x: canvas.width/2, y: canvas.height/2, worldX: WORLD_SIZE/2, worldY: WORLD_SIZE/2, held: false };
+
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('mousedown', e => { if(e.button === 0) mouse.held = true; });
+        window.addEventListener('mouseup', e => { if(e.button === 0) mouse.held = false; });
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        let entities = []; let scraps = []; let vines = []; let particles = [];
+        let spikes = []; let clones = [];
+        let player = null;
+        let score = 0; let frameCount = 0;
+
+        function createParticles(x, y, color, amount) {
+            if(particles.length > 300) return; 
+            for(let i=0; i<amount; i++) {
+                particles.push({ x: x, y: y, vx: (Math.random() - 0.5)*12, vy: (Math.random() - 0.5)*12, life: randomInt(10, 25), color: color, size: (Math.random()*3+2)|0 });
+            }
+        }
+
+        class Spike {
+            constructor(x, y, vx, vy, owner, damagePct, level) {
+                this.x = x; this.y = y; this.vx = vx; this.vy = vy; 
+                this.owner = owner; this.damagePct = damagePct; 
+                this.level = level; this.life = 60 + level * 10; 
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy; this.life--;
+                for(let i=0, len=entities.length; i<len; i++) {
+                    let ent = entities[i];
+                    if(ent === this.owner || ent.dead) continue;
+                    
+                    let r = ent.radius + 10 + this.level * 2;
+                    if(distSq(this.x, this.y, ent.x, ent.y) < r*r) {
+                        let actualDmg = (ent.mass * (this.damagePct / 100)) | 0;
+                        actualDmg = Math.max(1, actualDmg); 
+                        
+                        ent.takeDamage(actualDmg, Math.atan2(this.vy, this.vx));
+                        createParticles(this.x, this.y, '#fff', 5 + this.level);
+                        this.life = 0; break;
+                    }
+                }
+            }
+        }
+
+        class Clone {
+            constructor(owner, x, y, mass) {
+                this.owner = owner; this.x = x; this.y = y; this.vx = 0; this.vy = 0;
+                this.mass = mass; this.color = owner.baseColor; this.state = 'seeking'; 
+                this.target = null; this.attachTimer = 0; this.life = 1000;
+                this.blocks = [{rx: 0, ry: 0, distSq: 0}];
+                let visualSize = Math.min(30, (mass / 15)|0 + 5); 
+                for(let i=0; i<visualSize; i++) this.addBlock();
+            }
+            get radius() { return Math.sqrt(this.mass) * BLOCK_SIZE * 0.7; }
+            addBlock() {
+                let potentialSpots = []; let dirs = [[1,0], [-1,0], [0,1], [0,-1]];
+                for(let i=0; i<this.blocks.length; i++) {
+                    let b = this.blocks[i];
+                    for(let d=0; d<4; d++) {
+                        let nx = b.rx + dirs[d][0]; let ny = b.ry + dirs[d][1];
+                        if(!this.blocks.some(ex => ex.rx === nx && ex.ry === ny)) potentialSpots.push({ rx: nx, ry: ny, distSq: nx*nx + ny*ny });
+                    }
+                }
+                potentialSpots.sort((a, b) => a.distSq - b.distSq);
+                if(potentialSpots.length > 0) this.blocks.push(potentialSpots[0]);
+            }
+            update() {
+                this.life--;
+                if(this.life <= 0 && this.state !== 'returning') this.state = 'returning';
+
+                if(this.state === 'seeking') {
+                    let minDist = Infinity;
+                    for(let i=0; i<entities.length; i++) {
+                        let ent = entities[i];
+                        if(ent === this.owner || ent.dead) continue;
+                        let dSq = distSq(this.x, this.y, ent.x, ent.y);
+                        if(dSq < minDist) { minDist = dSq; this.target = ent; }
+                    }
+
+                    if(this.target && !this.target.dead) {
+                        let angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+                        this.vx += Math.cos(angle) * 1.8; this.vy += Math.sin(angle) * 1.8;
+                        if(distSq(this.x, this.y, this.target.x, this.target.y) < (this.radius + this.target.radius)**2) {
+                            if (this.target.armorTimer > 0) this.state = 'returning'; else this.state = 'attached';
+                        }
+                    } else { this.state = 'returning'; }
+
+                    this.vx *= 0.95; this.vy *= 0.95; this.x += this.vx; this.y += this.vy;
+                } else if(this.state === 'attached') {
+                    if(this.target.dead || this.target.armorTimer > 0) { this.state = 'returning'; return; }
+                    this.x = this.target.x; this.y = this.target.y;
+                    this.attachTimer++;
+                    if(this.attachTimer % 4 === 0 && this.target.mass > 5) {
+                        this.target.takeDamage(2, 0, false, true); this.mass += 2;
+                        if(this.mass % 20 === 0) this.addBlock(); 
+                    }
+                    if(this.attachTimer > 180) this.state = 'returning'; 
+                } else if(this.state === 'returning') {
+                    if(this.owner.dead) { this.life = 0; return; }
+                    let angle = Math.atan2(this.owner.y - this.y, this.owner.x - this.x);
+                    this.vx += Math.cos(angle) * 2.5; this.vy += Math.sin(angle) * 2.5;
+                    this.vx *= 0.9; this.vy *= 0.9; this.x += this.vx; this.y += this.vy;
+                    if(distSq(this.x, this.y, this.owner.x, this.owner.y) < (this.radius + this.owner.radius)**2) {
+                        this.owner.pendingBlocks += this.mass;
+                        createParticles(this.x, this.y, '#00ff66', 15);
+                        this.life = 0; 
+                    }
+                }
+            }
+        }
+
+        class Vine {
+            constructor(owner, targetWorldX, targetWorldY) {
+                this.owner = owner; this.startX = owner.x; this.startY = owner.y; this.headX = owner.x; this.headY = owner.y;
+                let angle = Math.atan2(targetWorldY - owner.y, targetWorldX - owner.x);
+                this.vx = Math.cos(angle) * 19; this.vy = Math.sin(angle) * 19;
+                this.upgradeLevel = (owner.mass / 500) | 0; 
+                this.maxLength = 600 + (this.upgradeLevel * 200); 
+                this.maxPullTime = 120 + (this.upgradeLevel * 60); this.pullTimer = 0;
+                this.thickness = 12 + (this.upgradeLevel * 6); this.cost = 20 + (this.upgradeLevel * 10); 
+                this.state = 'shooting'; this.targetEntity = null;
+                this.success = false; 
+            }
+            update() {
+                this.startX = this.owner.x; this.startY = this.owner.y;
+                if (this.state === 'shooting') {
+                    this.headX += this.vx; this.headY += this.vy;
+                    if (distSq(this.headX, this.headY, this.startX, this.startY) > this.maxLength*this.maxLength) {
+                        this.state = 'returning'; this.success = false; 
+                    }
+
+                    for (let i=0; i<entities.length; i++) {
+                        let ent = entities[i];
+                        if (ent === this.owner || ent.dead) continue;
+                        let r = ent.radius + 15;
+                        if(Math.abs(this.headX - ent.x) < r && Math.abs(this.headY - ent.y) < r) {
+                            if (distSq(this.headX, this.headY, ent.x, ent.y) < r*r) {
+                                if(ent.armorTimer > 0) return this.breakVine(this.headX, this.headY); 
+                                this.targetEntity = ent; this.state = 'pulling'; ent.pulledBy = this; 
+                                this.success = true; 
+                                createParticles(this.headX, this.headY, '#fff', 5); break;
+                            }
+                        }
+                    }
+                } 
+                else if (this.state === 'pulling') {
+                    if (this.targetEntity.dead || this.targetEntity.pulledBy !== this || this.targetEntity.armorTimer > 0) { 
+                        if(this.targetEntity && this.targetEntity.armorTimer > 0) return this.breakVine(this.headX, this.headY);
+                        this.state = 'returning'; return true; 
+                    }
+                    this.pullTimer++;
+                    if (this.pullTimer > this.maxPullTime) { this.targetEntity.pulledBy = null; return this.breakVine(this.headX, this.headY); }
+
+                    this.headX = this.targetEntity.x; this.headY = this.targetEntity.y;
+                    let dx = this.startX - this.headX; let dy = this.startY - this.headY;
+                    let angle = Math.atan2(dy, dx);
+                    let pullSpeed = Math.max(0.2, Math.min(4.0, (this.owner.mass / this.targetEntity.mass) * 0.6));
+                    
+                    this.targetEntity.vx += Math.cos(angle) * pullSpeed; this.targetEntity.vy += Math.sin(angle) * pullSpeed;
+                    this.owner.vx -= Math.cos(angle) * (pullSpeed * 0.1); this.owner.vy -= Math.sin(angle) * (pullSpeed * 0.1);
+
+                    if (dx*dx + dy*dy < (this.owner.radius + this.targetEntity.radius)**2) { this.targetEntity.pulledBy = null; this.state = 'returning'; }
+                }
+                else if (this.state === 'returning') {
+                    let angle = Math.atan2(this.startY - this.headY, this.startX - this.headX);
+                    this.headX += Math.cos(angle) * 40; this.headY += Math.sin(angle) * 40;
+                    
+                    if (distSq(this.startX, this.startY, this.headX, this.headY) < 2500) { 
+                        if (!this.success) this.owner.vineRechargeTimer -= 252;
+                        this.owner.activeVines--; return false; 
+                    }
+                }
+                return true;
+            }
+            breakVine(bx, by) {
+                createParticles(bx, by, this.owner.baseColor, 20);
+                this.owner.activeVines--; 
+                this.owner.takeDamage(this.cost, Math.random() * Math.PI * 2, true); 
+                if(this.targetEntity && this.targetEntity.pulledBy === this) this.targetEntity.pulledBy = null;
+                this.owner.vineRechargeTimer -= 252;
+                return false; 
+            }
+        }
+
+        class Entity {
+            constructor(x, y, isPlayer, color) {
+                this.x = x; this.y = y; this.vx = 0; this.vy = 0;
+                this.isPlayer = isPlayer; this.baseColor = color;
+                this.blocks = [{ rx: 0, ry: 0, distSq: 0 }]; 
+                this.pendingBlocks = isPlayer ? 150 : randomInt(50, 1000); 
+                this.invulnerableTimer = 0; this.dead = false;
+                
+                this.activeVines = 0; this.vineCharges = 0; this.vineRechargeTimer = 0; 
+                this.armorTimer = 0; this.wCooldown = 0; this.eCooldown = 0; this.rCooldown = 0;
+                this.dashCooldown = 0; this.dashCharge = 0; this.pulledBy = null;
+                this.sprintDrainPool = 0; this.aiTargetTimer = 0; 
+            }
+
+            get mass() { return this.blocks.length; }
+            get radius() { return Math.sqrt(this.mass) * BLOCK_SIZE * 0.7; }
+            get maxVines() { return Math.min(3, (this.mass / THRESHOLDS.VINE)|0); }
+
+            addBlock() {
+                if(this.blocks.length === 0) return;
+                let potentialSpots = []; let dirs = [[1,0], [-1,0], [0,1], [0,-1]];
+                for(let i=0; i<this.blocks.length; i++) {
+                    let b = this.blocks[i];
+                    for(let d=0; d<4; d++) {
+                        let nx = b.rx + dirs[d][0]; let ny = b.ry + dirs[d][1];
+                        if(!this.blocks.some(ex => ex.rx === nx && ex.ry === ny)) potentialSpots.push({ rx: nx, ry: ny, distSq: nx*nx + ny*ny });
+                    }
+                }
+                potentialSpots.sort((a, b) => a.distSq - b.distSq);
+                if(potentialSpots.length > 0) this.blocks.push(potentialSpots[0]);
+            }
+
+            takeDamage(amount, impactAngle, isSilent = false, isSprintDrain = false) {
+                if((this.invulnerableTimer > 0 && !isSilent && !isSprintDrain) || this.dead || this.armorTimer > 0) return;
+                if(!isSilent && !isSprintDrain) this.invulnerableTimer = 15; 
+
+                let blocksLost = Math.min(amount|0, this.blocks.length - 1);
+                for(let i=0; i<blocksLost; i++) {
+                    let removed = this.blocks.pop(); 
+                    if(!isSprintDrain && scraps.length < 500) { 
+                        scraps.push({ 
+                            x: this.x + removed.rx * BLOCK_SIZE, y: this.y + removed.ry * BLOCK_SIZE, 
+                            vx: Math.cos(impactAngle) * randomInt(8, 20) + (Math.random()-0.5)*5, 
+                            vy: Math.sin(impactAngle) * randomInt(8, 20) + (Math.random()-0.5)*5, 
+                            color: this.baseColor, life: 300 
+                        });
+                    }
+                }
+                if(!isSprintDrain) createParticles(this.x, this.y, '#fff', 10);
+                if (this.blocks.length <= 1) this.shatter(impactAngle);
+            }
+
+            shatter(impactAngle) {
+                this.dead = true; let splitAngle = impactAngle + Math.PI / 2;
+                for(let i=0; i<this.blocks.length; i++) {
+                    let block = this.blocks[i];
+                    if(scraps.length > 500) break;
+                    let dir = (i % 2 === 0) ? 1 : -1;
+                    scraps.push({ x: this.x + block.rx * BLOCK_SIZE, y: this.y + block.ry * BLOCK_SIZE, vx: Math.cos(splitAngle) * dir * randomInt(15, 30), vy: Math.sin(splitAngle) * dir * randomInt(15, 30), color: '#fff', life: 600 });
+                }
+                createParticles(this.x, this.y, this.baseColor, 40);
+
+                if (this.isPlayer) { GAME_STATE = 'GAMEOVER'; document.getElementById('game-over').style.display = 'flex'; document.getElementById('ui-layer').style.display = 'none'; } 
+                else { setTimeout(() => { if(GAME_STATE==='PLAYING') entities.push(new Entity(randomInt(500, WORLD_SIZE-500), randomInt(500, WORLD_SIZE-500), false, randomColor())); }, 3000); }
+            }
+        }
+
+        function initGame() {
+            entities = []; scraps = []; vines = []; particles = []; spikes = []; clones = []; foodGrid.clear();
+            
+            player = new Entity(WORLD_SIZE / 2, WORLD_SIZE / 2, true, '#66fcf1');
+            entities.push(player);
+            for(let i=0; i<40; i++) entities.push(new Entity(randomInt(100, WORLD_SIZE-100), randomInt(100, WORLD_SIZE-100), false, randomColor()));
+            for(let i=0; i<2500; i++) addFood({ x: randomInt(100, WORLD_SIZE-100), y: randomInt(100, WORLD_SIZE-100), color: randomColor(), size: 8 });
+            
+            score = 0; frameCount = 0;
+            camera.x = player.x; camera.y = player.y;
+            GAME_STATE = 'PLAYING';
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'block';
+        }
+
+        document.getElementById('btn-start').addEventListener('click', initGame);
+        document.getElementById('btn-restart').addEventListener('click', initGame);
+
+        function update() {
+            if(GAME_STATE !== 'PLAYING') return;
+            frameCount++;
+
+            if(!player.dead) {
+                let zoomLevel = (player.mass / 1000)|0; 
+                targetZoom = Math.max(0.15, 1.0 - (zoomLevel * 0.15));
+                currentZoom += (targetZoom - currentZoom) * 0.05; 
+            }
+
+            mouse.worldX = (mouse.x - canvas.width/2) / currentZoom + camera.x;
+            mouse.worldY = (mouse.y - canvas.height/2) / currentZoom + camera.y;
+
+            if(!player.dead) {
+                let currentMaxVines = player.maxVines;
+                if (player.vineCharges > currentMaxVines) player.vineCharges = currentMaxVines;
+                if (player.vineCharges < currentMaxVines) {
+                    player.vineRechargeTimer++;
+                    if (player.vineRechargeTimer >= CD_VINE_RECHARGE) { player.vineCharges++; player.vineRechargeTimer = 0; }
+                } else { player.vineRechargeTimer = 0; }
+
+                if(player.wCooldown > 0) player.wCooldown--;
+                if(player.armorTimer > 0) player.armorTimer--;
+                if(player.eCooldown > 0) player.eCooldown--;
+                if(player.rCooldown > 0) player.rCooldown--;
+                if(player.dashCooldown > 0) player.dashCooldown--;
+
+                let baseMaxSpeed = Math.max(2.5, 5.0 - (player.mass * 0.002)); 
+                let maxSpeed = player.armorTimer > 0 ? baseMaxSpeed * 0.5 : baseMaxSpeed; 
+
+                let dx = mouse.worldX - player.x; let dy = mouse.worldY - player.y;
+                let angle = Math.atan2(dy, dx);
+
+                // YENİ SPRİNT DRAIN (%0.004 e tekabül eden hassas erime oranı)
+                if(mouse.held && player.mass > 50) {
+                    player.sprintDrainPool += player.mass * 0.00004; 
+                    if(player.sprintDrainPool >= 1) {
+                        player.takeDamage(player.sprintDrainPool, angle + Math.PI, false, true);
+                        player.sprintDrainPool -= (player.sprintDrainPool|0);
+                    }
+                    player.vx += Math.cos(angle) * 0.6; player.vy += Math.sin(angle) * 0.6; maxSpeed *= 1.6; 
+                } else if (distSq(mouse.worldX, mouse.worldY, player.x, player.y) > 25) {
+                    player.vx += Math.cos(angle) * 0.25; player.vy += Math.sin(angle) * 0.25;
+                }
+                
+                let speedSq = player.vx*player.vx + player.vy*player.vy;
+                if(speedSq > maxSpeed*maxSpeed) { 
+                    let speed = Math.sqrt(speedSq); player.vx = (player.vx / speed) * maxSpeed; player.vy = (player.vy / speed) * maxSpeed; 
+                }
+
+                if(keys['q'] && player.mass >= THRESHOLDS.VINE && player.vineCharges > 0) {
+                    vines.push(new Vine(player, mouse.worldX, mouse.worldY));
+                    player.activeVines++; player.vineCharges--; keys['q'] = false; 
+                }
+
+                if(keys['w'] && player.wCooldown <= 0 && player.mass >= THRESHOLDS.W_ARMOR) {
+                    let cost = (player.mass * 0.05)|0;
+                    if(player.mass > cost + 20) {
+                        player.takeDamage(cost, angle + Math.PI, true);
+                        player.armorTimer = 120; player.wCooldown = CD_W_ARMOR; keys['w'] = false;
+                        createParticles(player.x, player.y, '#fff', 20);
+                    }
+                }
+
+                if(keys['e'] && player.eCooldown <= 0 && player.mass >= THRESHOLDS.E_NOVA) {
+                    let cost = (player.mass * 0.15)|0;
+                    if(player.mass > cost + 50) {
+                        player.takeDamage(cost, angle + Math.PI, true);
+                        let eLevel = (player.mass / 1000)|0 + 1;
+                        let damagePct = Math.min(9, 3 + (eLevel - 1) * 2); 
+                        let spikeCount = 10 + eLevel * 2; 
+                        let spikeSpeed = 20 + eLevel * 2;
+                        
+                        for(let i=0; i<spikeCount; i++) {
+                            let spikeAngle = (Math.PI * 2 / spikeCount) * i;
+                            spikes.push(new Spike(player.x, player.y, Math.cos(spikeAngle)*spikeSpeed, Math.sin(spikeAngle)*spikeSpeed, player, damagePct, eLevel));
+                        }
+                        player.eCooldown = CD_E_NOVA; keys['e'] = false;
+                    }
+                }
+
+                if(keys['r'] && player.rCooldown <= 0 && player.mass >= THRESHOLDS.R_ULTI) {
+                    let cost = (player.mass * 0.50)|0;
+                    if(player.mass > cost + 100) {
+                        player.takeDamage(cost, angle + Math.PI, true);
+                        clones.push(new Clone(player, player.x + Math.cos(angle)*(player.radius+50), player.y + Math.sin(angle)*(player.radius+50), cost));
+                        player.rCooldown = CD_R_ULTI; keys['r'] = false;
+                    }
+                }
+
+                if (player.dashCooldown <= 0) {
+                    if (keys[' '] && player.pulledBy) {
+                        let enemyVine = player.pulledBy; let escapeAngle = Math.atan2(player.y - enemyVine.owner.y, player.x - enemyVine.owner.x);
+                        player.vx += Math.cos(escapeAngle) * 45; player.vy += Math.sin(escapeAngle) * 45;
+                        player.takeDamage(30 + (player.mass * 0.05)|0, escapeAngle + Math.PI, true); 
+                        enemyVine.breakVine(player.x, player.y); player.pulledBy = null; player.dashCooldown = CD_DASH_ESCAPE; 
+                        player.dashCharge = 0; keys[' '] = false;
+                    } else if (keys[' '] && player.mass >= THRESHOLDS.DASH) {
+                        player.dashCharge = Math.min(1.0, player.dashCharge + 0.02); 
+                    } else if (!keys[' '] && player.dashCharge > 0) {
+                        let costPercent = 0.05 + (0.05 * player.dashCharge); 
+                        let cost = (player.mass * costPercent)|0; 
+                        if(player.mass > cost + 50) { 
+                            let dashForce = 25 + (35 * player.dashCharge) + ((player.mass/1000)|0 * 5);
+                            player.vx += Math.cos(angle) * dashForce; player.vy += Math.sin(angle) * dashForce;
+                            player.takeDamage(cost, angle + Math.PI, true); player.dashCooldown = CD_DASH; 
+                        }
+                        player.dashCharge = 0; 
+                    }
+                } else { player.dashCharge = 0; }
+
+                if (player.mass < THRESHOLDS.DASH && !player.pulledBy) player.dashCharge = 0;
+
+                let displayPercent = Math.max(0, ((player.vineRechargeTimer / CD_VINE_RECHARGE) * 100)|0);
+                let percent = player.vineCharges < currentMaxVines ? `(%${displayPercent})` : "";
+                
+                document.getElementById('skillStatus').innerHTML = player.mass < THRESHOLDS.VINE ? `Uzuv (Q): <span class="skill-cooldown">Kilitli</span>` : 
+                    `Uzuv (Q): <span class="${player.vineCharges>0 ? "skill-ready" : "skill-cooldown"}">Hazır ${player.vineCharges}/${currentMaxVines} ${percent}</span>`;
+                
+                document.getElementById('wStatus').innerHTML = player.mass < THRESHOLDS.W_ARMOR ? `Kemik Zırh (W): <span class="skill-cooldown">Kilitli</span>` : 
+                    `Kemik Zırh (W): ${player.wCooldown>0 ? `<span class="skill-cooldown">Soğuyor (${Math.ceil(player.wCooldown/60)}s)</span>` : (player.armorTimer>0 ? `<span style="color:#fff; font-weight:bold;">AKTİF</span>` : `<span class="skill-ready">Hazır</span>`)}`;
+                
+                let eLv = (player.mass / 1000)|0 + 1;
+                document.getElementById('eStatus').innerHTML = player.mass < THRESHOLDS.E_NOVA ? `Evrimsel İğne (E): <span class="skill-cooldown">Kilitli</span>` : 
+                    `Evrimsel İğne (E) (Lv.${eLv}): ${player.eCooldown>0 ? `<span class="skill-cooldown">Soğuyor (${Math.ceil(player.eCooldown/60)}s)</span>` : `<span class="skill-ready">Hazır</span>`}`;
+                
+                document.getElementById('rStatus').innerHTML = player.mass < THRESHOLDS.R_ULTI ? `Parazit Klon (R): <span class="skill-cooldown">ULTİ Kilitli</span>` : 
+                    `Parazit Klon (R): ${player.rCooldown>0 ? `<span class="skill-cooldown">Soğuyor (${Math.ceil(player.rCooldown/60)}s)</span>` : `<span class="skill-ready">Hazır (Bedel: %50)</span>`}`;
+
+                let dashMsg = "";
+                if(player.pulledBy) dashMsg = `<span class="skill-ready">KAÇIŞ İÇİN BAS!</span>`;
+                else if(player.mass < THRESHOLDS.DASH) dashMsg = `<span class="skill-cooldown">Sadece Kaçış Formu</span>`;
+                else if(player.dashCooldown > 0) dashMsg = `<span class="skill-cooldown">Soğuyor</span>`;
+                else if(player.dashCharge > 0) dashMsg = `<span class="skill-charging">Şarj Ediliyor (%${(player.dashCharge*100)|0})</span>`;
+                else dashMsg = `<span class="skill-ready">Basılı Tut</span>`;
+                document.getElementById('dashStatus').innerHTML = `Şarjlı Atılma (Space): ${dashMsg}`;
+            }
+
+            for(let i=spikes.length-1; i>=0; i--) { spikes[i].update(); if(spikes[i].life <= 0) spikes.splice(i,1); }
+            for(let i=clones.length-1; i>=0; i--) { clones[i].update(); if(clones[i].life <= 0) clones.splice(i,1); }
+
+            for(let i=0; i<entities.length; i++) {
+                let ent = entities[i];
+                if(ent.dead) continue;
+                ent.vx *= 0.94; ent.vy *= 0.94; ent.x += ent.vx; ent.y += ent.vy;
+                ent.x = Math.max(0, Math.min(ent.x, WORLD_SIZE)); ent.y = Math.max(0, Math.min(ent.y, WORLD_SIZE));
+
+                if(!ent.isPlayer) {
+                    if(ent.dashCooldown > 0) ent.dashCooldown--;
+                    if(ent.armorTimer > 0) ent.armorTimer--;
+                    
+                    let currentMaxVinesAI = ent.maxVines;
+                    if (ent.vineCharges > currentMaxVinesAI) ent.vineCharges = currentMaxVinesAI;
+                    if (ent.vineCharges < currentMaxVinesAI) {
+                        ent.vineRechargeTimer++;
+                        if (ent.vineRechargeTimer >= CD_VINE_RECHARGE) { ent.vineCharges++; ent.vineRechargeTimer = 0; }
+                    } else { ent.vineRechargeTimer = 0; }
+
+                    if (ent.pulledBy && ent.dashCooldown <= 0 && ent.mass > 60) {
+                        let enemyVine = ent.pulledBy; let escapeAngle = Math.atan2(ent.y - enemyVine.owner.y, ent.x - enemyVine.owner.x);
+                        ent.vx += Math.cos(escapeAngle) * 40; ent.vy += Math.sin(escapeAngle) * 40;
+                        ent.takeDamage(30 + (ent.mass * 0.05)|0, escapeAngle + Math.PI, true); 
+                        enemyVine.breakVine(ent.x, ent.y); ent.pulledBy = null; ent.dashCooldown = 260; 
+                    }
+
+                    if(ent.mass >= THRESHOLDS.DASH && ent.dashCooldown <= 0 && Math.random() < 0.005 && !ent.pulledBy) {
+                        let dashAngle = Math.atan2((ent.targetY||ent.y) - ent.y, (ent.targetX||ent.x) - ent.x);
+                        ent.vx += Math.cos(dashAngle) * 40; ent.vy += Math.sin(dashAngle) * 40;
+                        ent.takeDamage((ent.mass * 0.05)|0, dashAngle + Math.PI, true); ent.dashCooldown = CD_DASH_ESCAPE;
+                    }
+
+                    ent.aiTargetTimer--;
+                    if(ent.aiTargetTimer <= 0) {
+                        ent.aiTargetTimer = 20; 
+                        ent.targetX = ent.x; ent.targetY = ent.y;
+                        let targetEnt = null; let minDistEnt = Infinity;
+                        
+                        if (distSq(ent.x, ent.y, camera.x, camera.y) < (canvas.width/currentZoom*2)**2) {
+                            for(let j=0; j<entities.length; j++) {
+                                let other = entities[j];
+                                if(ent === other || other.dead) continue;
+                                let dSq = distSq(other.x, other.y, ent.x, ent.y);
+                                if(dSq < 640000 && dSq < minDistEnt) { minDistEnt = dSq; targetEnt = other; }
+                            }
+
+                            if(targetEnt) {
+                                if(ent.mass > targetEnt.mass * 0.7) {
+                                    ent.targetX = targetEnt.x; ent.targetY = targetEnt.y;
+                                    let vineRangeSq = (500 + ((ent.mass/500)|0)*200)**2;
+                                    if(ent.mass >= THRESHOLDS.VINE && ent.vineCharges > 0 && minDistEnt < vineRangeSq && targetEnt.armorTimer <= 0) {
+                                        vines.push(new Vine(ent, targetEnt.x, targetEnt.y));
+                                        ent.activeVines++; ent.vineCharges--;
+                                    }
+                                } else if (targetEnt.mass > ent.mass * 1.3) {
+                                    ent.targetX = ent.x - (targetEnt.x - ent.x); ent.targetY = ent.y - (targetEnt.y - ent.y);
+                                }
+                            } else {
+                                let cellFoods = foodGrid.get(getGridKey(ent.x, ent.y));
+                                if(cellFoods && cellFoods.length > 0) { ent.targetX = cellFoods[0].x; ent.targetY = cellFoods[0].y; }
+                            }
+                        }
+                    }
+
+                    let dx = (ent.targetX || ent.x) - ent.x; let dy = (ent.targetY || ent.y) - ent.y;
+                    if(dx*dx + dy*dy > 100) { let angle = Math.atan2(dy, dx); ent.vx += Math.cos(angle) * 0.2; ent.vy += Math.sin(angle) * 0.2; }
+                    let maxSpeed = Math.max(2.0, 4.5 - (ent.mass * 0.002));
+                    let speedSq = ent.vx*ent.vx + ent.vy*ent.vy;
+                    if(speedSq > maxSpeed*maxSpeed) { let speed = Math.sqrt(speedSq); ent.vx = (ent.vx / speed) * maxSpeed; ent.vy = (ent.vy / speed) * maxSpeed; }
+                }
+
+                let growthSpeed = ent.mass > 2000 ? 10 : 3;
+                if(ent.pendingBlocks > 0 && frameCount % growthSpeed === 0) {
+                    ent.addBlock(); ent.pendingBlocks--;
+                    if(ent.isPlayer) { score += 5; document.getElementById('massStats').innerText = ent.mass; document.getElementById('score').innerText = score; }
+                }
+                if(ent.invulnerableTimer > 0) ent.invulnerableTimer--;
+            }
+
+            if(!player.dead) { camera.x += (player.x - camera.x) * 0.1; camera.y += (player.y - camera.y) * 0.1; }
+
+            for(let i = vines.length - 1; i >= 0; i--) {
+                let v = vines[i]; let keep = v.update();
+                if(keep && (v.state === 'pulling' || v.state === 'shooting')) {
+                    for(let j=0; j<entities.length; j++) {
+                        let ent = entities[j];
+                        if(ent === v.owner || ent === v.targetEntity || ent.dead) continue;
+                        if(Math.abs(ent.x - v.startX) < v.maxLength && Math.abs(ent.y - v.startY) < v.maxLength) {
+                            if(distToSegmentSq(ent.x, ent.y, v.startX, v.startY, v.headX, v.headY) < ent.radius*ent.radius) { 
+                                keep = v.breakVine(ent.x, ent.y); break; 
+                            }
+                        }
+                    }
+                }
+                if(!keep) vines.splice(i, 1);
+            }
+
+            for(let i=0; i<entities.length; i++) {
+                let e1 = entities[i]; if(e1.dead) continue;
+                for(let j=i+1; j<entities.length; j++) {
+                    let e2 = entities[j]; if(e2.dead) continue;
+                    let rSum = e1.radius + e2.radius;
+                    if(Math.abs(e1.x - e2.x) < rSum && Math.abs(e1.y - e2.y) < rSum) {
+                        if(distSq(e1.x, e1.y, e2.x, e2.y) < rSum*rSum) {
+                            let angle = Math.atan2(e2.y - e1.y, e2.x - e1.x);
+                            let attacker = null, victim = null, impactAngle = 0;
+
+                            if (e1.armorTimer > 0 && e2.armorTimer <= 0) { attacker = e1; victim = e2; impactAngle = angle; }
+                            else if (e2.armorTimer > 0 && e1.armorTimer <= 0) { attacker = e2; victim = e1; impactAngle = angle + Math.PI; }
+                            else if(e1.mass > e2.mass) { attacker = e1; victim = e2; impactAngle = angle; }
+                            else if(e2.mass > e1.mass) { attacker = e2; victim = e1; impactAngle = angle + Math.PI; }
+
+                            if(attacker && victim && victim.invulnerableTimer === 0 && victim.armorTimer <= 0) {
+                                let force = 15 + (attacker.mass * 0.05); 
+                                let armorMult = attacker.armorTimer > 0 ? 2 : 1; 
+                                victim.vx = Math.cos(impactAngle) * force * armorMult; victim.vy = Math.sin(impactAngle) * force * armorMult;
+                                attacker.vx -= Math.cos(impactAngle) * (force * 0.2); attacker.vy -= Math.sin(impactAngle) * (force * 0.2);
+                                victim.takeDamage((attacker.mass / 5)|0 + 1, impactAngle);
+                            }
+                        }
+                    }
+                }
+            }
+
+            let viewDistX = (canvas.width / currentZoom) / 2 + 200; let viewDistY = (canvas.height / currentZoom) / 2 + 200;
+            for(let i=0; i<entities.length; i++) {
+                let ent = entities[i];
+                if(ent.dead) continue;
+                let minCol = ((ent.x - ent.radius - 10) / GRID_SIZE)|0; let maxCol = ((ent.x + ent.radius + 10) / GRID_SIZE)|0;
+                let minRow = ((ent.y - ent.radius - 10) / GRID_SIZE)|0; let maxRow = ((ent.y + ent.radius + 10) / GRID_SIZE)|0;
+                let rSq = (ent.radius + 10)*(ent.radius + 10);
+                
+                for(let c = minCol; c <= maxCol; c++) {
+                    for(let r = minRow; r <= maxRow; r++) {
+                        let cellFoods = foodGrid.get(c << 16 | r);
+                        if(cellFoods) {
+                            for(let j = cellFoods.length - 1; j >= 0; j--) {
+                                let f = cellFoods[j];
+                                if(distSq(ent.x, ent.y, f.x, f.y) < rSq) {
+                                    ent.pendingBlocks++; createParticles(f.x, f.y, f.color, 2);
+                                    cellFoods.splice(j, 1); addFood({ x: randomInt(100, WORLD_SIZE-100), y: randomInt(100, WORLD_SIZE-100), color: randomColor(), size: 8 });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // HATA ÇÖZÜMÜ: YENİ MANYETİK (MAGNET) TOPLAMA SİSTEMİ
+            for(let i = scraps.length - 1; i >= 0; i--) {
+                let s = scraps[i]; s.x += s.vx; s.y += s.vy; s.vx *= 0.92; s.vy *= 0.92; s.life--;
+                s.x = Math.max(0, Math.min(s.x, WORLD_SIZE)); s.y = Math.max(0, Math.min(s.y, WORLD_SIZE));
+                if(s.life <= 0) { scraps.splice(i, 1); continue; }
+                
+                let eaten = false;
+                for(let j=0; j<entities.length; j++) {
+                    let ent = entities[j];
+                    if(ent.dead) continue;
+                    
+                    let dSq = distSq(ent.x, ent.y, s.x, s.y);
+                    let pullRange = ent.radius + 150; // Mıknatıs menzili
+                    
+                    if(dSq < pullRange * pullRange) {
+                        let angle = Math.atan2(ent.y - s.y, ent.x - s.x);
+                        s.vx += Math.cos(angle) * 2.5; // Scraplar karaktere doğru emilir
+                        s.vy += Math.sin(angle) * 2.5;
+                        
+                        // Yeme alanı esnetildi
+                        let eatDist = ent.radius + BLOCK_SIZE * 2.5;
+                        if(dSq < eatDist * eatDist) {
+                            ent.pendingBlocks += 2; 
+                            createParticles(s.x, s.y, s.color, 3); 
+                            scraps.splice(i, 1); 
+                            eaten = true; break;
+                        }
+                    }
+                }
+                if(eaten) continue;
+            }
+
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i]; p.x += p.vx; p.y += p.vy; p.vx *= 0.9; p.vy *= 0.9; p.life--;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            if(GAME_STATE !== 'PLAYING') return;
+            ctx.fillStyle = '#08090a'; ctx.fillRect(0, 0, canvas.width, canvas.height); 
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2); ctx.scale(currentZoom, currentZoom); ctx.translate(-camera.x, -camera.y);
+
+            let cx = camera.x - (canvas.width/currentZoom)/2; let cy = camera.y - (canvas.height/currentZoom)/2;
+            let viewW = canvas.width / currentZoom; let viewH = canvas.height / currentZoom;
+
+            ctx.strokeStyle = '#1f2833'; ctx.lineWidth = 1;
+            let startX = (cx / 100 | 0) * 100, startY = (cy / 100 | 0) * 100;
+            ctx.beginPath();
+            for(let i=startX; i<cx + viewW; i+=100) { ctx.moveTo(i, cy); ctx.lineTo(i, cy + viewH); }
+            for(let i=startY; i<cy + viewH; i+=100) { ctx.moveTo(cx, i); ctx.lineTo(cx + viewW, i); }
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 10; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+
+            ctx.fillStyle = '#fff';
+            spikes.forEach(s => {
+                let sR = 15 + s.level * 2; 
+                let sW = 5 + s.level;
+                ctx.beginPath();
+                ctx.moveTo(s.x + Math.cos(Math.atan2(s.vy, s.vx))*sR, s.y + Math.sin(Math.atan2(s.vy, s.vx))*sR);
+                ctx.lineTo(s.x + Math.cos(Math.atan2(s.vy, s.vx)+Math.PI/2)*sW, s.y + Math.sin(Math.atan2(s.vy, s.vx)+Math.PI/2)*sW);
+                ctx.lineTo(s.x + Math.cos(Math.atan2(s.vy, s.vx)-Math.PI/2)*sW, s.y + Math.sin(Math.atan2(s.vy, s.vx)-Math.PI/2)*sW);
+                ctx.fill();
+            });
+
+            vines.forEach(v => {
+                ctx.lineWidth = v.thickness; ctx.strokeStyle = '#8a0303'; 
+                ctx.beginPath(); ctx.moveTo(v.startX, v.startY); ctx.lineTo(v.headX, v.headY); ctx.stroke();
+
+                ctx.lineWidth = v.thickness * 0.4; ctx.strokeStyle = v.owner.baseColor; 
+                ctx.setLineDash([15, 10]); 
+                ctx.beginPath(); ctx.moveTo(v.startX, v.startY); ctx.lineTo(v.headX, v.headY); ctx.stroke();
+                ctx.setLineDash([]); 
+
+                ctx.fillStyle = '#fff'; 
+                ctx.fillRect(v.headX - v.thickness*0.8, v.headY - v.thickness*0.8, v.thickness*1.6, v.thickness*1.6); 
+            });
+
+            let minCol = (cx / GRID_SIZE)|0; let maxCol = ((cx + viewW) / GRID_SIZE)|0;
+            let minRow = (cy / GRID_SIZE)|0; let maxRow = ((cy + viewH) / GRID_SIZE)|0;
+            for(let c = minCol; c <= maxCol; c++) {
+                for(let r = minRow; r <= maxRow; r++) {
+                    let cellFoods = foodGrid.get(c << 16 | r);
+                    if(cellFoods) { 
+                        for(let i=0; i<cellFoods.length; i++) {
+                            let f = cellFoods[i]; ctx.fillStyle = f.color; 
+                            ctx.fillRect(f.x - f.size/2, f.y - f.size/2, f.size, f.size); 
+                        }
+                    }
+                }
+            }
+
+            for(let i=0; i<scraps.length; i++) {
+                let s = scraps[i];
+                if(s.x > cx && s.x < cx + viewW && s.y > cy && s.y < cy + viewH) {
+                    ctx.fillStyle = s.color; ctx.globalAlpha = s.life < 60 ? s.life / 60 : 1;
+                    ctx.fillRect(s.x - BLOCK_SIZE/2, s.y - BLOCK_SIZE/2, BLOCK_SIZE, BLOCK_SIZE); ctx.globalAlpha = 1;
+                }
+            }
+
+            for(let i=0; i<clones.length; i++) {
+                let c = clones[i]; ctx.fillStyle = c.color; 
+                let pulse = Math.sin(frameCount * 0.2) * 2; 
+                for(let j=0; j<c.blocks.length; j++) {
+                    let block = c.blocks[j];
+                    ctx.fillRect(c.x + block.rx * (BLOCK_SIZE + pulse) - BLOCK_SIZE/2, c.y + block.ry * (BLOCK_SIZE + pulse) - BLOCK_SIZE/2, BLOCK_SIZE + 0.5 + pulse, BLOCK_SIZE + 0.5 + pulse);
+                }
+            }
+
+            for(let i=0; i<entities.length; i++) {
+                let ent = entities[i];
+                if(ent.x + ent.radius > cx && ent.x - ent.radius < cx + viewW && ent.y + ent.radius > cy && ent.y - ent.radius < cy + viewH) {
+                    let isHit = ent.invulnerableTimer > 0 && ((ent.invulnerableTimer / 4)|0) % 2 === 0;
+                    ctx.fillStyle = isHit ? '#ffffff' : ent.baseColor;
+
+                    ctx.beginPath();
+                    for(let j=0; j<ent.blocks.length; j++) {
+                        let block = ent.blocks[j];
+                        ctx.rect(ent.x + block.rx * BLOCK_SIZE - BLOCK_SIZE/2, ent.y + block.ry * BLOCK_SIZE - BLOCK_SIZE/2, BLOCK_SIZE + 0.5, BLOCK_SIZE + 0.5);
+                    }
+                    ctx.fill();
+                    
+                    if(ent.armorTimer > 0) {
+                        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.beginPath();
+                        for(let j=0; j<=Math.PI*2; j+=0.4) {
+                            let spikeR = ent.radius + 15 + (Math.random()*10); 
+                            ctx.lineTo(ent.x + Math.cos(j)*spikeR, ent.y + Math.sin(j)*spikeR);
+                        }
+                        ctx.closePath(); ctx.stroke();
+                    }
+                }
+                
+                if(ent.dashCharge > 0) {
+                    let barW = 60; let barH = 8; let barX = ent.x - barW/2; let barY = ent.y + ent.radius + 20;
+                    ctx.fillStyle = '#1f2833'; ctx.fillRect(barX, barY, barW, barH);
+                    ctx.fillStyle = ent.dashCharge > 0.8 ? '#ff0055' : '#ffea00'; 
+                    ctx.fillRect(barX, barY, barW * ent.dashCharge, barH);
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+                }
+            }
+
+            for(let i=0; i<particles.length; i++) {
+                let p = particles[i]; ctx.fillStyle = p.color; ctx.globalAlpha = p.life / p.maxLife;
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size); ctx.globalAlpha = 1; 
+            }
+
+            if(!player.dead) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 1;
+                ctx.beginPath(); 
+                ctx.moveTo(mouse.worldX-15/currentZoom, mouse.worldY); ctx.lineTo(mouse.worldX+15/currentZoom, mouse.worldY);
+                ctx.moveTo(mouse.worldX, mouse.worldY-15/currentZoom); ctx.lineTo(mouse.worldX, mouse.worldY+15/currentZoom);
+                ctx.stroke();
+            }
+
+            ctx.restore(); 
+        }
+
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+        requestAnimationFrame(gameLoop); 
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+    </script>
+</body>
+</html>

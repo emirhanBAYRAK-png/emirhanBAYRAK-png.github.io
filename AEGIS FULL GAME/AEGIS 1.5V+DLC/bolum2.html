@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEGIS // SURVIVAL DLC - ARAF</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=VT323&family=Inter:wght@400;500;700&display=swap');
+
+        :root {
+            --void-bg: #05000a;
+            --blood-red: #dc2626;
+            --glitch-cyan: #06b6d4;
+            --glitch-magenta: #ec4899;
+            --terminal-text: #fca5a5;
+            --ui-border: #7f1d1d;
+        }
+
+        body {
+            margin: 0; padding: 0; height: 100vh;
+            background-color: var(--void-bg);
+            background-image: radial-gradient(circle at center, #1a0505 0%, var(--void-bg) 80%);
+            font-family: 'Inter', sans-serif;
+            color: white;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- GLOBAL EFEKTLER (CRT, TİTREME) --- */
+        .crt-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none; z-index: 999;
+            animation: flicker 0.15s infinite;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.95; } 50% { opacity: 0.85; } 100% { opacity: 0.95; }
+        }
+
+        .screen-glitch { animation: screenShake 4s infinite; }
+        @keyframes screenShake {
+            0%, 95% { transform: translate(0, 0) skew(0deg); filter: hue-rotate(0deg); }
+            96% { transform: translate(-2px, 1px) skew(1deg); filter: hue-rotate(90deg); }
+            97% { transform: translate(2px, -2px) skew(-2deg); }
+            98% { transform: translate(-1px, 2px) skew(0deg); filter: hue-rotate(0deg); }
+        }
+
+        /* --- METİN BOZULMASI (GLITCH) --- */
+        .glitch-text { position: relative; display: inline-block; color: var(--blood-red); font-family: 'Rajdhani'; font-weight: bold; }
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--void-bg);
+        }
+        .glitch-text::before {
+            left: 2px; text-shadow: -2px 0 var(--glitch-cyan);
+            animation: glitch-anim-1 2.5s infinite linear alternate-reverse;
+        }
+        .glitch-text::after {
+            left: -2px; text-shadow: -2px 0 var(--glitch-magenta);
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim-1 {
+            0% { clip-path: inset(20% 0 80% 0); }
+            20% { clip-path: inset(60% 0 10% 0); }
+            40% { clip-path: inset(40% 0 50% 0); }
+            60% { clip-path: inset(80% 0 5% 0); }
+            80% { clip-path: inset(10% 0 70% 0); }
+            100% { clip-path: inset(30% 0 20% 0); }
+        }
+        @keyframes glitch-anim-2 {
+            0% { clip-path: inset(10% 0 60% 0); }
+            20% { clip-path: inset(30% 0 20% 0); }
+            40% { clip-path: inset(70% 0 10% 0); }
+            60% { clip-path: inset(20% 0 50% 0); }
+            80% { clip-path: inset(50% 0 30% 0); }
+            100% { clip-path: inset(5% 0 80% 0); }
+        }
+	
+	/* Special effect for AEQUITAS form */
+        .char-silhouette.divine-glow {
+            border-color: #fff; /* White border for divine light */
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.8), 0 0 20px #dc2626; /* White and red mixed glow */
+        }
+        .char-silhouette.divine-glow span {
+            color: #fff;
+            text-shadow: 0 0 10px #fff;
+        }
+
+        /* --- BÖLÜMLER --- */
+        #main-menu, #loading-screen, #game-ui {
+            width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; position: absolute; top:0; left:0;
+        }
+
+        /* 1. Menü */
+        .title-container { text-align: center; margin-bottom: 50px; }
+        .title { font-size: 8em; letter-spacing: 20px; margin: 0; text-shadow: 0 0 20px var(--blood-red); }
+        .subtitle { font-size: 2.5em; letter-spacing: 10px; color: #a8a29e; margin-top: -10px; }
+        
+        .btn-start {
+            font-family: 'Rajdhani'; font-size: 2.5em; color: white; background: transparent;
+            border: 2px solid var(--blood-red); padding: 15px 60px; cursor: pointer;
+            letter-spacing: 5px; box-shadow: inset 0 0 15px rgba(220, 38, 38, 0.3);
+            transition: 0.2s; position: relative; overflow: hidden;
+        }
+        .btn-start:hover { background: var(--blood-red); color: black; box-shadow: 0 0 30px var(--blood-red); }
+
+        /* 2. Yükleme Ekranı */
+        #loading-screen { display: none; }
+        .progress-box { width: 500px; height: 5px; border: 1px solid var(--blood-red); position: relative; margin: 30px 0; box-shadow: 0 0 10px var(--blood-red); }
+        .progress-fill { height: 100%; width: 0%; background: var(--blood-red); transition: width 0.1s; }
+        .loading-text { font-family: 'VT323', monospace; font-size: 1.5em; color: var(--terminal-text); letter-spacing: 2px; }
+
+        /* 3. OYUN ARAYÜZÜ (HAYATTA KALMA/DİYALOG) */
+        #game-ui { display: none; padding: 40px; box-sizing: border-box; justify-content: flex-end; }
+        
+        /* Görsel Alan (Karakterlerin durduğu yer) */
+        .scene-view {
+            position: absolute; top: 5%; left: 5%; width: 90%; height: 55%;
+            border: 1px solid var(--ui-border);
+            background: repeating-linear-gradient(0deg, rgba(220, 38, 38, 0.05) 0px, transparent 2px);
+            display: flex; justify-content: space-around; align-items: flex-end; padding-bottom: 20px; box-sizing: border-box;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+        
+        /* Karakter Portreleri ve Gizem Efekti */
+        .char-silhouette {
+            width: 160px; height: 320px; background: rgba(0,0,0,0.8); border: 1px solid #450a0a;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.1); transition: all 0.5s ease;
+            display: flex; justify-content: center; align-items: center; position: relative;
+            overflow: hidden;
+        }
+        
+        .char-silhouette span {
+            color: #7f1d1d; font-family: 'Rajdhani'; font-weight: bold; font-size: 4em;
+            text-shadow: 0 0 10px #450a0a; transition: 0.3s; z-index: 2;
+        }
+        
+        .char-img {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0; filter: grayscale(100%) brightness(0.4);
+            transition: opacity 1.5s ease, filter 1s ease; z-index: 1;
+        }
+
+        /* Konuşan Karakterin Parlaması */
+        .char-silhouette.active { 
+            border-color: var(--blood-red); box-shadow: 0 0 30px rgba(220, 38, 38, 0.6); 
+            transform: translateY(-10px); z-index: 5;
+        }
+        .char-silhouette.active .char-img { filter: grayscale(0%) brightness(1); }
+
+        /* Karakter Kimliği Açığa Çıktığında (Reveal) */
+        .char-silhouette.revealed span { display: none; }
+        .char-silhouette.revealed .char-img { opacity: 1; }
+        .char-silhouette.revealed { background: transparent; }
+
+        /* Diyalog Kutusu */
+        .dialogue-container {
+            width: 90%; background: rgba(5, 0, 10, 0.85); border: 2px solid var(--blood-red);
+            padding: 20px 30px; box-sizing: border-box; min-height: 150px; z-index: 10;
+            box-shadow: inset 0 0 20px rgba(220,38,38,0.2), 0 0 20px rgba(0,0,0,0.9);
+            position: relative; margin-bottom: 20px;
+        }
+        .speaker-name { font-family: 'Rajdhani'; font-size: 1.8em; color: var(--blood-red); margin-bottom: 10px; font-weight: bold; letter-spacing: 2px;}
+        .dialogue-text { font-family: 'Inter'; font-size: 1.2em; line-height: 1.5; color: #e7e5e4; text-shadow: 0 0 2px rgba(255,255,255,0.3); }
+
+        /* Seçim Butonları */
+        .choice-container { width: 90%; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
+        .choice-btn {
+            background: rgba(20, 5, 5, 0.9); border: 1px solid var(--ui-border); color: #d6d3d1;
+            padding: 15px 20px; text-align: left; font-family: 'Inter'; font-size: 1.1em; cursor: pointer; transition: 0.2s;
+        }
+        .choice-btn:hover { background: rgba(220, 38, 38, 0.2); border-color: var(--blood-red); color: white; padding-left: 30px; }
+        .choice-btn::before { content: "> "; color: var(--blood-red); font-weight: bold; opacity: 0; transition: 0.2s; }
+        .choice-btn:hover::before { opacity: 1; }
+
+    </style>
+</head>
+<body class="screen-glitch">
+
+    <div class="crt-overlay"></div>
+
+    <div id="main-menu">
+        <div class="title-container">
+            <h1 class="title glitch-text" data-text="AEGIS">AEGIS</h1>
+            <h2 class="subtitle">SURVIVAL DLC</h2>
+        </div>
+        <button class="btn-start" onclick="startLoading()">SİSTEME GİRİŞ</button>
+    </div>
+
+    <div id="loading-screen">
+        <h2 class="glitch-text" data-text="ARAF PROTOKOLÜ BAŞLATILIYOR" style="font-size: 3em;">ARAF PROTOKOLÜ BAŞLATILIYOR</h2>
+        <div class="progress-box">
+            <div class="progress-fill" id="load-bar"></div>
+        </div>
+        <div class="loading-text" id="load-msg">Gerçeklik algısı yeniden yazılıyor... <span id="load-pct">0</span>%</div>
+    </div>
+
+    <div id="game-ui">
+        <div class="scene-view">
+            <div class="char-silhouette" id="char-1"><img src="" class="char-img" id="img-1"><span>?</span></div>
+            <div class="char-silhouette" id="char-2"><img src="" class="char-img" id="img-2"><span>?</span></div>
+            <div class="char-silhouette" id="char-3"><img src="" class="char-img" id="img-3"><span>?</span></div>
+            <div class="char-silhouette" id="char-4"><img src="" class="char-img" id="img-4"><span>?</span></div>
+        </div>
+
+        <div class="dialogue-container">
+            <div class="speaker-name glitch-text" id="speaker" data-text="SİSTEM">SİSTEM</div>
+            <div class="dialogue-text" id="dialogue">...</div>
+        </div>
+
+        <div class="choice-container" id="choices">
+            </div>
+    </div>
+
+    <script>
+        // --- OYUN İSTATİSTİKLERİ VE TAKİP SİSTEMİ ---
+        let state = {
+            adim: 0,       // 100 olunca oyun biter
+            umut: 50,      // İnsan kalma ve kurtuluş inancı
+            karanlik: 0,   // Zeon enerjisine ve Araf'a boyun eğme
+            guven: 50      // Ekibin sana ve birbirine olan bağlılığı
+        };
+
+        // --- YÜKLEME EKRANI ---
+        function startLoading() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('loading-screen').style.display = 'flex';
+
+            let progress = 0;
+            let bar = document.getElementById('load-bar');
+            let pct = document.getElementById('load-pct');
+            let msg = document.getElementById('load-msg');
+
+            // Hızlı test için 80ms yaptım (8 Saniye)
+            let interval = setInterval(() => {
+                progress += 1;
+                bar.style.width = progress + "%";
+                pct.innerText = progress;
+
+                if(progress === 20) msg.innerText = "[HATA] Ankara koordinatları bulunamadı... " + progress + "%";
+                if(progress === 45) msg.innerText = "Biyolojik sinyaller tespit edildi: 4 Adet... " + progress + "%";
+                if(progress === 70) msg.innerText = "Bilinç bağlantısı kuruluyor... " + progress + "%";
+                if(progress === 90) msg.innerText = "Sisteme giriş yapıldı. Uyan komutan... " + progress + "%";
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    startGame();
+                }
+            }, 80);
+        }
+
+        // --- HİKAYE AĞACI (STORY TREE) ---
+        const story = {
+            // --- GİRİŞ VE KİMLİK AÇIĞA ÇIKARMA ---
+            "start": {
+                speaker: "SİSTEM",
+                text: "Kızıl kumların üzerinde bilincin yavaş yavaş yerine geliyor. Gözlerin bulanık. Etrafında 4 karaltı var. Biri seni sarsıyor...",
+                activeChar: null,
+                choices: [
+                    { label: "Gözlerimi açmaya çalış...", next: "scene_brock_reveal", effect: {umut: 1} }
+                ]
+            },
+            "scene_brock_reveal": {
+                speaker: "DEVASA SİLÜET",
+                text: "Abi! Komutan abi! Uyan! Kollarıma bir şey oldu, buradaki hava karıncalanmamı durdurdu! Ölmüyoruz değil mi?",
+                activeChar: "char-1",
+                reveal: { id: "char-1", img: "Brock.jpg", name: "BROCK" },
+                choices: [
+                    { label: "Brock? Sen misin? Sakin ol çocuk, buradayım.", next: "scene_barbaros_reveal", effect: {guven: 2} }
+                ]
+            },
+            "scene_barbaros_reveal": {
+                speaker: "DERİN VE SAKİN BİR SES",
+                text: "Çocuğu korkutma. Zihni henüz bu boyuta adapte olamadı. Patlama hepimizi bu cehenneme sürükledi Komutan. Mühürlerim... mühürlerim burada çok zayıf hissettiriyor.",
+                activeChar: "char-2",
+                reveal: { id: "char-2", img: "Barbaros.jpg", name: "BARBAROS" },
+                choices: [
+                    { label: "Barbaros... İyi ki yanımdasın. Başka kim var?", next: "scene_yavuz_reveal", effect: {guven: 2} },
+                    { label: "İçindeki o şeye hakim ol Barbaros, burada ona yenik düşemeyiz.", next: "scene_yavuz_reveal", effect: {karanlik: -2, guven: -1} }
+                ]
+            },
+            "scene_yavuz_reveal": {
+                speaker: "TİTREYEN BİR KILIÇ SESİ",
+                text: "Kılıcım hala keskin ama pusulamız yok evlat. Ankara'nın yıkıntılarına alışmıştık ama bu kızıl gökyüzü adaletin tecelli edeceği bir yere benzemiyor.",
+                activeChar: "char-3",
+                reveal: { id: "char-3", img: "Yavuz.jpg", name: "YAVUZ" },
+                choices: [
+                    { label: "Yavuz Amca! Ekibin bel kemiği burada. Peki ya dördüncü kişi?", next: "scene_selim_intro" }
+                ]
+            },
+            "scene_selim_intro": {
+                speaker: "GİZEMLİ GENÇ",
+                text: "Sizinle aynı karargahtan değilim. Merkez-B komutasındaydım. Patlama anında destek için ışınlanmıştım ama çekirdek infilak edince yeteneğim beni uzay-zamanın dışına, bu hiçliğe fırlattı.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Sen de kimsin? A.E.G.I.S. kayıtlarında ışınlanabilen biri yoktu.", next: "scene_selim_reveal" }
+                ]
+            },
+            "scene_selim_reveal": {
+                speaker: "GİZEMLİ GENÇ",
+                text: "Ben Selim. Zeon istilasından önce kriz yöneten bir CEO'ydum. Sonra radyasyon bana mekansal sıçrama gücü verdi. Kendi ekibimi kaybettim Komutan... Ama hayatta kalma refleksimi asla.",
+                activeChar: "char-4",
+                reveal: { id: "char-4", img: "Selim.jpg", name: "SELİM" },
+                choices: [
+                    { label: "Aramıza hoş geldin Selim. Yeteneklerin burada çok işe yarayacak.", next: "scene_first_danger", effect: {guven: 3} },
+                    { label: "Burası senin şirket toplantılarına benzemez, kuralları ben koyarım.", next: "scene_first_danger", effect: {guven: -2, karanlik: 2} }
+                ]
+            },
+            "scene_first_danger": {
+                speaker: "SİSTEM",
+                text: "[DİKKAT] Doğudan devasa bir kızıl radyasyon fırtınası hızla yaklaşıyor! Saniyeler içinde burayı yutacak. Takımın bir karar bekliyor Komutan!",
+                activeChar: null,
+                choices: [
+                    { label: "Tünele Koşun! (Karanlık ve Dar - Bilinmeyene giriş)", next: "scene_tunnel", effect: {karanlik: 3} },
+                    { label: "Tepeye Tırmanın! (Açık alan, efor gerektirir)", next: "scene_hill", effect: {umut: 3, guven: -1} },
+                    { label: "Selim, bizi kısa bir mesafeye ışınlayabilir misin?!", next: "scene_selim_blink", effect: {guven: 5, umut: 2} }
+                ]
+            },
+            
+            // --- DALLANMA 1: TÜNEL YOLU (Klostrofobi ve Et) ---
+            "scene_tunnel": {
+                speaker: "YAVUZ",
+                text: "Kılıcımı zor görüyorum... Duvarlar nefes alıyor gibi. Komutan, burası bir mağara değil, devasa bir organizmanın damarlarına benziyor.",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Silahlarınızı indirmeyin. İlerlemeye devam ediyoruz.", next: "scene_tunnel_2", effect: {karanlik: 2} },
+                    { label: "Barbaros, içindeki varlık bu duvarlarla iletişim kurabiliyor mu?", next: "scene_tunnel_barbaros", effect: {karanlik: 5, umut: -2} }
+                ]
+            },
+            "scene_tunnel_2": {
+                speaker: "BROCK",
+                text: "Abi ayaklarıma bir şeyler yapışıyor! Sümük gibi! Ve... sanırım duvarlar nefes alıyor. Çok sıcak...",
+                activeChar: "char-1",
+                choices: [
+                    { label: "Çamur falandır. Durmadan yürümeye devam edin!", next: "scene_tunnel_fast", effect: {umut: 1} },
+                    { label: "Durun. Selim, o sümüksü şeye bir bak. Ne bu?", next: "scene_tunnel_inspect", effect: {karanlik: 1, guven: 1} }
+                ]
+            },
+            "scene_tunnel_fast": {
+                speaker: "YAVUZ",
+                text: "Komutan haklı. Burası mezarımız olmadan önce çıkmalıyız. Kılıcımın parıltısıyla önünüzü aydınlatacağım, adımlarınızı hızlandırın!",
+                activeChar: "char-3",
+                choices: [
+                    { label: "(Karanlığın içine doğru depar atın)", next: "scene_tunnel_whispers" }
+                ]
+            },
+            "scene_tunnel_inspect": {
+                speaker: "SELİM",
+                text: "(Eğilip inceler) Bu çamur değil... Mide asidi gibi bir şey. Eğer botlarımız erirse kemiklerimize kadar işler. Lanet olsun, resmen devasa bir bağırsağın içindeyiz!",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Dikkatli adımlarla asit birikintilerinden kaçarak ilerleyin.", next: "scene_tunnel_whispers", effect: {guven: 2} }
+                ]
+            },
+            "scene_tunnel_barbaros": {
+                speaker: "BARBAROS",
+                text: "Duvarlar... 'Açız' diyor Komutan. Ve sen onlara yem olarak bizi getirdin. İçimdeki şey onlara cevap vermek, onlara katılmak istiyor!",
+                activeChar: "char-2",
+                choices: [
+                    { label: "O sese diren Barbaros! Sen bir canavar değilsin!", next: "scene_tunnel_whispers", effect: {umut: 2, guven: 2} },
+                    { label: "Bırak konuşsun. Belki bize çıkışı gösterirler.", next: "scene_tunnel_whispers", effect: {karanlik: 4, umut: -2} }
+                ]
+            },
+            "scene_tunnel_whispers": {
+                speaker: "SİSTEM",
+                text: "Tünelin ilerisinden etlerin yırtılma sesi geliyor. Duvarın içinden, gözleri olmayan ama devasa çenesi olan bir Araf Mutubüs'ü fırlayıp yolunuzu kesiyor!",
+                activeChar: null,
+                choices: [
+                    { label: "Yavuz! Kılıcını konuştur ihtiyar!", next: "scene_tunnel_fight_yavuz", effect: {guven: 2} },
+                    { label: "Brock, üstüne atla ve dikkatini dağıt!", next: "scene_tunnel_fight_brock", effect: {karanlik: 1} }
+                ]
+            },
+            "scene_tunnel_fight_yavuz": {
+                speaker: "YAVUZ",
+                text: "Adalet, karanlıkta bile kör değildir! (Tek bir kusursuz kılıç darbesiyle yaratığın çenesini ikiye böler. Üzerinize asit kanı sıçrar).",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Temiz iş. Çıkış ileride, ışığı görüyorum! Koşun!", next: "scene_outpost_arrival" }
+                ]
+            },
+            "scene_tunnel_fight_brock": {
+                speaker: "BROCK",
+                text: "Oleeey! Kucaklaşma zamanı! (Yaratık Brock'un kolunu koparır ama Brock diğer eliyle yaratığın göz yuvalarına parmaklarını sokar). Çok yumuşak!",
+                activeChar: "char-1",
+                choices: [
+                    { label: "Selim, Brock'u oradan çek! Çıkışa koşuyoruz!", next: "scene_outpost_arrival" }
+                ]
+            },
+
+            // --- DALLANMA 2: TEPE YOLU (Yerçekimsiz Şehir ve Efor) ---
+            "scene_hill": {
+                speaker: "SELİM",
+                text: "(Nefes nefese) Bu fırtına... normal değil. Radyasyon hücrelerimi yakıyor ama aynı zamanda ışınlanma gücümü de besliyor. Aşağıdaki manzaraya bak Komutan...",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Bu da nesi... Aşağıdaki şey koca bir şehir enkazı mı?", next: "scene_hill_city", effect: {umut: 2} }
+                ]
+            },
+            "scene_hill_city": {
+                speaker: "SİSTEM",
+                text: "Sislerin arasından, yer çekimine meydan okuyarak havada süzülen ters dönmüş binalar ve devasa kayalar beliriyor. Araf dedikleri yer, yok olan dünyaların çöplüğü.",
+                activeChar: null,
+                choices: [
+                    { label: "Karşıya geçmek zorundayız. Selim, havada süzülen o molozlardan zıplayarak ilerleyebilir miyiz?", next: "scene_hill_jump", effect: {karanlik: 1} },
+                    { label: "Risk alamayız. Yavuz, şu sağlam görünen ama uzun olan kayalık yamaçtan tırmalım.", next: "scene_hill_climb", effect: {umut: 1, guven: 1} }
+                ]
+            },
+            "scene_hill_jump": {
+                speaker: "SELİM",
+                text: "Zamanlama hatası yaparsak hiçliğe düşeriz. Adımlarımı takip edin! (Selim çevik bir şekilde molozdan moloza atlar. Ancak Brock'un ayağı kayar ve aşağı doğru düşmeye başlar!)",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Barbaros! Çocuğu yakala!", next: "scene_hill_brock_fall", effect: {guven: 2} }
+                ]
+            },
+            "scene_hill_brock_fall": {
+                speaker: "BARBAROS",
+                text: "(Barbaros içindeki karanlık enerjiden devasa bir pençe oluşturur ve Brock'u havada yakalayıp yukarı çeker). Bir daha o sarsak adımlarını atarken dikkat et çocuk.",
+                activeChar: "char-2",
+                choices: [
+                    { label: "Teşekkürler Barbaros. Tepeye az kaldı, devam edin.", next: "scene_outpost_arrival", effect: {karanlik: 1} }
+                ]
+            },
+            "scene_hill_climb": {
+                speaker: "YAVUZ",
+                text: "Böylesi daha güvenli. Ama ciğerlerimiz bu kızıl havaya alışık değil... (Saatlerce süren tırmanış herkesi bitkin düşürür. Zırhlarınız ağırlaşmıştır).",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Dayanın. Zirveye ulaştık. Aşağıya bakın...", next: "scene_outpost_arrival" }
+                ]
+            },
+
+            // --- DALLANMA 3: SELİM IŞINLANMA (Güven Testi ve Zeon Devriyesi) ---
+            "scene_selim_blink": {
+                speaker: "SELİM",
+                text: "Zor olacak... Havada çok statik var ama deneyeceğim. Herkes bana dokunsun! Sıkı tutunun!",
+                activeChar: "char-4",
+                choices: [
+                    { label: "(Gözlerini kapat ve sıçramayı bekle)", next: "scene_blink_aftermath", effect: {karanlik: 1, umut: 2} }
+                ]
+            },
+            "scene_blink_aftermath": {
+                speaker: "SİSTEM",
+                text: "[ŞİDDETLİ BİR PATLAMA SESİ] Gözlerini açtığında fırtınanın metrelerce üstünde, süzülen devasa bir kaya parçasının üzerindesiniz. Brock kusuyor, Selim ise dizlerinin üzerine çökmüş kan tükürüyor.",
+                activeChar: null,
+                choices: [
+                    { label: "Selim! İyi misin? Barbaros, onu sırtına al, yürüyemeyecek durumda.", next: "scene_blink_carry", effect: {guven: 3, umut: 1} },
+                    { label: "Kalk ayağa Selim! Zayıflık gösterecek vaktimiz yok, hareket et!", next: "scene_blink_force", effect: {guven: -3, karanlik: 2} }
+                ]
+            },
+            "scene_blink_carry": {
+                speaker: "SELİM",
+                text: "Gerek... gerek yok Komutan. Ciğerlerimdeki basınç normale dönüyor. (Barbaros yine de Selim'in koluna girer). Liderliğin... fena değilmiş.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Konuşmayı bırakın. Gökyüzünde bir şey var...", next: "scene_blink_flyer" }
+                ]
+            },
+            "scene_blink_force": {
+                speaker: "SELİM",
+                text: "Senin... senin o takım elbiseli zorba adamlardan hiçbir farkın yokmuş. (Öksürerek ayağa kalkar). Emir anlaşıldı Komutan.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Sızlanmayı kes. Gökyüzünde bir şey var, siper alın!", next: "scene_blink_flyer" }
+                ]
+            },
+            "scene_blink_flyer": {
+                speaker: "SİSTEM",
+                text: "Başınızın üstünden, bir zeplin büyüklüğünde, derisi çürümüş ve her yerinden gözler sarkan bir 'Gözcü Zeon' geçiyor. Sizi henüz fark etmedi.",
+                activeChar: null,
+                choices: [
+                    { label: "Nefesinizi tutun ve kayaların arkasına saklanın. Geçip gitsin.", next: "scene_blink_hide", effect: {umut: 1} },
+                    { label: "Barbaros, şu iğrenç şeye karanlık bir mızrak fırlat! Avlanma sırası bizde!", next: "scene_blink_fight", effect: {karanlik: 3, guven: -1} }
+                ]
+            },
+            "scene_blink_hide": {
+                speaker: "YAVUZ",
+                text: "Bilgece bir karar. Her savaşı kazanmak zorunda değiliz, bazen sadece hayatta kalmak yeterlidir. Yaratık uzaklaştı. Aşağıya doğru inebiliriz.",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Aşağıda bir vadi var. İnişe geçiyoruz.", next: "scene_outpost_arrival" }
+                ]
+            },
+            "scene_blink_fight": {
+                speaker: "BARBAROS",
+                text: "(Karanlık bir kahkaha atar). Memnuniyetle! (Gökyüzüne fırlattığı siyah enerji mızrağı yaratığın gözlerinden birini patlatır. Yaratık çığlık atarak uzaklaşır ama çırpınırken etrafa zehirli gaz saçar).",
+                activeChar: "char-2",
+                choices: [
+                    { label: "Herkes maskelerini taksın! Zehir bulutu dağılmadan aşağı vadiye iniyoruz!", next: "scene_outpost_arrival", effect: {umut: -1} }
+                ]
+            },
+
+            // --- DÜĞÜM NOKTASI 1 (FAZ 1 BİTİŞİ): KARAKOL ---
+            "scene_outpost_arrival": {
+                speaker: "SİSTEM",
+                text: "Hangi cehennemden geçmiş olursanız olun, adımlarınız sizi Araf'ın ortasındaki kızıl bir düzlüğe çıkardı. Tam karşınızda, üstünde A.E.G.I.S. logosu olan, Dünya'dan buraya düşmüş ve yarı yarıya kuma gömülmüş terk edilmiş bir ileri karakol duruyor.",
+                activeChar: null,
+                choices: [
+                    { label: "Dünya'dan bir parça... İçeride erzak ve sığınacak bir yer olabilir. Yaklaşın.", next: "scene_outpost_door", effect: {umut: 3} }
+                ]
+            },
+            "scene_outpost_door": {
+                speaker: "SELİM",
+                text: "Kapı elektronik şifreyle kilitlenmiş. Ve güç kaynağı ölü. Ben eski bir A.E.G.I.S. terminalini hackleyebilirim ama güç olmadan kapıyı açamam.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Barbaros, içindeki varlığın enerjisiyle bu kapıya güç verebilir misin?", next: "scene_outpost_power_dark", effect: {karanlik: 2} },
+                    { label: "Yavuz, kılıcın o metal kapıyı kesebilir mi? Kaba kuvvet kullanacağız.", next: "scene_outpost_power_force", effect: {guven: 1} }
+                ]
+            },
+            
+            // --- FAZ 2 BAŞLANGICI: KARAKOLA GİRİŞ ---
+            "scene_outpost_power_dark": {
+                speaker: "SİSTEM",
+                text: "Barbaros elini panele koyuyor. İçindeki varlığın kapkara enerjisi kablolara sızıyor. Işıklar mor bir renkle titreyerek yanıyor ve kapı acı dolu bir inlemeyle açılıyor. Karargaha girdiniz.",
+                activeChar: "char-2",
+                choices: [
+                    { label: "İçeriyi emniyete alın! Köşeleri kontrol edin.", next: "scene_outpost_inside", effect: {karanlik: 1} }
+                ]
+            },
+            "scene_outpost_power_force": {
+                speaker: "SİSTEM",
+                text: "Yavuz derin bir nefes alıyor. Kılıcı havada gümüş bir kavis çiziyor. Devasa çelik kapı menteşelerinden koparak büyük bir gürültüyle yere çarpıyor. Karargaha girdiniz.",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Gürültü her şeyi buraya çekmeden önce içeri girin!", next: "scene_outpost_inside", effect: {umut: 1} }
+                ]
+            },
+            "scene_outpost_inside": {
+                speaker: "SİSTEM",
+                text: "İçerisi tozlu ve soğuk. Duvarlarda eski A.E.G.I.S. posterleri var. Ancak erzak deposu neredeyse boş. Masanın üzerinde sadece 2 porsiyonluk askeri konserve kalmış.",
+                activeChar: null,
+                choices: [
+                    { label: "Selim, terminale bağlanıp haritayı çıkar. Diğerleri, erzakları toplayın.", next: "scene_camp_conflict" }
+                ]
+            },
+
+            // --- KAMP İÇİ ÇATIŞMA (ERZAK VE LİDERLİK) ---
+            "scene_camp_conflict": {
+                speaker: "SELİM",
+                text: "Komutan, mantıklı olmalıyız. 2 porsiyon yemeğimiz var. Brock hasar alsa bile saniyeler içinde yenileniyor, yani teknik olarak biyolojik bir açlık çekmiyor. Yemeği sadece savaşabilecek olanlara, yani bize paylaştırmalıyız.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Çocuğun payını kesmek mi? Sen çıldırdın mı Selim?", next: "scene_camp_yavuz_angry", effect: {umut: 2} },
+                    { label: "Haklısın. Kaynakları verimli kullanmak zorundayız. Brock aç kalacak.", next: "scene_camp_selim_wins", effect: {karanlik: 3, guven: -2} }
+                ]
+            },
+            "scene_camp_yavuz_angry": {
+                speaker: "YAVUZ",
+                text: "(Kılıcının kabzasına sarılır) O takım elbiseli boğazını bu kılıçla deşmemem için bana tek bir sebep söyle CEO bozuntusu! Biz hayatta kalmak için insanlığımızı satmadık!",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Kılıcını indir Yavuz! Selim sadece hesap yapıyor. Erzaklar eşit dağıtılacak.", next: "scene_camp_explore", effect: {guven: 2} }
+                ]
+            },
+            "scene_camp_selim_wins": {
+                speaker: "BROCK",
+                text: "Sorun değil Yavuz amca... Benim karnım guruldamıyor zaten. Sadece... bazen çok üşüyorum.",
+                activeChar: "char-1",
+                choices: [
+                    { label: "(Vicdan azabını bastır). Şimdi alt katları arama vakti.", next: "scene_camp_explore", effect: {karanlik: 2} }
+                ]
+            },
+
+            // --- ALT KAT DEVRİYESİ (DALLANMA) ---
+            "scene_camp_explore": {
+                speaker: "SİSTEM",
+                text: "Üst kat güvenli ama alt katın (Arşiv ve Jeneratör dairesi) karanlığından tuhaf sesler geliyor. Orayı temizleyip bir çıkış rotası haritası bulmanız şart.",
+                activeChar: null,
+                choices: [
+                    { label: "Selim ve Brock, alt kata inip Arşivleri araştırın. (Teknoloji Rotası)", next: "scene_explore_selim" },
+                    { label: "Yavuz ve Barbaros, Jeneratör dairesini temizleyin. (Savaş Rotası)", next: "scene_explore_yavuz" }
+                ]
+            },
+
+            // --- ALT KAT: SELİM & BROCK (TEKNOLOJİ ROTASI) ---
+            "scene_explore_selim": {
+                speaker: "SELİM",
+                text: "Arşiv terminalini buldum Komutan! Araf'ın topografik haritası içinde ama sistem kilitli. Beyin dalgalarımı doğrudan ana karta bağlayarak veriyi zihnime indirebilirim... ama bu sinir sistemimi kavurabilir.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Risk çok büyük Selim. Başka bir yol bulalım.", next: "scene_explore_selim_safe", effect: {umut: 2, guven: 1} },
+                    { label: "Haritaya ihtiyacımız var. Yap şunu! (Selim'i feda et)", next: "scene_explore_selim_hack", effect: {karanlik: 4, guven: -2} }
+                ]
+            },
+            "scene_explore_selim_safe": {
+                speaker: "BROCK",
+                text: "Ben klavyedeki tuşlara rastgele basarak bir şeyler açtım abi! Ekranda kırmızı büyük bir kule resmi var!",
+                activeChar: "char-1",
+                choices: [
+                    { label: "Harika iş çocuk! Koordinatları kopyalayın, yukarı dönüyoruz.", next: "scene_outpost_breach" }
+                ]
+            },
+            "scene_explore_selim_hack": {
+                speaker: "SİSTEM",
+                text: "[ÇIĞLIK SESLERİ] Selim veriyi zihnine indirirken gözlerinden kan boşanıyor. Haritayı aldı ama beyninin bir kısmı kalıcı hasar gördü. Artık eskisi kadar sık ışınlanamayacak.",
+                activeChar: null,
+                choices: [
+                    { label: "Bunu yapmak zorundaydık. Onu yukarı taşı Brock.", next: "scene_outpost_breach" }
+                ]
+            },
+
+            // --- ALT KAT: YAVUZ & BARBAROS (SAVAŞ ROTASI) ---
+            "scene_explore_yavuz": {
+                speaker: "BARBAROS",
+                text: "Komutan... Jeneratör odasında mutasyona uğramış Zeon askerleri kuluçkaya yatmış. İçimdeki karanlık onları parçalayıp özlerini emmek istiyor. Bana izin ver, onları yutayım!",
+                activeChar: "char-2",
+                choices: [
+                    { label: "Hayır! Yavuz, kılıcınla o odayı sessizce temizle. Vahşete gerek yok.", next: "scene_explore_yavuz_clean", effect: {umut: 3, guven: 1} },
+                    { label: "İplerini çözüyorum Barbaros. Hepsini parçala ve güçlen!", next: "scene_explore_yavuz_brutal", effect: {karanlik: 5, umut: -3} }
+                ]
+            },
+            "scene_explore_yavuz_clean": {
+                speaker: "YAVUZ",
+                text: "Sessiz, onurlu ve kesin. (Jeneratör odasına girer. Birkaç saniye içinde kılıcının şıkırtısı duyulur ve geri çıkar). Temizlendi. Üstelik masanın üzerinde Kızıl Kule'nin koordinatlarını buldum.",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Harika iş Avukat. Yukarı dönüyoruz.", next: "scene_outpost_breach" }
+                ]
+            },
+            "scene_explore_yavuz_brutal": {
+                speaker: "SİSTEM",
+                text: "[KEMİK KIRILMA SESLERİ] Barbaros bir canavar gibi odaya dalar. Etraf kan gölüne döner. Barbaros eskisinden çok daha güçlüdür ama insanlığından bir parça daha kopmuştur.",
+                activeChar: null,
+                choices: [
+                    { label: "Yeterince kan döküldü Barbaros. Koordinatları al ve yukarı çık.", next: "scene_outpost_breach" }
+                ]
+            },
+
+            // --- DÜĞÜM NOKTASI 2 (FAZ 2 BİTİŞİ): KARARGAH DÜŞÜYOR ---
+            "scene_outpost_breach": {
+                speaker: "SİSTEM",
+                text: "[ALARM SESLERİ] Tüm karargah kırmızı ışıklarla yanıp sönüyor! Alt kattaki veya kapıdaki gürültünüz Araf'ın avcılarını buraya çekti! Dışarıda yüzlerce Zeon silüeti var ve duvarları kırmaya başladılar!",
+                activeChar: null,
+                choices: [
+                    { label: "Kahretsin! Herkes silahlarına! Haritadaki Kızıl Kule'ye doğru yarmak zorundayız!", next: "scene_phase3_start" }
+                ]
+            },
+            
+            // --- FAZ 3 BAŞLANGICI: KARARGAHTAN KAÇIŞ VE KIZIL SİS ---
+            "scene_phase3_start": {
+                speaker: "SİSTEM",
+                text: "Karargahın arka duvarını patlatarak dışarı çıkıyorsunuz. Arkanızda yüzlerce Zeon çığlık atıyor ama karanlığın içine girmeye cesaret edemiyorlar. Çünkü önünüzde, göz gözü görmeyen, yoğun ve kan kırmızısı bir sis tabakası uzanıyor.",
+                activeChar: null,
+                choices: [
+                    { label: "Haritadaki Kızıl Kule rotasında mıyız Selim?", next: "scene_mist_enter" }
+                ]
+            },
+            "scene_mist_enter": {
+                speaker: "SELİM",
+                text: "Evet Komutan ama pusula çıldırmış durumda. Bu sis... radyoaktif değil. Daha çok... zihinsel bir frekans yayıyor. Kafamın içi uğulduyor.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Birbirinizden ayrılmayın! Sis zihninizle oynamaya çalışacak, gördüklerinize inanmayın!", next: "scene_yavuz_hallucination", effect: {umut: 2} }
+                ]
+            },
+
+            // --- YAVUZ'UN TRAVMASI (TORUNLAR) ---
+            "scene_yavuz_hallucination": {
+                speaker: "YAVUZ",
+                text: "(Kılıcını titreyerek indirir ve sisin içine doğru bir adım atar) Elif? Can? Ama... ben sizi o enkazdan çıkaramamıştım... Dedeciğim, buradayım! Korkmayın!",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Yavuz dur! Onlar gerçek değil! Sadece birer anı!", next: "scene_yavuz_saved", effect: {umut: 2, guven: 2} },
+                    { label: "(Yüzüne sertçe vur) Kendine gel ihtiyar! Aileni sen kurtaramadın ve öldüler! Bu sadece sisin bir oyunu!", next: "scene_yavuz_slapped", effect: {karanlik: 3, guven: -2} }
+                ]
+            },
+            "scene_yavuz_saved": {
+                speaker: "YAVUZ",
+                text: "(Gözyaşları içinde silkelenir) Biliyorum... Biliyorum evlat ama sesleri o kadar gerçekti ki. Adaletin bile düzeltemeyeceği hatalarım var. Beni uyardığın için sağ ol. Kılıcım tekrar emrinde.",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Geçmişi arkada bırak Avukat. Yürümeye devam ediyoruz.", next: "scene_brock_hallucination" }
+                ]
+            },
+            "scene_yavuz_slapped": {
+                speaker: "YAVUZ",
+                text: "(Yanağını tutar, gözlerindeki o son şefkat pırıltısı da yok olur) Haklısın... Acıma yok, merhamet yok. Sadece kesilecek etler var. Önümden çekil.",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Böyle daha iyisin. Gözünü açık tut.", next: "scene_brock_hallucination" }
+                ]
+            },
+
+            // --- BROCK'UN TRAVMASI (KOPAN UZUVLAR) ---
+            "scene_brock_hallucination": {
+                speaker: "BROCK",
+                text: "(Çığlık atarak yere düşer) Uzak durun benden! İstemiyorum! Komutan abi! Eskiden kopan kollarım ve bacaklarım yerlerde sürünerek bana geliyor! Üstüme tırmanıyorlar!",
+                activeChar: "char-1",
+                choices: [
+                    { label: "(Brock'a sarıl ve gözlerini kapat) Orada hiçbir şey yok çocuk. Sadece benim sesime odaklan.", next: "scene_brock_hug", effect: {umut: 3, guven: 3} },
+                    { label: "Onlar senin gücün Brock! Üstlerine bas, onları ez ve korkunu yen!", next: "scene_brock_crush", effect: {karanlik: 4, umut: -1} }
+                ]
+            },
+            "scene_brock_hug": {
+                speaker: "BROCK",
+                text: "(Titremesi durur) Sıcak... Ankara'daki battaniyem gibi hissettirdi. Gittiler abi. Artık bana dokunamıyorlar.",
+                activeChar: "char-1",
+                choices: [
+                    { label: "Aferin çocuk. Ben buradayım. Hadi kalk ayağa.", next: "scene_barbaros_hallucination" }
+                ]
+            },
+            "scene_brock_crush": {
+                speaker: "BROCK",
+                text: "Evet! Onları ben yarattım, ben ezerim! (Sislerin arasındaki görünmez bir şeyleri vahşice ezmeye başlar, yüzüne manyakça bir gülümseme yayılır). Ben bir canavarım!",
+                activeChar: "char-1",
+                choices: [
+                    { label: "İşte benim ölüm makinem. Yürümeye devam et.", next: "scene_barbaros_hallucination" }
+                ]
+            },
+
+            // --- BARBAROS'UN TRAVMASI (VARLIĞIN MANİFESTASYONU) ---
+            "scene_barbaros_hallucination": {
+                speaker: "BARBAROS",
+                text: "Siz zayıfsınız... İçimdeki bu varlık dışarı çıktı! Tam karşımda duruyor! Bana, eğer mühürlerimi tamamen sökersem bu kızıl dünyanın tanrısı olabileceğimi söylüyor. Ve... çok haklı.",
+                activeChar: "char-2",
+                choices: [
+                    { label: "Ona boyun eğersen seni tamamen yutar! Mühürlerini sıkı tut Barbaros!", next: "scene_barbaros_resist", effect: {umut: 2, guven: 1} },
+                    { label: "Belki de haklıdır. Bize o güç lazım. Çöz zincirlerini Barbaros!", next: "scene_barbaros_embrace", effect: {karanlik: 6, guven: -2} }
+                ]
+            },
+            "scene_barbaros_resist": {
+                speaker: "BARBAROS",
+                text: "(Acı içinde diz çöker) Sus! Benim adım Barbaros, ben bir A.E.G.I.S. askeriyim! (Derin nefesler alır). Başardım Komutan. Varlığı tekrar içime gömdüm. Şimdilik...",
+                activeChar: "char-2",
+                choices: [
+                    { label: "Büyük bir irade testiydi. Seninle gurur duyuyorum asker.", next: "scene_selim_hallucination" }
+                ]
+            },
+            "scene_barbaros_embrace": {
+                speaker: "SİSTEM",
+                text: "[KORKUNÇ BİR KÜKREME] Barbaros'un gözleri tamamen simsiyah olur. Derisinden dışarı fırlayan siyah dikenler zırhını parçalar. Artık takımında bir insan değil, ehlileştirilmiş bir Araf iblisi var.",
+                activeChar: null,
+                choices: [
+                    { label: "Mükemmel... Bu güçle Kule'nin kapılarını yıkacağız.", next: "scene_selim_hallucination" }
+                ]
+            },
+
+            // --- SELİM'İN TRAVMASI (SUÇLULUK) ---
+            "scene_selim_hallucination": {
+                speaker: "SELİM",
+                text: "Neden bana öyle bakıyorsunuz? Merkez-B çekirdeği patladığında ben hiçbir şey yapamazdım! Hayır... Yanıyorsunuz! Yanarken benim adımı sayıklamayın, ben bir liderim, hayatta kalmalıydım!",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Selim, onlar ölü. Liderler zor kararlar verir. Kendini affet.", next: "scene_selim_lead", effect: {umut: 2, guven: 2} },
+                    { label: "Sen onları ölüme terk edip kaçan bir korkaksın Selim. Bu suçluluğu silahın yap!", next: "scene_selim_guilt", effect: {karanlik: 3, guven: -3} }
+                ]
+            },
+            "scene_selim_lead": {
+                speaker: "SELİM",
+                text: "Sen de... Sen de kendi karargahında zor kararlar verdin değil mi Komutan? Liderliğin yükü bu demek. Sisin oyununa gelmeyeceğim.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "Aynen öyle. Şimdi toparlan, hedefe az kaldı.", next: "scene_tower_arrival" }
+                ]
+            },
+            "scene_selim_guilt": {
+                speaker: "SELİM",
+                text: "Korkak... Evet, korkağım. Ama merhamet etmeyen bir korkak. Hayatta kalmak için ne kadar pisleşmem gerekiyorsa o kadar pisleşeceğim. Duygular birer hatadır.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "İşte görmek istediğim rasyonel zeka. Yürüyelim.", next: "scene_tower_arrival" }
+                ]
+            },
+
+            // --- DÜĞÜM NOKTASI 3 (FAZ 3 BİTİŞİ): KIZIL KULE ---
+            "scene_tower_arrival": {
+                speaker: "SİSTEM",
+                text: "Sisi yarıp geçmeyi başardınız. Gördüğünüz halüsinasyonlar zihninizi ya çelik gibi sertleştirdi ya da paramparça etti. Gözünüzü açtığınızda, gökyüzünü delip geçen, etrafında şimşekler çakan o devasa yapı karşınızda duruyor: KIZIL KULE.",
+                activeChar: null,
+                choices: [
+                    { label: "Burası sonun başlangıcı. Kuleye giriyoruz.", next: "scene_phase4_start", effect: {umut: 1} }
+                ]
+            },
+
+            // --- FAZ 4 BAŞLANGICI: KIZIL KULE BASKINI ---
+            "scene_phase4_start": {
+                speaker: "SİSTEM",
+                text: "Kızıl Kule'nin devasa obsidyen kapılarının önündesiniz. Kapının etrafında uykuya yatmış onlarca Zeon Muhafızı var. Zirveye giden yol bu kapının ardında.",
+                activeChar: null,
+                choices: [
+                    { label: "Selim, bizi doğrudan kapının ardına, içeriye ışınla! (Gizlilik)", next: "scene_tower_stealth", effect: {guven: 2} },
+                    { label: "Uyuyan muhafızlara acımak yok! Yavuz, Brock, kapıyı kırıyoruz! (Saldırı)", next: "scene_tower_assault", effect: {karanlik: 2, umut: 1} }
+                ]
+            },
+
+            // --- KULEYE GİRİŞ SEÇENEKLERİ ---
+            "scene_tower_stealth": {
+                speaker: "SELİM",
+                text: "(Burnundan kan süzülür) Mesafeyi ayarlıyorum... Şimdi! (Bir flaş patlar ve kendinizi muhafızları uyandırmadan devasa kulenin devasa iç avlusunda bulursunuz). Başardık... ama içerisi beklediğimden çok daha büyük.",
+                activeChar: "char-4",
+                choices: [
+                    { label: "İyi iş Selim. Silahlarınızı çekin, yukarı doğru çıkıyoruz.", next: "scene_tower_climb" }
+                ]
+            },
+            "scene_tower_assault": {
+                speaker: "BROCK",
+                text: "SÜRPRİZZZ! (Brock devasa obsidyen kapıya omuz atarak menteşelerinden söker. Yavuz uykudaki muhafızların arasına fırtına gibi dalarak hepsini saniyeler içinde doğrar).",
+                activeChar: "char-1",
+                choices: [
+                    { label: "Kusursuz bir katliamdı. Zirveye giden merdivenlere yönelin!", next: "scene_tower_climb" }
+                ]
+            },
+
+            // --- ZİRVEYE TIRMANIŞ VE GARDİYAN İLE KARŞILAŞMA ---
+            "scene_tower_climb": {
+                speaker: "SİSTEM",
+                text: "Sarmal merdivenleri tırmandıkça havadaki basınç artıyor. Zirveye sadece bir kat kalmışken, önünüze devasa, dört kollu, zırhı erimiş metallerden oluşan bir Zeon Gardiyanı çıkıyor. Çıkışı kapatmış durumda.",
+                activeChar: null,
+                choices: [
+                    { label: "Bunu normal silahlarla aşamayız! Selim, Yavuz, zayıf noktasını arayın!", next: "scene_guardian_fight", effect: {umut: 1} }
+                ]
+            },
+            "scene_guardian_fight": {
+                speaker: "YAVUZ",
+                text: "(Nefes nefese) Kılıcım zırhından sekiyor Komutan! Bu şey etten değil, saf Araf enerjisinden yapılmış. Bizi ezecek!",
+                activeChar: "char-3",
+                choices: [
+                    { label: "Barbaros! İçindeki o canavarı serbest bırakmanın tam vakti! Parçala şunu!", next: "scene_barbaros_twist" }
+                ]
+            },
+
+            // --- BÜYÜK TERS KÖŞE (PLOT TWIST): İLAHİ VARLIK UYANIYOR ---
+            "scene_barbaros_twist": {
+                speaker: "SİSTEM",
+                text: "[ZAMAN YAVAŞLAR] Barbaros öne çıkar. Gözlerinden beklediğiniz o siyah, şeytani duman çıkmaz. Bunun yerine, gözleri ve ağzı kör edici, saf, renksiz bir ışıkla parlamaya başlar. Etraftaki yerçekimi aniden sıfırlanır.",
+                activeChar: "char-2",
+		changeImg: { id: "img-2", newSrc: "Aequitas.jpg" },
+                choices: [
+                    { label: "Barbaros..? Bu da ne böyle? Ne oluyor sana?!", next: "scene_entity_speaks" }
+                ]
+            },
+            "scene_entity_speaks": {
+                speaker: "ÇOK SESLİ, YANKILANAN BİR VARLIK",
+                text: "Siz faniler, karanlığı kavrayamadığınız için bana hep 'İblis' dediniz. Ben bir canavar değilim, Komutan. Ben 'Aequitas'. Ben evrensel teraziyim. Düzenin ve hiçliğin ilahi yargıcıyım.",
+                activeChar: "char-2",
+                choices: [
+                    { label: "Sen... kötü bir şey değil misin? Bizi yok etmeyecek misin?", next: "scene_entity_explains", effect: {umut: 3} },
+                    { label: "İblis veya Tanrı, fark etmez! Şu önümüzdeki Zeon'u yok et Terazi!", next: "scene_entity_judges", effect: {karanlik: 4, guven: -1} }
+                ]
+            },
+            "scene_entity_explains": {
+                speaker: "AEQUITAS (BARBAROS'UN BEDENİNDE)",
+                text: "İyilik ve kötülük, sadece sizin dar zihinlerinizin uydurduğu kavramlardır. Bu Zeon ırkı, evrenin terazisini bozdu. Taştılar ve yozlaştırdılar. Onlar bir hastalıktır... Ve ben de tedavisiyim.",
+                activeChar: "char-2",
+                choices: [
+                    { label: "O zaman teraziyi dengele. O gardiyanı aradan çıkar.", next: "scene_entity_erases" }
+                ]
+            },
+            "scene_entity_judges": {
+                speaker: "AEQUITAS (BARBAROS'UN BEDENİNDE)",
+                text: "Bana emir veremezsin anomali. Ama bu yaratığın varlığı denklemi bozuyor. Terazinin kefesi yeniden eşitlenecek.",
+                activeChar: "char-2",
+                choices: [
+                    { label: "(Geri adım at ve bu kozmik gücü izle)", next: "scene_entity_erases" }
+                ]
+            },
+            "scene_entity_erases": {
+                speaker: "SİSTEM",
+                text: "Barbaros (Aequitas) elini yavaşça kaldırır. Gardiyan saldırıya geçecekken aniden donup kalır. Kan yok, vahşet yok, çığlık yok. Dev Zeon Gardiyanı, saniyeler içinde sessizce cama dönüşür ve tuz buz olarak hiçliğe karışır. Silinmiştir.",
+                activeChar: null,
+                choices: [
+                    { label: "Bu... bu inanılmaz bir güçtü.", next: "scene_barbaros_returns" }
+                ]
+            },
+	    "scene_barbaros_returns": {
+                speaker: "BARBAROS",
+                text: "(Işık kaybolur, Barbaros dizlerinin üzerine çöker, derin nefesler alır). Gördünüz mü? O bir lanet değil... Komutan, benim taşıdığım şey evrenin yargıcıymış. Ben bir tapınağım.",
+                activeChar: "char-2",
+                changeImg: { id: "img-2", newSrc: "Barbaros.jpg" }, 
+                choices: [
+                    { label: "Bu yükü taşıyabildiğin için hayattayız kardeşim. Kalk ayağa.", next: "scene_apex_arrival", effect: {guven: 3, umut: 2} },
+                    { label: "Eğer o tanrıyı kontrol edebilirsek, kimse önümüzde duramaz.", next: "scene_apex_arrival", effect: {karanlik: 3} }
+                ]
+            },
+            "scene_barbaros_resist": {
+                speaker: "BARBAROS",
+                text: "(Acı içinde diz çöker) Sus! Benim adım Barbaros, ben bir A.E.G.I.S. askeriyim! (Derin nefesler alır). Başardım Komutan. Varlığı tekrar içime gömdüm. Şimdilik...",
+                activeChar: "char-2",
+                changeImg: { id: "img-2", newSrc: "Barbaros.jpg" }, // NORMAL BARBAROS RESMİNE GERİ DÖN VE divine-glow'U KALDIR
+                choices: [
+                    { label: "Büyük bir irade testiydi. Seninle gurur duyuyorum asker.", next: "scene_selim_hallucination" }
+                ]
+            },
+
+            // --- DÜĞÜM NOKTASI 4 (FAZ 4 BİTİŞİ): ZİRVE VE PORTAL ---
+            "scene_apex_arrival": {
+                speaker: "SİSTEM",
+                text: "Aequitas'ın yolu açmasıyla Kızıl Kule'nin en üst katına, Zirve Odası'na ulaştınız. Tam ortada, Dünya'ya (Ankara Karargahı'na) açılan, mavi renkte parlayan devasa bir yırtık/portal duruyor. Ancak portal dengesiz bir şekilde dalgalanıyor.",
+                activeChar: null,
+                choices: [
+                    { label: "Sonunda! Evi bulduk! Selim, şu portalı sabitle!", next: "scene_phase5_start" }
+                ]
+            },
+
+            // --- FAZ 5 BAŞLANGICI: ZİRVE VE PORTAL ---
+            "scene_phase5_start": {
+                speaker: "SİSTEM",
+                text: "Kızıl Kule'nin zirvesindesiniz. Etrafınızda uzay-zaman bükülüyor. Karşınızda Ankara'ya (Dünya'ya) açılan mavi bir portal var ama dengesizce titriyor. Aşağıdan ise binlerce Zeon avcısının ayak sesleri ve çığlıkları yükseliyor. Kuleyi sardılar!",
+                activeChar: null,
+                choices: [
+                    { label: "Selim, portalı sabitle! Yavuz, Brock, kapıyı tutun!", next: "scene_finale_stand" }
+                ]
+            },
+            "scene_finale_stand": {
+                speaker: "SELİM",
+                text: "(Konsolda kan ter içinde çalışır) Komutan! Portalın Dünya'ya açılabilmesi için Araf'ın frekansını kırması lazım. Ya muazzam bir enerji feda edilecek, ya da birimiz geride kalıp portalı içeriden mühürleyecek! Zamanımız yok, kapıyı kırıyorlar!",
+                activeChar: "char-4",
+                choices: [
+                    { label: "[NİHAİ KARARI VER VE KADERİNLE YÜZLEŞ]", next: "trigger_ending" } // Bu buton özel bir tetikleyicidir
+                ]
+            },
+
+            // ==========================================
+            // --- OYUN SONLARI (ENDINGS) ---
+            // ==========================================
+
+            // SON 1: HİÇLİKTE DELİLİK (GÜVEN ÇOK DÜŞÜKSE - TAMAMEN YALNIZ SON)
+            "ending_alone": {
+                speaker: "SİSTEM // KÖTÜ SON: HİÇLİKTE DELİLİK",
+                text: "Güven bağları çoktan kopmuştu. Panik anında Yavuz ve Selim birbirine düştü. Brock korkuyla Zeon sürüsünün arasına daldı ve parçalandı. Barbaros'un bedeni portalın basıncına dayanamayıp küle dönüştü. Mavi portal kapandı.",
+                activeChar: null,
+                choices: [
+                    { label: "Ben...", next: "ending_alone_2" }
+                ]
+            },
+            "ending_alone_2": {
+                speaker: "SİSTEM",
+                text: "Herkes öldü. Zeon sürüsü sana dokunmadı, çünkü Araf'ın karanlığı zihnini çoktan ele geçirmişti. Zirvenin soğuk, siyah zemininde dizlerinin üzerine çöktün. Başaramadın. Evrenin bu unutulmuş çöplüğünde artık sonsuza dek... yapayalnızsın.",
+                activeChar: null,
+                choices: [
+                    { label: "[OYUN BİTTİ - YENİDEN BAŞLA]", next: "start" }
+                ]
+            },
+
+            // SON 2: İKİ YARGIÇ (KARANLIK ÇOK YÜKSEKSE - VARLIKLA BAŞ BAŞA KALINAN SON)
+            "ending_aequitas": {
+                speaker: "SİSTEM // KARANLIK SON: İKİ YARGIÇ",
+                text: "Gözlerini kapatıp Araf'ın karanlığını kucakladın. İnsanlığın zayıflıklarına geri dönmek sana anlamsız geldi. Selim, Yavuz ve Brock'u zorla portaldan fırlatıp Dünya'ya gönderdin ve geçidi kapattın.",
+                activeChar: null,
+                changeImg: { id: "img-2", newSrc: "Aequitas.jpg" }, // BU SONDA VARLIK KALICI OLARAK UYANIR
+                choices: [
+                    { label: "Barbaros... Hayır, Aequitas. Yanıma gel.", next: "ending_aequitas_2" }
+                ]
+            },
+            "ending_aequitas_2": {
+                speaker: "AEQUITAS (BARBAROS)",
+                text: "(Barbaros'un bedeni bembeyaz bir ışıkla parlayarak yanına gelir) 'Doğru seçimi yaptın Komutan. İnsanlık kusurludur. Ancak sen ve ben... Bu hiçlik boyutunu yeniden şekillendirecek iki ilahi terazi olacağız.' Sen ve Varlık, Araf'ın yeni tanrıları olarak kulede yalnız kaldınız.",
+                activeChar: "char-2",
+                choices: [
+                    { label: "[OYUN BİTTİ - YENİDEN BAŞLA]", next: "start" }
+                ]
+            },
+
+            // SON 3: MUTLAK FEDAKARLIK (ORTALAMA PUAN - KAHRAMANCA YALNIZLIK)
+            "ending_sacrifice": {
+                speaker: "SİSTEM // ACI TATLI SON: MUTLAK FEDAKARLIK",
+                text: "Portalın manuel olarak açık tutulması gerekiyordu. Komutan olarak son emrini verdin. Selim, Yavuz, Brock ve Barbaros'u portaldan geçmeye zorladın. Sana son kez, yaşlı gözlerle selam vererek Dünya'ya döndüler.",
+                activeChar: null,
+                choices: [
+                    { label: "Gittiler... Görev tamamlandı.", next: "ending_sacrifice_2" }
+                ]
+            },
+            "ending_sacrifice_2": {
+                speaker: "SİSTEM",
+                text: "Portal arkalarından kapandı. Zeon sürüsü kapıyı kırıp içeri girdiğinde, sen silahını çekip gülümsüyordun. Ankara kurtuldu ama sen Araf'ın zirvesinde, ekibin için kendini feda eden yalnız bir efsane olarak kaldın.",
+                activeChar: null,
+                choices: [
+                    { label: "[OYUN BİTTİ - YENİDEN BAŞLA]", next: "start" }
+                ]
+            },
+
+            // SON 4: KIZIL ŞAFAK (UMUT VE GÜVEN YÜKSEKSE - İYİ SON)
+            "ending_good": {
+                speaker: "SİSTEM // İYİ SON: KIZIL ŞAFAK",
+                text: "Aylarca süren cehenneme rağmen ekibin sana olan güveni sarsılmazdı. Selim portalın kodlarını zihninden okudu, Yavuz ve Brock kusursuz bir uyumla kapıyı tuttu. Barbaros, Aequitas'ın enerjisiyle portalı sabitledi!",
+                activeChar: null,
+                choices: [
+                    { label: "Bunu hep birlikte başaracağız! Atlayın!", next: "ending_good_2" }
+                ]
+            },
+            "ending_good_2": {
+                speaker: "SİSTEM",
+                text: "Beşiniz aynı anda parlayan mavi ışığın içine atladınız. Kızıl Kule arkanızda çökerken, gözlerinizi A.E.G.I.S. Ankara Karargahı'nın soğuk ama güvenli beton zemininde açtınız. Başardınız Komutan. İnsanlık kazandı, hayatta kaldınız.",
+                activeChar: null,
+                choices: [
+                    { label: "[OYUN BİTTİ - YENİDEN BAŞLA]", next: "start" }
+                ]
+            }
+        };
+        // ==========================================
+        // --- MOTOR DÜZENLEMELERİ (FİNALİ TETİKLEME) ---
+        // ==========================================
+
+        function checkEndings() {
+            let finalSceneKey = "";
+            
+            // Başlangıç Güven: 50, Başlangıç Karanlık: 0, Başlangıç Umut: 50
+            // Oyuncunun seçimlerine göre sonu belirliyoruz:
+            
+            if (state.guven <= 45) {
+                // Güven sarsılmışsa doğrudan Delilik ve Yalnızlık sonu (Kötü Son)
+                finalSceneKey = "ending_alone";
+            } 
+            else if (state.karanlik >= 15) {
+                // Karanlık sınırını aştıysa Aequitas ile Tanrı olma sonu (Güç/Yalnızlık Sonu)
+                finalSceneKey = "ending_aequitas";
+            } 
+            else if (state.umut >= 55 && state.guven >= 55) {
+                // Ekip mükemmel uyumdaysa herkes kurtulur (İyi Son)
+                finalSceneKey = "ending_good";
+            } 
+            else {
+                // Hiçbiri değilse Ortalama Son (Fedakarlık Sonu)
+                finalSceneKey = "ending_sacrifice";
+            }
+
+            renderScene(finalSceneKey);
+        }
+
+        // --- SAHNEYİ ÇİZEN ANA FONKSİYON (NİHAİ SÜRÜM) ---
+        function renderScene(sceneKey) {
+            // Eğer oyuncu finale ulaşma butonuna bastıysa, istatistikleri hesapla ve sonu getir
+            if (sceneKey === "trigger_ending") {
+                checkEndings();
+                return;
+            }
+
+            let scene = story[sceneKey];
+            if(!scene) return;
+
+            let currentSpeaker = scene.speaker;
+
+            // --- RESİM DEĞİŞTİRME TETİKLEYİCİSİ (Aequitas Transform) ---
+            if(scene.changeImg) {
+                // Güvenlik için id formatını alıyoruz (char-2 veya img-2 gelebilir)
+                let suffix = scene.changeImg.id.split('-')[1]; 
+                let imgId = 'img-' + suffix;
+                let targetImg = document.getElementById(imgId);
+                
+                if(targetImg) {
+                    targetImg.src = scene.changeImg.newSrc; // Yeni resmi yükle
+                    
+                    let parentDiv = targetImg.parentElement;
+                    // Eğer Aequitas formundaysak, ilahi parlama efektini uygula
+                    if(sceneKey === "scene_barbaros_twist" || sceneKey === "ending_aequitas") {
+                        parentDiv.classList.add('divine-glow');
+                    } else if(sceneKey === "scene_barbaros_resist" || scene.changeImg.newSrc === "Barbaros.jpg") {
+                        // Normal Barbaros'a dönülüyorsa parlama efektini kaldır
+                        parentDiv.classList.remove('divine-glow');
+                    }
+                }
+            }
+            // -----------------------------------------------------------
+
+            // --- KİMLİK AÇIĞA ÇIKARMA (REVEAL) KONTROLÜ ---
+            if(scene.reveal) {
+                let charDiv = document.getElementById(scene.reveal.id);
+                charDiv.classList.add('revealed'); 
+                let imgId = 'img-' + scene.reveal.id.split('-')[1];
+                document.getElementById(imgId).src = scene.reveal.img;
+                currentSpeaker = scene.reveal.name; 
+            }
+
+            // Metinleri ve Konuşmacıyı Güncelle
+            let speakerBox = document.getElementById('speaker');
+            speakerBox.innerText = currentSpeaker;
+            speakerBox.setAttribute('data-text', currentSpeaker); // Glitch efekti için
+            document.getElementById('dialogue').innerText = scene.text;
+
+            // Karakter Parlatması (Aktif konuşan)
+            document.querySelectorAll('.char-silhouette').forEach(c => c.classList.remove('active'));
+            if(scene.activeChar) {
+                document.getElementById(scene.activeChar).classList.add('active');
+            }
+
+            // Seçenekleri Bas
+            let choicesBox = document.getElementById('choices');
+            choicesBox.innerHTML = "";
+            
+            if(scene.choices) {
+                scene.choices.forEach(choice => {
+                    let btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.innerText = choice.label;
+                    btn.onclick = () => {
+                        // Seçim yapıldığında arka planda puanları hesapla
+                        if(choice.effect) {
+                            if(choice.effect.umut) state.umut += choice.effect.umut;
+                            if(choice.effect.karanlik) state.karanlik += choice.effect.karanlik;
+                            if(choice.effect.guven) state.guven += choice.effect.guven;
+                        }
+                        
+                        // İstatistikleri konsola yazdır (Test edebilmen için)
+                        console.log(`Umut: ${state.umut} | Karanlık: ${state.karanlik} | Güven: ${state.guven}`);
+                        
+                        // Sonraki sahneye geç
+                        renderScene(choice.next);
+                    };
+                    choicesBox.appendChild(btn);
+                });
+            }
+        }
+        function startGame() {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'flex';
+            renderScene("start"); 
+        }
+    </script>
+</body>
+</html>

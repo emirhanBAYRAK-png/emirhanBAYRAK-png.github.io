@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WTF CHESS V1.8</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --bg: #030712; --board-dark: #1f2937; --board-light: #4b5563;
+            --neon-blue: #38bdf8; --neon-red: #ef4444; --neon-green: #22c55e; --neon-orange: #f97316;
+            --glass: rgba(17, 24, 39, 0.85); --border: rgba(255,255,255,0.08);
+            --font: 'Inter', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #111827 0%, var(--bg) 100%);
+            color: #f3f4f6; font-family: var(--font);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; margin: 0; padding-top: 10px; overflow: hidden;
+        }
+
+        h1 { margin: 0; font-size: 2.2rem; font-weight: 800; text-transform: uppercase; letter-spacing: -1px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.6); }
+        .subtitle { color: #9ca3af; margin-bottom: 15px; font-size: 0.9rem; font-style: italic; }
+
+        #game-container { display: flex; gap: 20px; perspective: 1200px; }
+
+        /* Modern Tahta */
+        #board {
+            display: grid; grid-template-columns: repeat(8, 70px); grid-template-rows: repeat(8, 70px);
+            border: 8px solid #0f172a; border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.9), 0 0 40px rgba(56, 189, 248, 0.05);
+            background-color: #030712; position: relative; transition: filter 0.2s;
+        }
+
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-3px, 0, 0); } 20%, 80% { transform: translate3d(5px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-7px, 0, 0); } 40%, 60% { transform: translate3d(7px, 0, 0); } }
+
+        .flashbang-active { filter: brightness(20) contrast(0) !important; pointer-events: none; transition: filter 0.1s; }
+
+        .square {
+            width: 70px; height: 70px; display: flex; justify-content: center; align-items: center;
+            font-size: 45px; cursor: pointer; user-select: none; position: relative; transition: background-color 0.2s;
+            overflow: visible;
+        }
+        
+        .light { background-color: var(--board-light); }
+        .dark { background-color: var(--board-dark); }
+        .selected { background-color: rgba(34, 197, 94, 0.3) !important; box-shadow: inset 0 0 25px rgba(34, 197, 94, 0.6); }
+        
+        .valid-move::after { content: ''; position: absolute; width: 16px; height: 16px; background-color: rgba(0, 0, 0, 0.4); border-radius: 50%; transition: scale 0.2s; }
+        .valid-capture::after { content: ''; position: absolute; width: 60px; height: 60px; border: 3px solid var(--neon-red); border-radius: 50%; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); background: transparent; transition: scale 0.2s; }
+        .square:hover::after { scale: 1.2; }
+
+        /* Taşlar */
+        .piece { 
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 10; position: relative;
+            filter: drop-shadow(0 8px 6px rgba(0,0,0,0.7));
+            will-change: transform;
+        }
+        .piece-move { z-index: 100 !important; }
+
+        .white-piece { color: #f8fafc; text-shadow: 0 0 8px rgba(255,255,255,0.5), 0 0 15px rgba(56, 189, 248, 0.5); }
+        .black-piece { color: #020617; text-shadow: 0 0 4px rgba(255,255,255,0.1), 0 0 15px rgba(239, 68, 68, 0.3); }
+        .zombie-piece { color: #052e16 !important; text-shadow: 0 0 10px #22c55e, 0 0 20px #166534 !important; filter: drop-shadow(0 2px 8px #22c55e); }
+
+        /* ========================================= */
+        /* SAF CSS ÇEVRE VE VFX EFEKTLERİ (EMOJİSİZ) */
+        /* ========================================= */
+        
+        /* 1. Lav Zemini */
+        .lava-floor {
+            background: linear-gradient(45deg, #7f1d1d, #dc2626, #991b1b) !important;
+            background-size: 200% 200%;
+            animation: lavaPulse 3s ease infinite;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 15px rgba(239, 68, 68, 0.6);
+        }
+        @keyframes lavaPulse { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; filter: brightness(1.3); } 100% { background-position: 0% 50%; } }
+
+        /* 2. Ejderha İzi (Boss Karesi) */
+        .dragon-tile {
+            background-color: #0a0505 !important;
+            box-shadow: inset 0 0 30px #000, 0 0 20px rgba(220, 38, 38, 0.4);
+            position: relative;
+        }
+        .dragon-tile::after {
+            content: ''; position: absolute; width: 40px; height: 40px;
+            background: radial-gradient(circle, #ef4444 10%, transparent 60%);
+            border-radius: 50%; box-shadow: 0 0 20px #ef4444;
+            animation: dragonBreath 2s infinite alternate;
+        }
+        @keyframes dragonBreath { to { transform: scale(1.3); filter: brightness(1.5); } }
+
+        /* 3. Portallar */
+        .portal-blue { box-shadow: inset 0 0 30px #0ea5e9, inset 0 0 10px #fff; border-radius: 10px; animation: pPulse 1.5s infinite alternate; }
+        .portal-orange { box-shadow: inset 0 0 30px #f97316, inset 0 0 10px #fff; border-radius: 10px; animation: pPulse 1.5s infinite alternate; }
+        @keyframes pPulse { to { transform: scale(0.95); } }
+
+        /* FX Katmanı */
+        .fx-layer { position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: none; z-index: 20; }
+
+        /* Patlama (Saf CSS) */
+        .fx-explosion {
+            width: 100%; height: 100%; border-radius: 50%;
+            background: radial-gradient(circle, #fff 0%, #facc15 20%, #ef4444 50%, transparent 80%);
+            animation: explodeCss 0.6s ease-out forwards;
+        }
+        @keyframes explodeCss { 0% { transform: scale(0); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.9; } 100% { transform: scale(2.5); opacity: 0; } }
+
+        /* Yıldırım (Saf CSS) */
+        .fx-lightning {
+            width: 8px; height: 250px; background: #fff;
+            box-shadow: 0 0 20px #0ea5e9, 0 0 40px #38bdf8;
+            transform-origin: bottom; position: absolute; bottom: 35px;
+            animation: lightningCss 0.5s ease-out forwards;
+        }
+        @keyframes lightningCss { 0% { transform: scaleY(0); opacity: 1; } 10% { transform: scaleY(1); filter: brightness(2); } 100% { transform: scaleY(1); opacity: 0; } }
+
+        /* Sniper Lazer (Saf CSS) */
+        .fx-sniper {
+            width: 8px; height: 8px; background: #ef4444; border-radius: 50%;
+            box-shadow: 0 0 15px #ef4444, 0 0 30px #ef4444; position: relative;
+        }
+        .fx-sniper::after {
+            content: ''; position: absolute; width: 40px; height: 40px;
+            border: 2px solid rgba(239, 68, 68, 0.6); border-radius: 50%;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            animation: sniperLock 0.6s infinite alternate;
+        }
+        @keyframes sniperLock { to { transform: translate(-50%, -50%) scale(0.5); border-color: #ef4444; background: rgba(239, 68, 68, 0.2); } }
+
+        /* UFO Işını (Saf CSS) */
+        .fx-ufo-beam {
+            width: 70px; height: 250px;
+            background: linear-gradient(to bottom, rgba(34, 197, 94, 0.9), transparent);
+            clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+            position: absolute; bottom: 0;
+            animation: beamFade 1.5s forwards;
+        }
+        @keyframes beamFade { 0% { opacity: 0; } 15% { opacity: 1; filter: brightness(1.5); } 85% { opacity: 1; } 100% { opacity: 0; } }
+        .abducted { animation: pullUp 1.2s forwards ease-in; }
+        @keyframes pullUp { to { transform: translateY(-150px) scale(0); filter: brightness(3); opacity: 0; } }
+
+        /* Kara Delik (Saf CSS) */
+        .fx-blackhole {
+            width: 210px; height: 210px; /* 3x3 kareyi kaplar */
+            background: #000; border-radius: 50%; position: absolute;
+            box-shadow: 0 0 50px #6d28d9, inset 0 0 30px #4c1d95;
+            animation: blackholeSuck 1.2s ease-in forwards; z-index: 50;
+        }
+        @keyframes blackholeSuck { 0% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1.2) rotate(180deg); opacity: 1; } 100% { transform: scale(0) rotate(360deg); opacity: 0; } }
+
+        /* ========================================= */
+
+        /* Arayüz */
+        #sidebar { 
+            width: 380px; background: var(--glass); backdrop-filter: blur(15px);
+            padding: 15px; border-radius: 12px; border: 1px solid var(--border);
+            display: flex; flex-direction: column; box-shadow: 0 20px 30px rgba(0,0,0,0.8);
+        }
+        #log { 
+            flex-grow: 1; height: 440px; overflow-y: auto; background: rgba(0,0,0,0.4);
+            padding: 12px; border-radius: 8px; color: #d1d5db; margin-bottom: 10px;
+            font-size: 13px; font-family: monospace; line-height: 1.6; scroll-behavior: smooth;
+            border-left: 2px solid var(--border);
+        }
+        .log-entry { margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 5px; animation: entryFade 0.2s forwards; }
+        @keyframes entryFade { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .wtf-event { color: var(--neon-red); font-weight: 800; text-shadow: 0 0 5px rgba(239, 68, 68, 0.4); }
+        .ai-event { color: #9ca3af; font-style: italic; }
+        
+        .status-box { 
+            text-align: center; font-weight: 800; font-size: 15px; margin-bottom: 12px; padding: 12px;
+            background: #000; border-radius: 6px; text-transform: uppercase; letter-spacing: 1.5px;
+            border: 1px solid var(--border); box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>WTF CHESS</h1>
+    <p class="subtitle">V1.8</p>
+    
+    <div id="game-container">
+        <div id="board"></div>
+        <div id="sidebar">
+            <div class="status-box">TUR: <span id="turn-counter" style="color: var(--neon-green);">1 (SENİN SIRAN)</span></div>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Emojiler tamamen kaldırıldı. Sadece satranç ikonları kaldı.
+        const PIECES = { 
+            'wK':'♚', 'wQ':'♛', 'wR':'♜', 'wB':'♝', 'wN':'♞', 'wP':'♟', 
+            'bK':'♚', 'bQ':'♛', 'bR':'♜', 'bB':'♝', 'bN':'♞', 'bP':'♟', 
+            'ZO':'♟' 
+        };
+        const VALUES = { 'P': 10, 'N': 30, 'B': 30, 'R': 50, 'Q': 90, 'K': 10000, 'ZO': 5 };
+        
+        let board = [
+            ['bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR'],
+            ['bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP'],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP'],
+            ['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR']
+        ];
+
+        let turnCount = 1; let isPlayerTurn = true; let selectedSquare = null; let validMovesForSelected = [];
+        let isAnimating = false; let mines = []; let portals = { blue: null, orange: null }; let gameOver = false;
+        let lastChaosEvent = null;
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        function getValidMoves(r, c, b) {
+            let piece = b[r][c];
+            if (!piece || piece === 'DR' || piece === 'LV' || piece === 'ZO') return [];
+            let color = piece[0]; let type = piece[1]; let moves = [];
+
+            function addIfValid(nr, nc, isCaptureOnly = false, isMoveOnly = false) {
+                if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                    let target = b[nr][nc];
+                    if (target === '') {
+                        if (!isCaptureOnly) moves.push({r: nr, c: nc, capture: false}); return true;
+                    } else if (target[0] !== color && target !== 'DR' && target !== 'LV') { 
+                        if (!isMoveOnly) moves.push({r: nr, c: nc, capture: true}); return false;
+                    }
+                }
+                return false;
+            }
+
+            if (type === 'P') {
+                let dir = color === 'w' ? -1 : 1; let startRow = color === 'w' ? 6 : 1;
+                if (addIfValid(r + dir, c, false, true) && r === startRow) addIfValid(r + (dir * 2), c, false, true);
+                addIfValid(r + dir, c - 1, true, false); addIfValid(r + dir, c + 1, true, false);
+            } 
+            else if (type === 'N') { [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(j => addIfValid(r + j[0], c + j[1])); }
+            else if (type === 'K') { [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(s => addIfValid(r + s[0], c + s[1])); }
+            else {
+                let dirs = [];
+                if (type === 'R' || type === 'Q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+                if (type === 'B' || type === 'Q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+                dirs.forEach(d => { let nr = r + d[0], nc = c + d[1]; while(addIfValid(nr, nc)) { nr += d[0]; nc += d[1]; } });
+            }
+            return moves;
+        }
+
+        // --- Geliştirilmiş Domsal Çizim (Harita Objeleri Sınıf Olarak Atanır) ---
+        function drawBoard() {
+            const boardDiv = document.getElementById('board'); boardDiv.innerHTML = ''; 
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.id = `sq-${row}-${col}`;
+                    
+                    if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) square.classList.add('selected');
+                    
+                    if (isPlayerTurn && !gameOver) {
+                        let isValid = validMovesForSelected.find(m => m.r === row && m.c === col);
+                        if (isValid) { if (isValid.capture) square.classList.add('valid-capture'); else square.classList.add('valid-move'); }
+                    }
+
+                    // Dinamik Harita Sınıfları (Emoji Yerine)
+                    const pieceStr = board[row][col];
+                    if (pieceStr === 'LV') square.classList.add('lava-floor');
+                    if (pieceStr === 'DR') square.classList.add('dragon-tile');
+                    if (portals.blue && portals.blue.r === row && portals.blue.c === col) square.classList.add('portal-blue');
+                    if (portals.orange && portals.orange.r === row && portals.orange.c === col) square.classList.add('portal-orange');
+
+                    square.onclick = () => handleSquareClick(row, col);
+
+                    // Sadece gerçek taşlar için span oluşturulur
+                    if (pieceStr !== '' && pieceStr !== 'LV' && pieceStr !== 'DR') {
+                        const pieceSpan = document.createElement('span');
+                        pieceSpan.innerText = PIECES[pieceStr];
+                        pieceSpan.className = 'piece';
+                        pieceSpan.id = `piece-${row}-${col}`;
+                        
+                        if (pieceStr === 'ZO') pieceSpan.classList.add('zombie-piece'); 
+                        else pieceSpan.classList.add(pieceStr.startsWith('w') ? 'white-piece' : 'black-piece');
+                        square.appendChild(pieceSpan);
+                    }
+
+                    const fxLayer = document.createElement('div'); fxLayer.className = 'fx-layer'; fxLayer.id = `fx-${row}-${col}`;
+                    square.appendChild(fxLayer); boardDiv.appendChild(square);
+                }
+            }
+        }
+
+        async function handleSquareClick(row, col) {
+            if (isAnimating || !isPlayerTurn || gameOver) return; 
+            const clickedPiece = board[row][col];
+
+            if (!selectedSquare) {
+                if (clickedPiece && clickedPiece.startsWith('w')) { selectedSquare = { row, col }; validMovesForSelected = getValidMoves(row, col, board); drawBoard(); }
+            } else {
+                if (selectedSquare.row === row && selectedSquare.col === col) { selectedSquare = null; validMovesForSelected = []; drawBoard(); return; }
+                let validMove = validMovesForSelected.find(m => m.r === row && m.c === col);
+                
+                if (validMove) await executeMove(selectedSquare.row, selectedSquare.col, row, col);
+                else if (clickedPiece && clickedPiece.startsWith('w')) { selectedSquare = { row, col }; validMovesForSelected = getValidMoves(row, col, board); drawBoard(); }
+            }
+        }
+
+        async function executeMove(fromR, fromC, toR, toC) {
+            isAnimating = true; let movingPiece = board[fromR][fromC]; let capturedPiece = board[toR][toC];
+            
+            let movingPieceEl = document.getElementById(`piece-${fromR}-${fromC}`);
+            if(movingPieceEl) {
+                movingPieceEl.classList.add('piece-move');
+                let diffX = (toC - fromC) * 70; let diffY = (toR - fromR) * 70;
+                movingPieceEl.style.transform = `translate(${diffX}px, ${diffY}px)`;
+                await sleep(300); 
+            }
+            
+            board[toR][toC] = movingPiece; board[fromR][fromC] = '';
+            selectedSquare = null; validMovesForSelected = []; drawBoard(); 
+            
+            addLog(`${isPlayerTurn ? "Sen" : "AI"} hamle yaptı.`);
+            if (capturedPiece === 'wK' || capturedPiece === 'bK') { checkGameOver(); return; }
+            await sleep(200); 
+
+            let mineIndex = mines.findIndex(m => m.r === toR && m.c === toC);
+            if(mineIndex > -1) {
+                await playCssFx(toR, toC, 'fx-explosion'); 
+                board[toR][toC] = ''; mines.splice(mineIndex, 1); addLog(`💥 Mayın patladı!`); drawBoard(); await sleep(300);
+            } 
+            else if (portals.blue && portals.blue.r === toR && portals.blue.c === toC && portals.orange) {
+                board[portals.orange.r][portals.orange.c] = movingPiece; board[toR][toC] = ''; addLog(`🌀 Işınlanma!`); drawBoard(); await sleep(300);
+            } 
+            else if (portals.orange && portals.orange.r === toR && portals.orange.c === toC && portals.blue) {
+                board[portals.blue.r][portals.blue.c] = movingPiece; board[toR][toC] = ''; addLog(`🌀 Işınlanma!`); drawBoard(); await sleep(300);
+            }
+
+            checkGameOver(); if (gameOver) return;
+
+            isPlayerTurn = !isPlayerTurn; updateStatus();
+            if (isPlayerTurn) {
+                turnCount++;
+                if (turnCount % 2 === 0) await triggerChaos();
+            } else {
+                isAnimating = false; setTimeout(makeAIMove, 500);
+            }
+            if(!gameOver) { isAnimating = false; drawBoard(); }
+        }
+
+        async function makeAIMove() {
+            if (gameOver) return; isAnimating = true; addLog("🤖 AI Hamle Arıyor...", false, true);
+            let bestScore = -Infinity; let bestMove = null; let allMoves = [];
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(board[r][c] && board[r][c].startsWith('b')) {
+                let moves = getValidMoves(r, c, board); moves.forEach(m => allMoves.push({ from: {r,c}, to: {r: m.r, c: m.c} }));
+            }
+            if (allMoves.length === 0) { addLog("AI pes etti!", true); isPlayerTurn = true; updateStatus(); isAnimating = false; return; }
+
+            allMoves.forEach(move => {
+                let score = 0; let targetPiece = board[move.to.r][move.to.c];
+                if (targetPiece) score += VALUES[targetPiece[1]] || 0;
+                let distToCenter = Math.abs(3.5 - move.to.r) + Math.abs(3.5 - move.to.c);
+                score -= (distToCenter * 0.5); score += Math.random();
+                if (score > bestScore) { bestScore = score; bestMove = move; }
+            });
+            await executeMove(bestMove.from.r, bestMove.from.c, bestMove.to.r, bestMove.to.c);
+        }
+
+        function shakeBoard() { const b = document.getElementById('board'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+        
+        // --- Emojisiz Saf CSS Oynatıcı ---
+        async function playCssFx(row, col, fxClass, doShake = true) {
+            if(doShake) shakeBoard(); const fx = document.getElementById(`fx-${row}-${col}`);
+            if(fx) { fx.innerHTML = `<div class="${fxClass}"></div>`; await sleep(800); fx.innerHTML = ''; }
+        }
+
+        function checkGameOver() {
+            let wk=false, bk=false;
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) { if(board[r][c]=='wK') wk=true; if(board[r][c]=='bK') bk=true; }
+            if(!wk && !bk) { addLog("☠️ İKİ ŞAH DA ÖLDÜ! BERABERE!", true); gameOver = true; }
+            else if(!wk) { addLog("💀 BEYAZ ŞAH DÜŞTÜ! YAPAY ZEKA KAZANDI!", true); gameOver = true; }
+            else if(!bk) { addLog("🏆 SİYAH ŞAH DÜŞTÜ! SEN KAZANDIN!", true); gameOver = true; }
+            if(gameOver) isAnimating = false;
+        }
+
+        // ==========================================
+        // 🌪️ KAOS MOTORU
+        // ==========================================
+        async function triggerChaos() {
+            addLog("⚠️ KAOS TETİKLENDİ!", true);
+            const events = [
+                e_ufo, e_mine, e_dragon, e_smite, e_portals, e_blackHole, e_earthquake, e_tornado, 
+                e_lava, e_flashbang, e_gank, e_duel, e_communism, e_tax, e_zombies, e_trojan, 
+                e_spy, e_glitch, e_sniper, e_vipShield
+            ];
+            let available = events.filter(e => e !== lastChaosEvent);
+            let chosen = available[Math.floor(Math.random() * available.length)];
+            await chosen(); lastChaosEvent = chosen; drawBoard(); checkGameOver();
+        }
+
+        function getRndEmpty() {
+            let empty = []; for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(board[r][c]==='') empty.push({r,c});
+            return empty.length ? empty[Math.floor(Math.random()*empty.length)] : null;
+        }
+        function getRndPiece(condition) {
+            let pts = []; 
+            for(let r=0; r<8; r++) for(let c=0; c<8; c++) { let p = board[r][c]; if(p && (p.startsWith('w') || p.startsWith('b')) && condition(p)) pts.push({r,c, p:p}); }
+            return pts.length ? pts[Math.floor(Math.random()*pts.length)] : null;
+        }
+
+        async function e_ufo() { 
+            let t = getRndPiece(p => p[1]!=='K'); 
+            if(t) { 
+                addLog(`🛸 UFO bir taşı çekiyor!`, true); 
+                const fx = document.getElementById(`fx-${t.r}-${t.c}`);
+                if(fx) fx.innerHTML = '<div class="fx-ufo-beam"></div>'; // Neon Işın
+                document.getElementById(`piece-${t.r}-${t.c}`)?.classList.add('abducted'); 
+                await sleep(1500); board[t.r][t.c]=''; 
+            } 
+        }
+        async function e_mine() { let t = getRndEmpty(); if(t) { mines.push(t); addLog(`⚠️ Gizli mayın döşendi!`, true); await sleep(300); } }
+        async function e_dragon() { let r = Math.floor(Math.random()*8), c = Math.floor(Math.random()*8); addLog(`🐉 Boss Karesi Oluştu!`, true); await playCssFx(r,c,'fx-explosion'); board[r][c]='DR'; }
+        async function e_smite() { let t = getRndPiece(p => p[1]!=='K'); if(t) { addLog(`⚡ Yıldırım düştü!`, true); await playCssFx(t.r,t.c,'fx-lightning'); board[t.r][t.c]=''; } }
+        async function e_portals() { portals.blue = getRndEmpty(); portals.orange = getRndEmpty(); shakeBoard(); addLog(`🌌 Portallar açıldı!`, true); await sleep(600); }
+        async function e_blackHole() { 
+            let r = Math.floor(Math.random()*6)+1, c = Math.floor(Math.random()*6)+1; 
+            addLog(`🌀 KARA DELİK! [${r},${c}] etrafı yutuldu!`, true); shakeBoard();
+            const fx = document.getElementById(`fx-${r}-${c}`);
+            if(fx) { fx.innerHTML = '<div class="fx-blackhole"></div>'; await sleep(1200); }
+            for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) board[r+i][c+j] = ''; 
+        }
+        async function e_earthquake() { addLog(`🌋 DEPREM! D ve E sütunları çöktü!`, true); shakeBoard(); await sleep(500); shakeBoard(); for(let r=0; r<8; r++) { board[r][3]=''; board[r][4]=''; await playCssFx(r,3,'fx-explosion', false); } await sleep(500); }
+        async function e_tornado() { addLog(`🌪️ KASIRGA! 4 taşın yeri karıştı!`, true); shakeBoard(); let p1=getRndPiece(p=>p), p2=getRndPiece(p=>p), p3=getRndPiece(p=>p), p4=getRndPiece(p=>p); if(p1&&p2&&p3&&p4) { let temp=board[p1.r][p1.c]; board[p1.r][p1.c]=board[p2.r][p2.c]; board[p2.r][p2.c]=board[p3.r][p3.c]; board[p3.r][p3.c]=board[p4.r][p4.c]; board[p4.r][p4.c]=temp; } await sleep(800); }
+        async function e_lava() { addLog(`🔥 LAV ZEMİNİ! Yerler eriyor...`, true); for(let i=0; i<5; i++) { let t=getRndEmpty(); if(t) board[t.r][t.c]='LV'; } await sleep(600); }
+        async function e_flashbang() { addLog(`💣 RUSH B! Flaşbombası patladı!`, true); const b = document.getElementById('board'); b.classList.add('flashbang-active'); await sleep(2000); b.classList.remove('flashbang-active'); }
+        async function e_gank() { let r = Math.floor(Math.random()*8); addLog(`💨 ORMAN BASKINI! ${r}. Satır ezildi!`, true); shakeBoard(); for(let c=0; c<8; c++) { board[r][c]=''; playCssFx(r,c,'fx-explosion', false); await sleep(100); } }
+        async function e_duel() { let w=getRndPiece(p=>p.startsWith('w')), b=getRndPiece(p=>p.startsWith('b')); if(w && b) { addLog(`🔫 DÜELLO! Yazı tura...`, true); await sleep(600); if(Math.random()>0.5){ board[w.r][w.c]=''; await playCssFx(w.r,w.c,'fx-explosion'); } else { board[b.r][b.c]=''; await playCssFx(b.r,b.c,'fx-explosion'); } } }
+        async function e_communism() { addLog(`☭ KOMÜNİZM! Artık herkes piyon!`, true); for(let r=0; r<8; r++) { for(let c=0; c<8; c++) { let p=board[r][c]; if(p && (p.startsWith('w') || p.startsWith('b')) && p[1]!=='K' && p[1]!=='P') { board[r][c] = p[0]+'P'; } } } await sleep(600); }
+        async function e_tax() { addLog(`💸 VERGİ! Şah'ın 2 taşına el konuldu.`, true); for(let i=0; i<2; i++) { let t=getRndPiece(p=>p.startsWith('w')&&p!=='wK'); if(t) { board[t.r][t.c]=''; await playCssFx(t.r,t.c,'fx-explosion', false); } } await sleep(500); }
+        async function e_zombies() { addLog(`🧟 ENFEKTE TAŞLAR! Salgın yayıldı.`, true); for(let i=0; i<3; i++) { let t=getRndEmpty(); if(t) board[t.r][t.c]='ZO'; } await sleep(600); }
+        async function e_trojan() { addLog(`🐴 TRUVA ATI! Siyah piyonlar sızdı!`, true); for(let i=0; i<3; i++) { let t=getRndEmpty(); if(t && t.r > 4) board[t.r][t.c]='bP'; } await sleep(600); }
+        async function e_spy() { let t=getRndPiece(p=>p==='wP'); if(t){ addLog(`🕵️ AJAN! Bir piyon taraf değiştirdi!`, true); board[t.r][t.c]='bP'; await sleep(600); } }
+        async function e_glitch() { let t=getRndPiece(p=>p.endsWith('P')); if(t){ addLog(`👾 GLITCH! Bir piyon mutasyona uğradı!`, true); await playCssFx(t.r,t.c,'fx-explosion'); board[t.r][t.c]=t.p[0]+'Q'; await sleep(300); } }
+        async function e_sniper() { let t=getRndPiece(p=>p[1]!=='K'); if(t){ addLog(`🎯 SNIPER! Kilitlendi!`, true); await playCssFx(t.r,t.c,'fx-sniper'); board[t.r][t.c]=''; await sleep(300); } }
+        async function e_vipShield() { addLog(`🛡️ VIP KALKAN! Şahlar herkesi itti!`, true); let kings = []; for(let r=0; r<8; r++) for(let c=0; c<8; c++) if(board[r][c] && board[r][c].endsWith('K')) kings.push({r,c}); kings.forEach(k => { for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) if((i!==0||j!==0) && k.r+i>=0 && k.r+i<8 && k.c+j>=0 && k.c+j<8) { board[k.r+i][k.c+j]=''; playCssFx(k.r+i,k.c+j,'fx-explosion', false); } }); shakeBoard(); await sleep(700); }
+
+        function updateStatus() {
+            const el = document.getElementById('turn-counter');
+            if (gameOver) { el.innerText = "OYUN BİTTİ!"; el.style.color = 'var(--neon-red)'; return; }
+            if (isPlayerTurn) { el.innerText = `${turnCount} (SENİN SIRAN)`; el.style.color = 'var(--neon-green)'; }
+            else { el.innerText = `${turnCount} (AI DÜŞÜNÜYOR...)`; el.style.color = 'var(--neon-orange)'; }
+        }
+
+        function addLog(msg, isWtf = false, isAI = false) {
+            const logDiv = document.getElementById('log'); const entry = document.createElement('div');
+            entry.className = `log-entry ${isWtf ? 'wtf-event' : ''} ${isAI ? 'ai-event' : ''}`;
+            entry.innerText = `> ${msg}`; logDiv.prepend(entry); logDiv.scrollTop = 0; 
+        }
+
+        drawBoard(); updateStatus(); addLog("Sistem Başlatıldı. Siyah Şahı yok et!");
+    </script>
+</body>
+</html>

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rev.Games | By Emirhan BAYRAK</title>
+    <style>
+        /* --- GELİŞMİŞ TEMA VE DEĞİŞKENLER --- */
+        :root {
+            --bg-deep: #030303;
+            --bg-panel: #0a0a0a;
+            --bg-card: #111111;
+            --text-main: #f0f0f0;
+            --text-dim: #888888;
+            --rev-red: #d90000;
+            --rev-red-glow: #ff1a1a;
+            --border-subtle: #222222;
+            --border-focus: #444444;
+        }
+
+        /* Özel Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--rev-red); }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Consolas', 'Segoe UI', monospace, sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- CRT EKRAN / SCANLINE EFEKTİ VE YENİ TİTREŞİM --- */
+        @keyframes crtFlicker {
+            0% { opacity: 0.55; } 5% { opacity: 0.65; } 10% { opacity: 0.55; }
+            15% { opacity: 0.7; } 100% { opacity: 0.6; }
+        }
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.25) 51%);
+            background-size: 100% 4px; pointer-events: none; z-index: 9999;
+            opacity: 0.6; animation: crtFlicker 0.15s infinite; /* Titreşim Eklendi */
+        }
+
+        /* YENİ: Nefes Alan Arkaplan Işığı */
+        @keyframes breatheGlow {
+            0% { transform: translateX(-50%) scale(1); opacity: 0.7; }
+            100% { transform: translateX(-50%) scale(1.15); opacity: 1; }
+        }
+        .bg-glow {
+            position: absolute; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(217, 0, 0, 0.05) 0%, transparent 70%);
+            top: -200px; left: 50%; transform: translateX(-50%);
+            z-index: -1; pointer-events: none;
+            animation: breatheGlow 4s infinite alternate ease-in-out; /* Animasyon Eklendi */
+        }
+
+        /* --- GELİŞMİŞ NAVBAR --- */
+        nav {
+            position: fixed; top: 0; width: 100%;
+            background: rgba(3, 3, 3, 0.9); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-subtle);
+            z-index: 1000; display: flex; justify-content: space-between;
+            align-items: center; padding: 1rem 4rem; box-sizing: border-box; text-transform: uppercase;
+        }
+
+        .nav-brand { font-size: 1.8rem; font-weight: 900; color: var(--text-main); text-decoration: none; letter-spacing: 3px; }
+        .nav-brand span { color: var(--rev-red); }
+
+        .nav-links a {
+            color: var(--text-dim); text-decoration: none; font-size: 0.9rem; font-weight: bold;
+            margin-left: 2rem; letter-spacing: 2px; transition: color 0.3s, text-shadow 0.3s;
+        }
+        .nav-links a:hover { color: var(--text-main); text-shadow: 0 0 10px var(--rev-red-glow); }
+
+        /* --- HERO SECTİON --- */
+        .hero {
+            min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; text-align: center; position: relative; padding: 0 2rem;
+        }
+
+        .glitch-title { font-size: 6vw; font-weight: 900; text-transform: uppercase; letter-spacing: 5px; margin: 0; animation: pulse 4s infinite alternate; }
+        @keyframes pulse { 0% { text-shadow: 0 0 10px rgba(217,0,0,0.2); } 100% { text-shadow: 0 0 30px rgba(217,0,0,0.6); } }
+        .glitch-title span { color: var(--rev-red); }
+
+        .hero-subtitle {
+            font-family: 'Segoe UI', sans-serif; color: var(--text-dim); font-size: 1.2rem; max-width: 700px;
+            margin: 2rem 0 3rem; line-height: 1.8; border-left: 2px solid var(--rev-red); padding-left: 1rem; text-align: left;
+        }
+
+        .action-btn {
+            background: transparent; color: var(--text-main); border: 1px solid var(--border-focus);
+            padding: 1rem 2.5rem; font-size: 1rem; font-weight: bold; text-transform: uppercase;
+            letter-spacing: 2px; text-decoration: none; position: relative; overflow: hidden; transition: all 0.4s;
+        }
+        .action-btn::before { content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--rev-red); transition: all 0.4s; z-index: -1; }
+        .action-btn:hover::before { left: 0; }
+        .action-btn:hover { border-color: var(--rev-red); box-shadow: 0 0 20px rgba(217,0,0,0.4); }
+
+        /* --- ORTAK BÖLÜM YAPISI --- */
+        .section-container { max-width: 1300px; margin: 0 auto; padding: 8rem 2rem; }
+        .section-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 4rem; }
+        .section-header h2 { font-size: 2.5rem; text-transform: uppercase; letter-spacing: 2px; margin: 0; }
+        .header-line { height: 1px; flex-grow: 1; background: linear-gradient(90deg, var(--rev-red) 0%, transparent 100%); }
+
+        /* --- OYUN KARTLARI VE YENİ HOVER EFEKTİ --- */
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 3rem; }
+        .project-card { background: var(--bg-card); border: 1px solid var(--border-subtle); position: relative; overflow: hidden; transition: border-color 0.4s, transform 0.4s; }
+        
+        /* YENİ: Kartın üstünden geçen ışık efekti */
+        .project-card::after {
+            content: ""; position: absolute; top: 0; left: -150%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent);
+            transform: skewX(-25deg); transition: left 0.6s ease; z-index: 10; pointer-events: none;
+        }
+        .project-card:hover::after { left: 200%; }
+        .project-card:hover { border-color: var(--rev-red); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+       .project-visual { 
+            height: 250px; 
+            background-color: #000; 
+            background-size: 100% 100%; /* Resimleri kutuya hiç boşluk kalmayacak şekilde tam sığdırır */
+            background-position: center; 
+            background-repeat: no-repeat;
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: transparent; 
+        }
+        .status-badge { position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.8); border: 1px solid var(--rev-red); color: var(--rev-red); padding: 0.3rem 0.8rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        .project-content { padding: 2rem; position: relative; }
+        .project-content h3 { margin: 0 0 1rem; font-size: 1.8rem; color: var(--text-main); }
+        .project-content p { color: var(--text-dim); font-family: 'Segoe UI', sans-serif; margin-bottom: 1.5rem; line-height: 1.6; }
+        .tech-stack { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .tech-stack span { font-size: 0.75rem; color: var(--text-main); background: #1a1a1a; padding: 0.3rem 0.6rem; border: 1px solid #333; }
+        
+        .play-link {
+            display: block; width: 100%; text-align: center; padding: 1rem; background: #111;
+            border: 1px solid var(--border-subtle); color: var(--text-main); text-transform: uppercase;
+            font-weight: bold; letter-spacing: 1px; transition: all 0.3s; cursor: pointer; font-family: inherit;
+        }
+        .project-card:hover .play-link { background: var(--rev-red); border-color: var(--rev-red); color: #fff; box-shadow: 0 0 15px rgba(217,0,0,0.3); }
+
+        /* --- OYUN TERMİNALİ (MODAL) %16:9 DEVASA ORAN --- */
+        @keyframes modalOpen {
+            0% { transform: scale(0.9); opacity: 0; filter: blur(5px); }
+            100% { transform: scale(1); opacity: 1; filter: blur(0); }
+        }
+
+        .game-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            /* backdrop-filter: blur() İPTAL EDİLDİ - FPS Düşmanı */
+            background: #020202; /* Neredeyse tam siyah, GPU'yu hiç yormaz */
+            z-index: 2000; justify-content: center; align-items: center; flex-direction: column;
+        }
+
+        /* Yeni Eklenen: Modal içeriğini ortalamak ve boyutlandırmak için Wrapper */
+        .modal-wrapper {
+            width: 95vw; /* Ekranın %95'ini kaplar */
+            max-width: 1600px; /* Maksimum genişlik devasa boyuta çıkarıldı */
+            max-height: 95vh;
+            display: flex; flex-direction: column; align-items: center;
+            animation: modalOpen 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* Açılış animasyonu */
+        }
+
+        .modal-header {
+            width: 100%; display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 1.5rem; background: var(--bg-panel); border: 1px solid var(--rev-red);
+            border-bottom: none; box-sizing: border-box; border-top-left-radius: 4px; border-top-right-radius: 4px;
+        }
+
+        .modal-title { font-size: 1.2rem; font-weight: bold; color: var(--rev-red); margin: 0; letter-spacing: 2px; display: flex; align-items: center; gap: 10px; }
+        .modal-title::before { content: "●"; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .modal-controls { display: flex; gap: 1rem; }
+        .modal-btn {
+            background: transparent; color: var(--text-dim); border: 1px solid var(--border-focus);
+            padding: 0.4rem 1rem; cursor: pointer; font-family: 'Consolas', monospace; font-weight: bold;
+            transition: all 0.3s; text-transform: uppercase;
+        }
+        .modal-btn:hover { color: #fff; border-color: var(--rev-red); background: rgba(217,0,0,0.2); }
+        .modal-btn.close { color: var(--rev-red); border-color: var(--rev-red); }
+        .modal-btn.close:hover { background: var(--rev-red); color: #fff; box-shadow: 0 0 15px rgba(217,0,0,0.5); }
+
+        .iframe-container {
+            width: 100%;
+            aspect-ratio: 16 / 9; 
+            max-height: calc(95vh - 65px); 
+            border: 1px solid var(--rev-red); 
+            /* Devasa box-shadow küçültüldü, render yükü alındı */
+            box-shadow: 0 0 15px rgba(217,0,0,0.4); 
+            background: #000; position: relative; box-sizing: border-box;
+        }
+
+        .iframe-container iframe { width: 100%; height: 100%; border: none; display: block; }
+
+        /* --- DEV PANEL & İLETİŞİM --- */
+        .dev-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; background: var(--bg-panel); border: 1px solid var(--border-subtle); padding: 4rem; position: relative; }
+        .dev-panel::before, .dev-panel::after { content: ""; position: absolute; width: 20px; height: 20px; border: 2px solid var(--rev-red); }
+        .dev-panel::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .dev-panel::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+        .terminal-text { color: var(--text-dim); font-family: 'Segoe UI', sans-serif; line-height: 1.8; font-size: 1.1rem; }
+        .terminal-text h3 { color: var(--text-main); font-family: 'Consolas', monospace; font-size: 1.6rem; margin-top: 0; border-bottom: 1px dashed var(--border-focus); padding-bottom: 0.5rem; display: inline-block; }
+        .sys-stats { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .sys-stats li { background: #111; padding: 1rem 1.5rem; border-left: 3px solid var(--rev-red); display: flex; justify-content: space-between; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        .sys-stats li span.val { color: var(--text-main); font-weight: bold; }
+        .contact-panel { text-align: center; background: linear-gradient(180deg, var(--bg-panel) 0%, #000 100%); border: 1px solid var(--border-subtle); padding: 4rem 2rem; margin-top: 2rem; }
+        .contact-links { display: flex; justify-content: center; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
+        .contact-link { color: var(--text-main); text-decoration: none; font-size: 1.1rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid transparent; padding-bottom: 5px; transition: all 0.3s; }
+        .contact-link:hover { color: var(--rev-red); border-bottom: 2px solid var(--rev-red); text-shadow: 0 0 10px rgba(217,0,0,0.4); }
+        footer { text-align: center; padding: 2rem; color: var(--border-focus); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; border-top: 1px solid #111; }
+
+        @media (max-width: 900px) { .dev-panel { grid-template-columns: 1fr; padding: 2rem; } .nav-links { display: none; } }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <nav>
+        <a href="#" class="nav-brand">Rev.<span>Games</span></a>
+        <div class="nav-links">
+            <a href="#katalog">// Projeler</a>
+            <a href="#sistem">// Sistem_Bilgisi</a>
+            <a href="#iletisim">// Bağlantı_Kur</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="bg-glow"></div>
+        <h1 class="glitch-title">Rev.<span>Games</span></h1>
+        <p class="hero-subtitle">
+            Bağımsız oyunların, evrimsel simülasyonların ve sistemlerin sınırlarını zorlayan mekaniklerin inşa edildiği geliştirici arayüzü. 
+        </p>
+        <a href="#katalog" class="action-btn">Sisteme Giriş Yap</a>
+    </header>
+
+    <section id="katalog" class="section-container">
+        <div class="section-header">
+            <h2>Oyun_Veritabanı</h2>
+            <div class="header-line"></div>
+        </div>
+
+        <div class="grid-layout">
+            
+            <div class="project-card">
+                <div class="project-visual" style="background-image: url('vis/aegisvis.png');">
+                    AEGIS_RENDER
+                    <span class="status-badge">Web / Kapsamlı Proje</span>
+                </div>
+                <div class="project-content">
+                   <h3>AEGIS</h3>
+                    <div class="tech-stack"><span>HTML5</span><span>Oyun Motoru</span></div>
+                    <p>Tam sürüm olarak geliştirilmiş, kompleks mekaniklere ve geniş sistemlere sahip ana proje.</p>
+                    <button class="play-link" onclick="openGame('AEGIS FULL GAME/index.html', 'AEGIS_SİSTEMİ')">Oyna</button>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-visual" style="background-image: url('vis/epoxyvis.png');">
+                    <span class="status-badge">Web / Psiko-Gerilim</span>
+                </div>
+                <div class="project-content">
+                    <h3>EPOXY</h3>
+                    <div class="tech-stack"><span>HTML</span><span>JavaScript</span><span>CSS</span></div>
+                    <p>Oyuncunun psikolojik sınırlarını test eden, derin atmosferik gerilim deneyimi.</p>
+                    <button class="play-link" onclick="openGame('EPOXY.html', 'EPOXY_DENEYİ')">Oyna</button>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-visual" style="background-image: url('vis/hegemonyvis.png');">
+                    <span class="status-badge">Web / Strateji</span>
+                </div>
+                <div class="project-content">
+                    <h3>HEGEMONY</h3>
+                    <div class="tech-stack"><span>HTML</span><span>JS Algoritması</span></div>
+                    <p>Kaynak yönetiminin ve stratejik hamlelerin ön planda olduğu güç ve kontrol mücadelesi.</p>
+                    <button class="play-link" onclick="openGame('HEGEMONY.html', 'HEGEMONY_PROTOKOLÜ')">Oyna</button>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-visual" style="background-image: url('vis/mutlakhiclikvis.png');">
+                    <span class="status-badge">Web / Deneysel</span>
+                </div>
+                <div class="project-content">
+                    <h3>Mutlak Hiçlik</h3>
+                    <div class="tech-stack"><span>HTML</span><span>Atmosferik</span></div>
+                    <p>Boşluğun, bilinmezliğin ve hiçliğin konseptleriyle harmanlanmış deneysel bir proje.</p>
+                    <button class="play-link" onclick="openGame('MutlakHiçlik.html', 'MUTLAK_HİÇLİK_BOŞLUĞU')">Oyna</button>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-visual" style="background-image: url('vis/simboyvis.png');">
+                    <span class="status-badge">Web / Simülasyon</span>
+                </div>
+                <div class="project-content">
+                    <h3>Symbot</h3>
+                    <div class="tech-stack"><span>HTML5</span><span>Simülasyon</span></div>
+                    <p>Evrimsel mekaniklerin yönetildiği, gözleme dayalı kapalı ekosistem simülasyonu.</p>
+                    <button class="play-link" onclick="openGame('Symbot.html', 'SYMBOT_SİMÜLASYONU')">Oyna</button>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-visual" style="background-image: url('vis/wtfcvis.png');">
+                    <span class="status-badge">Web / Dinamik</span>
+                </div>
+                <div class="project-content">
+                    <h3>WTFC</h3>
+                    <div class="tech-stack"><span>HTML</span><span>JavaScript</span></div>
+                    <p>Öngörülemeyen mekanikleriyle oyuncuyu sürekli şaşırtan, yüksek tempolu bir deneyim.</p>
+                    <button class="play-link" onclick="openGame('WTFC.html', 'WTFC_MOTORU')">Oyna</button>
+                </div>
+            </div>
+
+            <div class="project-card">
+                <div class="project-visual" style="background-image: url('vis/17sn.png');">
+                    <span class="status-badge">Web / Aksiyon</span>
+                </div>
+                <div class="project-content">
+                    <h3>17 Saniye</h3>
+                    <div class="tech-stack"><span>HTML</span><span>Mekanik Dizayn</span></div>
+                    <p>Hızlı tepki süresi gerektiren, adrenalin dolu sadece 17 saniyelik bir meydan okuma.</p>
+                    <button class="play-link" onclick="openGame('17sn.html', '17_SANİYE_SAYACI')">Oyna</button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <section id="sistem" class="section-container">
+        <div class="section-header">
+            <h2>Geliştirici_Profili</h2>
+            <div class="header-line"></div>
+        </div>
+        <div class="dev-panel">
+            <div class="terminal-text">
+                <h3>Emirhan Bayrak</h3>
+                <p>Oyun geliştirme süreci sadece kod yazmaktan ibaret değildir; mekanikleri, tasarımları ve atmosferi sıfırdan inşa etme sanatıdır. Web tabanlı deneyimlerden komut satırı oyunlarına ve 3D modellere kadar geniş bir yelpazede projeler üretiyorum.</p>
+                <p>Bir fikrin konsept aşamasından, Blender'da modellenmesine, sistem algoritmalarının yazılmasına ve yayınlanmasına kadar tüm geliştirme döngüsüne hakimiyet kurmayı amaçlıyorum.</p>
+            </div>
+            <ul class="sys-stats">
+                <li><span>Unvan:</span> <span class="val">Bağımsız Oyun Geliştiricisi</span></li>
+                <li><span>Eğitim:</span> <span class="val">Bilgisayar Programcılığı</span></li>
+                <li><span>Uzmanlık Alanı:</span> <span class="val">Mekanik & Sistem Tasarımı</span></li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="iletisim" class="section-container" style="padding-top: 2rem;">
+        <div class="contact-panel">
+            <h2 style="margin: 0; font-size: 2rem; text-transform: uppercase; letter-spacing: 2px;">Sisteme_Erişim_Talebi</h2>
+            <p style="color: var(--text-dim); margin-top: 1rem; font-family: 'Segoe UI', sans-serif;">Projeler hakkında detaylı bilgi almak şimdilik mümkün değil.</p>
+          
+        </div>
+    </section>
+
+    <footer>
+        [ REV.GAMES ] V1.0 // DEVELOPED BY EMIRHAN BAYRAK // ALL SYSTEMS NOMINAL
+    </footer>
+
+    <div id="gameModal" class="game-modal">
+        <div class="modal-wrapper">
+            <div class="modal-header">
+                <h3 id="modalTitle" class="modal-title">SİSTEM_YÜKLENİYOR...</h3>
+                <div class="modal-controls">
+                    <button class="modal-btn" onclick="toggleFullscreen()">[ Tam Ekran ]</button>
+                    <button class="modal-btn close" onclick="closeGame()">[ X Kapat ]</button>
+                </div>
+            </div>
+            <div class="iframe-container" id="iframeContainer">
+                <iframe id="gameIframe" src=""></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('gameModal');
+        const titleElement = document.getElementById('modalTitle');
+        const iframeContainer = document.getElementById('iframeContainer');
+
+        
+        // Oyunu Aç (Performans ve Güvenlik Optimizasyonlu)
+        function openGame(url, title) {
+            titleElement.innerText = "YÜRÜTÜLÜYOR: " + title;
+            
+            iframeContainer.innerHTML = ''; 
+            
+            const newIframe = document.createElement('iframe');
+            newIframe.id = 'gameIframe';
+            newIframe.src = url;
+            
+            // OYUN İÇİN MAKSİMUM İZİNLER
+            // allow-pointer-lock: Oyunlarda mouse'un dışarı kaçmasını engeller (FPS oyunları için şart)
+            newIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-pointer-lock allow-forms');
+            newIframe.setAttribute('allow', 'autoplay; fullscreen; pointer-lock');
+            newIframe.allowFullscreen = true;
+            newIframe.style.backgroundColor = "#000"; // Arkaplan transparanlık hesaplamasını iptal eder
+            
+            iframeContainer.appendChild(newIframe);
+            
+            newIframe.onload = () => {
+                newIframe.focus();
+            };
+
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; 
+        }
+
+        // Oyunu Kapat (Sistemi Temizle)
+        function closeGame() {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; 
+            
+            // Kapatıldığında iframe'i html içinden tamamen yok et (RAM/VRAM anında boşalır)
+            iframeContainer.innerHTML = ''; 
+            
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+        }
+
+        // Tam Ekran Kontrolü
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                if (iframeContainer.requestFullscreen) {
+                    iframeContainer.requestFullscreen();
+                } else if (iframeContainer.webkitRequestFullscreen) { 
+                    iframeContainer.webkitRequestFullscreen();
+                } else if (iframeContainer.msRequestFullscreen) { 
+                    iframeContainer.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+    </script>
+
+</body>
+</html>

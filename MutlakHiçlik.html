@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mutlak Hiçlik</title>
+    <style>
+        body {
+            background-color: #000; 
+            color: #7a7a7a; 
+            font-family: 'Courier New', Courier, monospace;
+            display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden;
+            transition: background 2s ease, filter 2s ease;
+        }
+
+        /* Klostrofobi Efekti */
+        #vignette {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle, transparent 90%, #000 100%);
+            pointer-events: none; transition: background 4s ease-in-out; z-index: 10;
+        }
+
+        #game-container { text-align: center; max-width: 650px; width: 100%; padding: 30px; position: relative; z-index: 20; }
+        
+        #f11-warning { font-size: 1rem; letter-spacing: 1px; line-height: 2; transition: opacity 2s ease; color: #7a7a7a; }
+        .highlight { color: #aaa; font-weight: bold; }
+        #menu-screen { display: none; opacity: 0; transition: opacity 3s ease; }
+        
+        #room-screen { display: none; text-align: left; line-height: 1.8; font-size: 1.1rem; }
+        
+        #text-wrapper, #choices { transition: opacity 2s ease-in-out; opacity: 1; }
+        #text-wrapper { min-height: 200px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center;} 
+        #choices { min-height: 180px; } 
+
+        #story-content {
+            transition: opacity 2s ease-in-out;
+            opacity: 0; 
+            margin-bottom: 30px;
+            min-height: 80px; 
+            display: flex;
+            align-items: center;
+        }
+
+        /* Sinematik Ortalanmış Yazı */
+        .centered-cinematic-text {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 1.3rem; color: #888; letter-spacing: 3px;
+            opacity: 0; transition: opacity 4s ease-in-out; 
+            text-align: center; width: 100%; pointer-events: none; z-index: 50;
+        }
+
+        .typewriter-container { color: #999; letter-spacing: 1px; min-height: 1.5rem; }
+        .cursor { display: inline-block; width: 8px; height: 1.1rem; background-color: #777; animation: blink 1s step-end infinite; vertical-align: bottom; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Psikoz (Bulanıklık) Efektleri */
+        @keyframes pulse-blur-mild { 0%, 100% { filter: blur(0px); } 50% { filter: blur(0.4px); } }
+        @keyframes pulse-blur-high { 0%, 100% { filter: blur(0.2px); } 50% { filter: blur(1.0px); } }
+        @keyframes pulse-blur-borderline { 0%, 100% { filter: blur(0.5px) contrast(1.1); } 50% { filter: blur(2.5px) contrast(0.8); } }
+        
+        .blur-none { filter: blur(0); transition: filter 4s ease; }
+        .blur-mild { animation: pulse-blur-mild 10s ease-in-out infinite; }
+        .blur-high { animation: pulse-blur-high 8s ease-in-out infinite; }
+        .blur-catatonic { animation: none; filter: blur(1px) grayscale(1); transition: filter 5s ease; }
+        .blur-borderline { animation: pulse-blur-borderline 4s ease-in-out infinite; }
+
+        /* Metin Stilleri */
+        .whisper-text { font-style: italic; color: #555; }
+        .death-msg { font-style: italic; color: #666; }
+        .checkpoint-msg { font-style: italic; color: #555; letter-spacing: 1px;}
+        .void-msg { color: #444; font-weight: bold; letter-spacing: 2px;}
+
+        button {
+            background: none; color: #555; border: 1px solid #111;
+            padding: 12px 25px; font-family: inherit; font-size: 0.95rem;
+            cursor: pointer; transition: all 1s ease; opacity: 0; pointer-events: none;
+            display: block; width: 100%; text-align: left; margin-bottom: 10px;
+        }
+        button.menu-btn { text-align: center; border: 1px solid #222; margin: 0 auto; width: auto;}
+        button.visible { opacity: 1; pointer-events: auto; border-color: #333; }
+        button.visible:hover { color: #aaa; border-color: #666; padding-left: 30px; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+    <div id="vignette"></div>
+    <div id="game-container">
+        <div id="f11-warning">
+            <p>Dış dünyayla bağını koparmalısın.</p>
+            <p>Lütfen <span class="highlight">F11</span> tuşuna basarak tam ekrana geç.</p><br>
+            <button id="ready-btn" class="menu-btn">Geçtim, Hazırım</button>
+        </div>
+
+        <div id="menu-screen">
+            <div id="menu-typewriter" class="typewriter-container" style="text-align:center;"></div>
+            <button id="start-btn" class="menu-btn" style="margin-top:40px;">Gözlerini Aç</button>
+        </div>
+
+        <div id="room-screen">
+            <div id="text-wrapper">
+                <div id="story-content"></div> 
+                <div id="typewriter-content" class="typewriter-container"></div> 
+            </div>
+            <div id="choices"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- KAPSAMLI SES MOTORU ---
+        let audioCtx, whisperGain, droneGain;
+        let metronomeTimer;
+        let isMetronomeDistorted = false;
+        let activeAudio = "none"; 
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // 1. Fısıltı / Nefes Sesi Ayarları
+            const bufferSize = audioCtx.sampleRate * 2; 
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            for (let j = 0; j < bufferSize; j++) output[j] = Math.random() * 2 - 1;
+            
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = buffer; whiteNoise.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass'; filter.frequency.value = 500; filter.Q.value = 1.0;
+
+            whisperGain = audioCtx.createGain();
+            whisperGain.gain.value = 0;
+
+            const lfo = audioCtx.createOscillator();
+            lfo.type = 'sine'; lfo.frequency.value = 0.20; 
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 0.15; 
+
+            lfo.connect(lfoGain); lfoGain.connect(whisperGain.gain); 
+            whiteNoise.connect(filter); filter.connect(whisperGain); whisperGain.connect(audioCtx.destination);
+            whiteNoise.start(); lfo.start();
+
+            // 2. Boşluk Uğultusu (Drone) Ayarları
+            const droneOsc = audioCtx.createOscillator();
+            droneOsc.type = 'sine';
+            droneOsc.frequency.value = 55; // Sub-bass
+            droneGain = audioCtx.createGain();
+            droneGain.gain.value = 0;
+            droneOsc.connect(droneGain); droneGain.connect(audioCtx.destination);
+            droneOsc.start();
+        }
+
+        function stopAllAudio(fadeTime = 1.5) {
+            if (!audioCtx) return;
+            if (whisperGain) whisperGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + fadeTime);
+            if (droneGain) droneGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + fadeTime);
+            clearInterval(metronomeTimer);
+            clearTimeout(metronomeTimer);
+            activeAudio = "none";
+        }
+
+        function playWhisper() {
+            if (activeAudio === "whisper") return;
+            stopAllAudio();
+            whisperGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            whisperGain.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 3); 
+            activeAudio = "whisper";
+        }
+
+        function playDrone() {
+            if (activeAudio === "drone") return;
+            stopAllAudio();
+            droneGain.gain.cancelScheduledValues(audioCtx.currentTime);
+            droneGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 5);
+            activeAudio = "drone";
+        }
+
+        // Metronom Mantığı
+        function tick() {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            let freq = isMetronomeDistorted ? (Math.random() * 600 + 400) : 600;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.type = isMetronomeDistorted ? 'sawtooth' : 'sine'; 
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(isMetronomeDistorted ? 0.3 : 0.8, audioCtx.currentTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+            osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playMetronome(distorted = false) {
+            stopAllAudio();
+            activeAudio = "metronome";
+            isMetronomeDistorted = distorted;
+            if (distorted) {
+                function erraticTick() {
+                    tick();
+                    let nextTick = Math.random() * 400 + 100;
+                    metronomeTimer = setTimeout(erraticTick, nextTick);
+                }
+                erraticTick();
+            } else {
+                metronomeTimer = setInterval(tick, 1000);
+            }
+        }
+
+        function playLobotomySound() {
+            stopAllAudio(0.5);
+            const drillOsc = audioCtx.createOscillator();
+            drillOsc.type = 'sawtooth';
+            drillOsc.frequency.setValueAtTime(3000, audioCtx.currentTime); 
+            const drillGain = audioCtx.createGain();
+            drillGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            drillGain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1); 
+            drillOsc.connect(drillGain); drillGain.connect(audioCtx.destination);
+            drillOsc.start();
+            drillGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+            drillOsc.stop(audioCtx.currentTime + 3.1);
+        }
+
+        // --- GÖRSEL MOTOR ---
+        function setPsychosis(level) {
+            document.body.className = ''; 
+            if (level === 1) document.body.classList.add('blur-mild');
+            else if (level >= 2) document.body.classList.add('blur-high');
+            else if (level === 'catatonic') document.body.classList.add('blur-catatonic');
+            else if (level === 'borderline') document.body.classList.add('blur-borderline');
+            else document.body.classList.add('blur-none');
+
+            // Void (Hiçlik) durumunda klostrofobi karanlığı kalkar
+            if (level === 'catatonic' || level === 'borderline' || level === 'void') {
+                document.getElementById('vignette').style.background = `radial-gradient(circle, transparent 100%, #000 100%)`;
+            } else {
+                let darkness = 90 - ((typeof level === 'number' ? level : 0) * 10); 
+                document.getElementById('vignette').style.background = `radial-gradient(circle, transparent ${darkness}%, #000 100%)`;
+            }
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // --- HİKAYE MOTORU ---
+        let loopCount = 0;
+        let currentCheckpoint = "start";
+        let hasInspected = false;
+
+        const storyNodes = {
+            // ================= ACT 1 =================
+            start: {
+                audio: "whisper", psychosis: 0,
+                fadeChunks: () => loopCount === 0 
+                    ? [
+                        "Görüntü netleşmiyor... Etraf ruhsuz, hastalıklı bir gri. Burnuna pas kokusu doluyor. Zemin soğuk.", 
+                       "<span class='whisper-text'>Karanlığın içinden hafif bir uğultu geliyor...</span>",
+			"Karşında eski, ahşap bir kapı var."
+                      ]
+                    : [
+                        "Yine aynı tavan. Aynı soğuk taşlar. Karanlıkta geçen zamanın bir anlamı kalmadı.", 
+                        "O kapı hala karşında duruyor."
+                      ],
+                typeText: () => loopCount === 0 ? "" : "Hata yapma.",
+                choices: [
+                    { text: "Kapının kolunu çevir ve çık.", nextNode: "door_death" },
+                    { text: "Karanlığa alışmayı bekle ve kapıyı incele.", nextNode: "inspect_door", condition: () => !hasInspected }
+                ]
+            },
+            inspect_door: {
+                psychosis: 0,
+                fadeChunks: () => [
+                    "Gözlerin karanlığa alışınca kapı koluna bağlı incecik, saydam bir misina teli olduğunu fark ediyorsun. Bir tuzak.",
+                    "Düğümü dikkatlice çözüp kapıyı güvenle aralıyorsun."
+                ],
+                choices: [ { text: "Karanlık koridora adım at.", nextNode: "corridor" } ]
+            },
+            door_death: {
+                audio: "stop", psychosis: 2,
+                fadeChunks: () => [
+                    "<span class='death-msg'>Kapı kolunu çevirdiğin anda soğuk nüfuz ediyor ve hissizleşiyorsun.</span>",
+                    "<span class='death-msg'>Nefesin kesilirken karanlık seni yutuyor.</span>"
+                ],
+                choices: [ { text: "Karanlığa teslim ol...", nextNode: "respawn" } ]
+            },
+            corridor: {
+                audio: "whisper", psychosis: 1,
+                fadeChunks: () => [
+                    "Uzun, loş bir koridordasın.",
+                    "Yürümeye başlıyorsun.",
+                    "Sen adım attıkça arkandan bir adım sesi daha yankılanıyor.",
+                    "Duruyorsun.",
+                    "Ses de duruyor.",
+                    "Tekrar yürüyorsun, adımlar hızlanıyor.",
+                    "Biri seni takip ediyor."
+                ],
+                choices: [
+                    { text: "Arkana bakmadan var gücünle koş!", nextNode: "panic_run" },
+                    { text: "Dur. Derin bir nefes al ve arkana dön.", nextNode: "face_truth" }
+                ]
+            },
+            panic_run: {
+                audio: "stop", psychosis: 2,
+                fadeChunks: () => [
+                    "<span class='death-msg'>Ayak sesleri de seninle koşuyor.</span>",
+                    "<span class='death-msg'>Panikle nefes nefese kalıyorsun. Görmediğin bir çıkıntıya ayağın takılıyor.</span>",
+                    "<span class='death-msg'>Kafatasının taşlara çarpma sesini duyuyorsun.</span>",
+                    "<span class='death-msg'>Kimse seni kovalamıyordu... Kendi paniğinden kaçarken öldün.</span>"
+                ],
+                choices: [ { text: "Gözlerini kapat...", nextNode: "respawn" } ]
+            },
+            face_truth: {
+                audio: "stop", psychosis: 0, 
+                fadeOutLastChunk: true,
+                fadeChunks: () => [
+                    "Adım sesleri anında duruyor.",
+                    "Yavaşça arkana dönüyorsun.",
+                    "Koca bir hiçlik.",
+                    "Taştan yansıyan sadece kendi adımlarının yankısıydı.",
+                    "Boşluk hissi midene oturuyor."
+                ],
+                cinematicText: () => "Tamamen teksin.",
+                choices: [ { text: "Karanlığın içinden ilerideki paslı kapıya yönel.", nextNode: "dorm_room" } ]
+            },
+            dorm_room: {
+                audio: "whisper", psychosis: 1,
+                fadeChunks: () => [
+                    "Kapı arkandan sertçe kapanıyor. Oda inanılmaz dar. Köşede paslı bir ranza var.",
+                    "Duvara silik rakamlar kazınmış... Bir mahkum kodu mu? Kimin olduğu meçhul. Masanın üzerinde yeşil ışığı titreyen eski bir monitör duruyor."
+                ],
+                typeText: () => "Bu anılar kime ait?",
+                choices: [
+                    { text: "Ekrana yaklaş ve ne yazdığına bak.", nextNode: "monitor_trap" },
+                    { text: "Odanın daralmasına dayanamayıp kapıyı yumrukla.", nextNode: "claustrophobia" }
+                ]
+            },
+            claustrophobia: {
+                audio: "stop", psychosis: 2,
+                fadeChunks: () => [
+                    "<span class='death-msg'>Kapı kilitli. Duvarlar üzerine kapanmaya başlıyor.</span>",
+                    "<span class='death-msg'>Nefes alamıyorsun. Zihnin bu dar alanı kaldıramıyor ve karanlık seni boğuyor.</span>"
+                ],
+                choices: [ { text: "Karanlığa teslim ol...", nextNode: "respawn" } ]
+            },
+            monitor_trap: {
+                psychosis: 2,
+                fadeChunks: () => [
+                    "Ekranda bitmek bilmeyen döngüler ve çözümsüz denklemler hızla akıyor. Kafanın içinde yankılanan o ses geri dönüyor...",
+                    "<span class='whisper-text'>'Eksiksin... Yetmeyecek. Kodlar çalışmıyor. Sonsuza dek burada çürüyeceksin...'</span>",
+                    "Başın zonkluyor. Ekrana kilitlendin."
+                ],
+                typeText: () => "Zihnin kırılmak üzere.",
+                choices: [
+                    { text: "Gözlerini kırpmadan ekrandaki kodu çözmeye çalış.", nextNode: "mind_break" },
+                    { text: "BUNLAR GERÇEK DEĞİL! Monitörü yere fırlat!", nextNode: "break_illusion" }
+                ]
+            },
+            mind_break: {
+                audio: "stop", psychosis: 2,
+                fadeChunks: () => [
+                    "<span class='death-msg'>Satırlara daldıkça zihnin ekranın içine çekiliyor.</span>",
+                    "<span class='death-msg'>Parmakların görünmez bir klavyede yazmaya çalışırken kaskatı kesiliyor. Zihnin parçalandı.</span>"
+                ],
+                choices: [ { text: "Gerçeğe dön...", nextNode: "respawn" } ]
+            },
+            break_illusion: {
+                isCheckpoint: true, audio: "stop", psychosis: 0,
+                fadeChunks: () => [
+                    "Monitör büyük bir gürültüyle parçalandığında, duvarlar bir anda cam gibi kırılıp etrafa saçılıyor.",
+                    "Kendini yıldızsız bir gökyüzünün altında, yıkık dökük bir avluda buluyorsun. Ortada mavi alevlerle yanan bir fener var.",
+                    "Ateşin yanına çöküyorsun... <span class='checkpoint-msg'>Ruhun bağlandı.</span>"
+                ],
+                typeText: () => "Kabus şimdilik durdu.",
+                choices: [ { text: "Ateşin başında dinlen.", nextNode: "act2_start" } ]
+            },
+
+            // ================= ACT 2 =================
+            act2_start: {
+                audio: "whisper", psychosis: 0,
+                fadeChunks: () => [
+                    "Mavi alevlerin çıtırtısını dinliyorsun. Ancak bir tuhaflık var... Ateş seni ısıtmıyor.",
+                    "Gözlerin karanlığa alıştıkça avlunun köşesinde taştan bir kemer olduğunu fark ediyorsun.",
+                    "Kemerin ardında, zifiri karanlığın içine doğru kıvrılarak inen devasa, spiral bir merdiven var."
+                ],
+                typeText: () => "Aşağı inmelisin.",
+                choices: [ 
+                    { text: "Ateşin yanından ayrıl ve merdivenlere yönel.", nextNode: "spiral_descent" }
+                ]
+            },
+            spiral_descent: {
+                audio: "metronome", psychosis: 1, 
+                fadeChunks: () => [
+                    "Kemerden içeri adım attığın an fısıltılar kesiliyor.",
+                    "Aşağı doğru inmeye başlıyorsun. Basamaklar pürüzsüz ve nemli.",
+                    "Zifiri karanlıkta sadece tek bir ses var...",
+                    "<span class='whisper-text'>Tık... Tık... Tık...</span>",
+                    "Kusursuz, ritmik bir metal sesi. Bir saat mekanizması veya dev bir metronom gibi."
+                ],
+                typeText: () => "Adımlarını sese uyduruyorsun.",
+                choices: [ 
+                    { text: "Karanlığın içine doğru inmeye devam et.", nextNode: "spiral_distortion" }
+                ]
+            },
+            spiral_distortion: {
+                audio: "distorted_metronome", psychosis: 2, 
+                fadeChunks: () => [
+                    "Dakikalarca, belki de saatlerce iniyorsun. Zaman algın kayboldu.",
+                    "Birden ritim bozuluyor.",
+                    "Metronom tökezliyor. Hızlanıyor, yavaşlıyor, metalik bir çığlığa dönüşüyor!",
+                    "Kafanın içi matkapla deliniyormuş gibi. Bedeninle zihnin arasındaki bağın koptuğunu hissediyorsun."
+                ],
+                typeText: () => "Bu ses senin içinden geliyor.",
+                choices: [ 
+                    { text: "Kulaklarını tıkayıp kendini merdivenlerin sonundaki kapıdan içeri at!", nextNode: "mirror_room" }
+                ]
+            },
+            mirror_room: {
+                audio: "stop", psychosis: 0, 
+                fadeOutLastChunk: true,
+                fadeChunks: () => [
+                    "Ağır demir kapı arkandan çarpılarak kapanıyor.",
+                    "Tıklama sesi anında kesildi. Kusursuz bir sessizlik.",
+                    "Soğuk fayanslarla kaplı, loş bir banyodasın.",
+                    "Karşında, lavabonun üzerinde paramparça olmuş bir ayna var."
+                ],
+                typeText: () => "Kendine bak.",
+                choices: [ 
+                    { text: "Kırık aynadaki yansımaya yaklaş.", nextNode: "depersonalization" }
+                ]
+            },
+            depersonalization: {
+                audio: "whisper", psychosis: 1, 
+                fadeChunks: () => [
+                    "Aynanın kırık parçalarından kendine bakıyorsun.",
+                    "Soluk bir ten, boş bakan gözler...",
+                    "Elini yüzüne götürüyorsun. Ama aynadaki yansıma elini kaldırmıyor.",
+                    "Yansıma sana bakmaya devam ederken dudakları yavaşça kıvrılıyor.",
+                    "<span class='whisper-text'>'Sen o değilsin. Asla o olmadın. Sen sadece bu döngünün bir tortususun.'</span>"
+                ],
+                typeText: () => "Benliğin parçalanıyor.",
+                choices: [ 
+                    { text: "Aynadaki yabancıya 'Ben kimim?' diye sor.", nextNode: "schizophrenia_question" },
+                    { text: "Gözlerini kapat ve lavaboya tutunarak gerçeğe tutunmaya çalış.", nextNode: "ocd_compulsion" }
+                ]
+            },
+            schizophrenia_question: {
+                psychosis: 2,
+                fadeChunks: () => [
+                    "Yansıma konuşmuyor. Ancak odanın köşesindeki su borularından cevap geliyor.",
+                    "<span class='whisper-text'>'Bir hiçsin...'</span>",
+                    "Ardından fayansların arkasından başka bir ses: <span class='whisper-text'>'Ona güvenme, o yalan söylüyor.'</span>",
+                    "Duvarlar kendi aralarında fısıldaşmaya başlıyor. Gerçeklik algın tamamen çöküyor."
+                ],
+                choices: [ 
+                    { text: "Kafanın içindeki sesleri susturmak için aynaya yumruk at!", nextNode: "break_mirror" }
+                ]
+            },
+            ocd_compulsion: {
+                psychosis: 2,
+                fadeChunks: () => [
+                    "Gözlerini kapatıyorsun ama kafanın içinde bir dürtü yankılanıyor.",
+                    "<span class='whisper-text'>'Ellerini yıkamalısın. Yoksa her şey yeniden başlayacak. Kanı temizle. Temizle!'</span>",
+                    "Paslı musluğu açıyorsun. Su yerine koyu, siyah bir sıvı akıyor.",
+                    "Dürtü o kadar güçlü ki, siyah sıvıyla ellerini defalarca, derini yüzene kadar ovalıyorsun."
+                ],
+                choices: [ 
+                    { text: "Aynadaki yansıma sana gülerken aynaya yumruk at!", nextNode: "break_mirror" }
+                ]
+            },
+            break_mirror: {
+                audio: "stop", psychosis: 0,
+                fadeChunks: () => [
+                    "Yumruğun cama çarptığı an, sadece ayna değil, tüm oda parçalanıyor.",
+                    "Fayanslar, lavabo, fısıltılar... Hepsi cam kırıkları gibi boşluğa dökülüyor."
+                ],
+                cinematicText: () => "Gerçeklik kırıldı.",
+                choices: [ 
+                    { text: "Kırıkların arasından boşluğa düş...", nextNode: "act3_void" }
+                ]
+            },
+
+            // ================= ACT 3 =================
+            act3_void: {
+                audio: "drone", psychosis: "void",
+                fadeChunks: () => [
+                    "Kırılan gerçekliğin parçaları arasından aşağıya düştün.",
+                    "Ne kadar sürdü bilmiyorsun. Artık 'zaman' yok.",
+                    "Gözlerini açıyorsun. Gözlerin açık mı, ondan da emin değilsin.",
+                    "Burası bir oda değil. Bir zindan değil. Burası zihninin çöplüğü.",
+                    "Sonsuz, gri bir boşluktasın. Bedenin yok. Sadece düşüncelerin."
+                ],
+                typeText: "Burası son durak.",
+                choices: [ 
+                    { text: "Kıpırdamaya çalış.", nextNode: "catatonia_trap" },
+                    { text: "Düşüncelerin arasında kaybol.", nextNode: "borderline_split" }
+                ]
+            },
+            catatonia_trap: {
+                psychosis: "catatonic", 
+                fadeChunks: () => [
+                    "Kıpırdamaya çalışıyorsun. Bacakların yok. Kolların yok.",
+                    "Bedenin komutları reddediyor. Gerçeklikten o kadar koptun ki, beynin 'hareket' kavramını unuttu.",
+                    "Sonsuz gri bir heykel gibi donup kaldın. Sadece iç sesin yankılanıyor.",
+                    "<span class='whisper-text'>'Sonsuza dek böyle kalacaksın. Kendi içine hapsoldun.'</span>"
+                ],
+                choices: [ 
+                    { text: "Bu donmuş düşünceyi kabullen.", nextNode: "borderline_split" }
+                ]
+            },
+            borderline_split: {
+                psychosis: "borderline", 
+                fadeChunks: () => [
+                    "Gri boşluğun içinden suretler belirmeye başlıyor.",
+                    "Anıların değil. Çarpık yansımaların. Onlarca sen.",
+                    "Bir yansıman sana acıyla bakıyor, diğeri nefretle.",
+                    "Hangi 'sen' gerçek? Hiçbiri mi? Hepsi mi?",
+                    "Benliğin bir sabun köpüğü gibi patlıyor. Kendini dışarıdan izliyorsun.",
+                    "Bir tortusun. Bir yankısın. Bir hiçsin."
+                ],
+                choices: [ 
+                    { text: "Parçalanmış benliği birleştirmeye çalış.", nextNode: "void_voices" }
+                ]
+            },
+            void_voices: {
+                psychosis: "borderline",
+                fadeChunks: () => [
+                    "Fısıltılar geri dönmüyor. Onlar artık birer çığlık.",
+                    "Boşluğun her köşesinden tek bir istek geliyor.",
+                    "<span class='void-msg'>Varolmamalıydın.</span>",
+                    "<span class='whisper-text'>Onu öldür. Kendini öldür. Kapıyı aç. Kapı yok.</span>",
+                    "Zihnin bir savaş alanı. Düşünceler saniyede bin kez değişiyor.",
+                    "Bu kaosa dayanamıyorsun. Delilik artık bir sığınak değil, bir hapishane."
+                ],
+                choices: [ 
+                    { text: "Bu acıyı dindirecek tek çözümü ara.", nextNode: "lobotomy_prep" }
+                ]
+            },
+            lobotomy_prep: {
+                psychosis: "void",
+                fadeChunks: () => [
+                    "Gri boşluğun ortasında, bembeyaz, steril bir ışık huzmesi beliriyor.",
+                    "Bir ameliyat masası. Ve üzerinde parlayan soğuk metal aletler.",
+                    "Kafanın arkasında bir el hissediyorsun. Soğuk ve hissiz.",
+                    "Kafatasının hemen arkasında, o iğrenç sesi duymaya başlıyorsun."
+                ],
+                choices: [ 
+                    { text: "Sessizliği kabullen ve ışığa teslim ol.", nextNode: "lobotomy_exec" }
+                ]
+            },
+           lobotomy_exec: {
+                audio: "lobotomy", psychosis: "none",
+                fadeOutLastChunk: true,
+                fadeChunks: () => [
+                    "<span class='void-msg'>...</span>",
+                    "Metal, kemiği deliyor. Duyguların, anıların, korkuların... Hepsi birer birer koparılıyor.",
+                    "Acı yok. Korku yok. Düşünce yok.",
+                    "Sadece mutlak, pürüzsüz bir boşluk kalıyor.",
+                    "Döngü bitti. Sen bittin."
+                ],
+                cinematicText: () => "Mutlak Hiçlik.",
+                choices: [ { text: "Karanlığa karış...", nextNode: "credits" } ] 
+            },
+            credits: {
+                audio: "stop", psychosis: "none",
+                fadeChunks: () => [],
+                // İmza yazısı daktilo efektiyle ekranın ortasında belirir ve oyun biter
+                typeText: () => "created by emirhan BAYRAK",
+                choices: [] // Seçenek yok, oyun burada tamamen durur.
+            }
+        };
+
+        // --- ARAYÜZ VE GEÇİŞ YÖNETİMİ ---
+        const readyBtn = document.getElementById('ready-btn');
+        const warningScreen = document.getElementById('f11-warning');
+        const menuScreen = document.getElementById('menu-screen');
+        const startBtn = document.getElementById('start-btn');
+        const roomScreen = document.getElementById('room-screen');
+        const textWrapper = document.getElementById('text-wrapper');
+        const choicesWrapper = document.getElementById('choices');
+        const storyContent = document.getElementById('story-content');
+        const typewriterContent = document.getElementById('typewriter-content');
+
+        let isFirstRender = true;
+
+        setTimeout(() => { readyBtn.classList.add('visible'); }, 3000);
+
+        readyBtn.addEventListener('click', () => {
+            warningScreen.style.opacity = 0;
+            setTimeout(() => {
+                warningScreen.style.display = 'none';
+                menuScreen.style.display = 'block';
+                setTimeout(() => {
+                    menuScreen.style.opacity = 1;
+                    runTypewriter(document.getElementById('menu-typewriter'), "Hiçbir şey hatırlamıyorsun... Sadece bu karanlığı.").then(() => {
+                        startBtn.classList.add('visible');
+                    });
+                }, 1000);
+            }, 2000);
+        });
+
+        startBtn.addEventListener('click', () => {
+            menuScreen.style.opacity = 0;
+            initAudio(); 
+            setTimeout(() => {
+                menuScreen.style.display = 'none';
+                roomScreen.style.display = 'block';
+                renderNode("start");
+            }, 2000);
+        });
+
+        function runTypewriter(element, text) {
+            return new Promise(resolve => {
+                element.innerHTML = '<span id="tw-text"></span><span class="cursor"></span>';
+                const textSpan = element.querySelector('#tw-text');
+                const cursor = element.querySelector('.cursor');
+                let i = 0;
+                function type() {
+                    if (i < text.length) {
+                        textSpan.innerHTML += text.charAt(i);
+                        i++;
+                        setTimeout(type, text.charAt(i - 1) === '.' ? 600 : Math.random() * 60 + 30);
+                    } else {
+                        setTimeout(() => { cursor.style.display = 'none'; resolve(); }, 500);
+                    }
+                }
+                type();
+            });
+        }
+
+        async function playChunks(chunks, fadeOutLast = false) {
+            for (let i = 0; i < chunks.length; i++) {
+                storyContent.innerHTML = chunks[i];
+                storyContent.style.opacity = 1; 
+
+                let readTime = Math.max(2500, chunks[i].length * 40);
+                await sleep(readTime);
+
+                if (i < chunks.length - 1 || fadeOutLast) {
+                    storyContent.style.opacity = 0; 
+                    await sleep(2000); 
+                }
+            }
+        }
+
+        async function renderNode(nodeId) {
+            if (nodeId === "hard_reset") {
+                location.reload(); 
+                return;
+            }
+            if (nodeId === "respawn") {
+                loopCount++; hasInspected = false;
+                nodeId = currentCheckpoint;
+            }
+
+            const node = storyNodes[nodeId];
+            if (node.isCheckpoint) currentCheckpoint = nodeId;
+
+            // Ekran Karartma
+            if (!isFirstRender) {
+                textWrapper.style.opacity = 0;
+                choicesWrapper.style.opacity = 0;
+                await sleep(2000); 
+            }
+            
+            // Görsel ve Ses Yönetimi
+            setPsychosis(node.psychosis || 0);
+            if (node.audio === 'stop') stopAllAudio();
+            else if (node.audio === 'whisper') playWhisper();
+            else if (node.audio === 'metronome') playMetronome(false);
+            else if (node.audio === 'distorted_metronome') playMetronome(true);
+            else if (node.audio === 'drone') playDrone();
+            else if (node.audio === 'lobotomy') playLobotomySound();
+            
+            typewriterContent.style.transition = 'none';
+            typewriterContent.style.opacity = 1;
+            
+            storyContent.innerHTML = "";
+            storyContent.style.opacity = 0; 
+            typewriterContent.innerHTML = "";
+            choicesWrapper.innerHTML = "";
+
+            textWrapper.style.opacity = 1;
+            choicesWrapper.style.opacity = 1;
+
+            let chunks = node.fadeChunks ? node.fadeChunks() : [];
+            isFirstRender = false;
+
+            // 1. Uzun Metinler
+            if (chunks.length > 0) {
+                await playChunks(chunks, node.fadeOutLastChunk);
+            }
+
+            // 2. Sinematik Yazı
+            if (node.cinematicText) {
+                const cinDiv = document.createElement('div');
+                cinDiv.className = 'centered-cinematic-text';
+                cinDiv.innerHTML = node.cinematicText();
+                document.getElementById('room-screen').appendChild(cinDiv);
+
+                await sleep(1000); 
+                cinDiv.style.opacity = 1; 
+                await sleep(3500); 
+                cinDiv.style.opacity = 0; 
+                await sleep(5000); // Karanlıkta bırak
+                cinDiv.remove(); 
+            }
+            
+            // 3. Daktilo ve Butonlar
+            let typeTxt = typeof node.typeText === 'function' ? node.typeText() : node.typeText;
+            if (typeTxt) {
+                await runTypewriter(typewriterContent, typeTxt);
+                showChoices(node);
+            } else {
+                showChoices(node);
+            }
+        }
+
+        function showChoices(node) {
+            let delay = 500;
+            if(!node.choices) return;
+            node.choices.forEach(choice => {
+                if (choice.condition && !choice.condition()) return;
+                
+                const btn = document.createElement("button");
+                btn.innerHTML = "> " + choice.text;
+                
+                btn.onclick = () => {
+                    const allBtns = choicesWrapper.querySelectorAll('button');
+                    allBtns.forEach(b => b.style.pointerEvents = 'none');
+                    renderNode(choice.nextNode);
+                };
+                
+                choicesWrapper.appendChild(btn);
+
+                setTimeout(() => { btn.classList.add("visible"); }, delay);
+                delay += 800; 
+            });
+        }
+    </script>
+</body>
+</html>

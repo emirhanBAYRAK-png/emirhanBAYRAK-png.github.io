@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Zaman Döngüsü: Tam Sürüm</title>
+    <style>
+        body {
+            background: #111; color: #fff; font-family: 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; margin: 0; overflow: hidden;
+        }
+        .ui {
+            background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 10px;
+            margin-bottom: 15px; text-align: center; border: 2px solid #3498db; z-index: 10;
+        }
+        #timer { font-size: 32px; color: #e94560; font-weight: bold; }
+        .controls { font-size: 14px; color: #ccc; margin-top: 5px; }
+        #viewport {
+            width: 800px; height: 600px; border: 5px solid #fff;
+            overflow: hidden; position: relative; background: #1a1a2e;
+            box-shadow: 0 0 30px rgba(52, 152, 219, 0.3);
+        }
+        canvas { position: absolute; left: 0; top: 0; }
+        #winScreen {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); color: #f1c40f; font-size: 48px; font-weight: bold;
+            text-align: center; line-height: 600px; z-index: 20;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ui">
+        <div>Döngü Sıfırlanmasına: <span id="timer">17</span>s | Hayalet: <span id="ghostCount">0</span>/3</div>
+        <div class="controls">W-A-S-D: Hareket | E: Şalter Kullan | R: Her Şeyi Başa Sar</div>
+    </div>
+    <div id="viewport">
+        <canvas id="gameCanvas"></canvas>
+        <div id="winScreen">OYUNU BİTİRDİN!</div>
+    </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- OYUN AYARLARI ---
+const FPS = 60;
+const TIME_LIMIT = 17 * FPS;
+const VIEW_W = 800; // Kameranın genişliği
+const VIEW_H = 600; // Kameranın yüksekliği
+canvas.width = 5000; // Devasa sabit haritanın boyutu
+canvas.height = 3000;
+
+let currentFrame = 0;
+let ghosts = [];
+let currentRun = [];
+let camera = { x: 0, y: 0, targetX: 0, targetY: 0 };
+
+const player = {
+    spawnX: 150, spawnY: 300, // Checkpoint ile değişecek ana doğma noktası
+    x: 150, y: 300, size: 24, speed: 5, color: '#fff'
+};
+const keys = {};
+
+// --- HARİTA VE OBJELER (Senin Çizimine Göre Ayarlandı) ---
+let rooms = [];
+let walls = [];
+let doors = [];
+let levers = [];
+let plates = [];
+let checkpoints = [];
+let goal = {};
+
+// Duvar çizme asistanı
+function buildWall(x, y, w, h) { walls.push({x, y, w, h}); }
+
+function createRoomOutline(x, y, w, h, gaps) {
+    rooms.push({x, y, w, h});
+    let t = 20; // Duvar kalınlığı
+    
+    // Basit gap (boşluk) hesaplamasıyla duvarları örme
+    let topGap = gaps.find(g => g.side === 'top');
+    if(topGap) { buildWall(x, y, topGap.start, t); buildWall(x+topGap.start+topGap.size, y, w-(topGap.start+topGap.size), t); } 
+    else { buildWall(x, y, w, t); }
+
+    let botGap = gaps.find(g => g.side === 'bottom');
+    if(botGap) { buildWall(x, y+h-t, botGap.start, t); buildWall(x+botGap.start+botGap.size, y+h-t, w-(botGap.start+botGap.size), t); } 
+    else { buildWall(x, y+h-t, w, t); }
+
+    let leftGap = gaps.find(g => g.side === 'left');
+    if(leftGap) { buildWall(x, y, t, leftGap.start); buildWall(x, y+leftGap.start+leftGap.size, t, h-(leftGap.start+leftGap.size)); } 
+    else { buildWall(x, y, t, h); }
+
+    let rightGap = gaps.find(g => g.side === 'right');
+    if(rightGap) { buildWall(x+w-t, y, t, rightGap.start); buildWall(x+w-t, y+rightGap.start+rightGap.size, t, h-(rightGap.start+rightGap.size)); } 
+    else { buildWall(x+w-t, y, t, h); }
+}
+
+// 1. ODA (Sol Üst)
+createRoomOutline(0, 0, 800, 600, [{side: 'right', start: 250, size: 100}]);
+checkpoints.push({x: 150, y: 150}); // Mor Checkpoint
+levers.push({x: 400, y: 150, target: 'd1', active: false}); // Mavi Şalter
+doors.push({id: 'd1', x: 780, y: 250, w: 20, h: 100, req: 1, power: 0, color: '#2ecc71'}); // Yeşil Kapı
+
+// 2. ODA (Sağ)
+createRoomOutline(800, 0, 800, 600, [{side: 'left', start: 250, size: 100}, {side: 'bottom', start: 350, size: 100}]);
+levers.push({x: 1100, y: 150, target: 'd2', active: false});
+levers.push({x: 1400, y: 400, target: 'd2', active: false});
+doors.push({id: 'd2', x: 1150, y: 580, w: 100, h: 20, req: 2, power: 0, color: '#2ecc71'}); // 2 Şalter isteyen kapı
+
+// 3. ODA (Aşağı)
+createRoomOutline(800, 600, 800, 600, [{side: 'top', start: 350, size: 100}, {side: 'bottom', start: 350, size: 100}]);
+checkpoints.push({x: 1000, y: 900});
+levers.push({x: 1300, y: 900, target: 'd3', active: false});
+doors.push({id: 'd3', x: 1150, y: 1180, w: 100, h: 20, req: 1, power: 0, color: '#2ecc71'});
+
+// 4. ODA (Aşağı)
+createRoomOutline(800, 1200, 800, 600, [{side: 'top', start: 350, size: 100}, {side: 'right', start: 250, size: 100}]);
+levers.push({x: 1000, y: 1400, target: 'd4', active: false});
+levers.push({x: 1300, y: 1600, target: 'd4', active: false});
+doors.push({id: 'd4', x: 1580, y: 1450, w: 20, h: 100, req: 2, power: 0, color: '#2ecc71'});
+
+// 5. ODA (Sağ - Kırmızı Kapılı Oda)
+createRoomOutline(1600, 1200, 800, 600, [{side: 'left', start: 250, size: 100}, {side: 'right', start: 250, size: 100}]);
+plates.push({x: 1800, y: 1470, w: 50, h: 50, target: 'd5', active: false}); // Turuncu Plaka
+checkpoints.push({x: 2000, y: 1350});
+levers.push({x: 2200, y: 1600, target: 'd5', active: false});
+doors.push({id: 'd5', x: 2380, y: 1450, w: 20, h: 100, req: 2, power: 0, color: '#c0392b'}); // Kırmızı Kapı (Hem plaka hem şalter ister)
+
+// 6. ODA (Sağ)
+createRoomOutline(2400, 1200, 800, 600, [{side: 'left', start: 250, size: 100}, {side: 'bottom', start: 350, size: 100}]);
+levers.push({x: 2800, y: 1500, target: 'd6', active: false});
+doors.push({id: 'd6', x: 2750, y: 1780, w: 100, h: 20, req: 1, power: 0, color: '#2ecc71'});
+
+// 7. ODA (Büyük Alt Oda)
+createRoomOutline(2400, 1800, 800, 800, [{side: 'top', start: 350, size: 100}, {side: 'right', start: 400, size: 100}]);
+checkpoints.push({x: 2600, y: 2200});
+levers.push({x: 2900, y: 2000, target: 'd7', active: false});
+doors.push({id: 'd7', x: 3180, y: 2200, w: 20, h: 100, req: 1, power: 0, color: '#2ecc71'});
+
+// 8. ODA (Dikey Koridor)
+createRoomOutline(3200, 1800, 400, 800, [{side: 'left', start: 400, size: 100}, {side: 'right', start: 200, size: 100}]);
+plates.push({x: 3350, y: 2000, w: 50, h: 50, target: 'd8', active: false});
+doors.push({id: 'd8', x: 3580, y: 2000, w: 20, h: 100, req: 1, power: 0, color: '#2ecc71'});
+
+// 9. ODA (Son Koridor)
+createRoomOutline(3600, 1800, 400, 400, [{side: 'left', start: 200, size: 100}, {side: 'right', start: 200, size: 100}]);
+plates.push({x: 3750, y: 2000, w: 50, h: 50, target: 'd9', active: false});
+doors.push({id: 'd9', x: 3980, y: 2000, w: 20, h: 100, req: 1, power: 0, color: '#2ecc71'});
+
+// 10. ODA (Sarı Hedef Odası)
+createRoomOutline(4000, 1000, 600, 1200, [{side: 'left', start: 1000, size: 100}]);
+goal = {x: 4300, y: 1200, radius: 60}; // SARI OYUN SONU
+
+// --- GİRDİ KONTROLLERİ ---
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if(e.code === 'KeyR') hardReset(); // Komple sıfırlama
+});
+window.addEventListener('keyup', e => {
+    keys[e.code] = false;
+    if(e.code === 'KeyE') player.eHeld = false; // Basılı tutma bug'ını engeller
+});
+
+function hardReset() {
+    ghosts = []; currentRun = []; currentFrame = 0;
+    player.spawnX = 150; player.spawnY = 300; // En başa atar
+    player.x = player.spawnX; player.y = player.spawnY;
+    levers.forEach(l => l.active = false);
+}
+
+// --- FİZİK VE ÇARPIŞMA ---
+function checkWallCollision(nx, ny) {
+    let box = {x: nx, y: ny, w: player.size, h: player.size};
+    
+    for (let wall of walls) {
+        if (box.x < wall.x + wall.w && box.x + box.w > wall.x &&
+            box.y < wall.y + wall.h && box.y + box.h > wall.y) return true;
+    }
+    for (let door of doors) {
+        if (door.power < door.req) { // Kapı kapalıysa duvar sayılır
+            if (box.x < door.x + door.w && box.x + box.w > door.x &&
+                box.y < door.y + door.h && box.y + box.h > door.y) return true;
+        }
+    }
+    return false;
+}
+
+// --- ANA DÖNGÜ VE MANTIK ---
+function update() {
+    // 1. Hareket
+    let nextX = player.x, nextY = player.y;
+    if (keys['KeyW']) nextY -= player.speed;
+    if (keys['KeyS']) nextY += player.speed;
+    if (keys['KeyA']) nextX -= player.speed;
+    if (keys['KeyD']) nextX += player.speed;
+
+    if (!checkWallCollision(nextX, player.y)) player.x = nextX;
+    if (!checkWallCollision(player.x, nextY)) player.y = nextY;
+
+    // 2. Kamera Kayması (Bulunduğun odaya göre)
+    let activeRoom = rooms.find(r => player.x >= r.x && player.x <= r.x + r.w && player.y >= r.y && player.y <= r.y + r.h);
+    if(activeRoom) {
+        camera.targetX = activeRoom.x + (activeRoom.w/2) - (VIEW_W/2);
+        camera.targetY = activeRoom.y + (activeRoom.h/2) - (VIEW_H/2);
+    }
+    camera.x += (camera.targetX - camera.x) * 0.1; // Akışkan Lerp efekti
+    camera.y += (camera.targetY - camera.y) * 0.1;
+
+    // 3. Etkileşim Tuşu (E)
+    let isInteracting = keys['KeyE'] && !player.eHeld;
+    if(isInteracting) player.eHeld = true; // Sadece ilk basışta tetikler
+    
+    // Kayıt
+    currentRun.push({ x: player.x, y: player.y, e: isInteracting });
+
+    // 4. Mekanikleri Kontrol Et
+    checkMechanics();
+
+    // 5. Oyun Sonu (Sarı)
+    let distToGoal = Math.hypot((player.x + 12) - goal.x, (player.y + 12) - goal.y);
+    if(distToGoal < goal.radius) {
+        document.getElementById('winScreen').style.display = 'block';
+        return; // Oyunu durdur
+    }
+
+    // 6. Zaman Kontrolü
+    currentFrame++;
+    document.getElementById('timer').innerText = Math.ceil((TIME_LIMIT - currentFrame) / FPS);
+    if (currentFrame >= TIME_LIMIT) resetLoop();
+}
+
+function checkMechanics() {
+    // Kapıların gücünü sıfırla
+    doors.forEach(d => d.power = 0);
+
+    // Mor Checkpointler
+    checkpoints.forEach(cp => {
+        let dist = Math.hypot((player.x + 12) - cp.x, (player.y + 12) - cp.y);
+        if(dist < 30) { player.spawnX = cp.x; player.spawnY = cp.y; }
+    });
+
+    // Mavi Şalterler (Sadece E ile tetiklenir, döngü sonuna kadar açık kalır)
+    levers.forEach(lever => {
+        // Oyuncu basıyorsa
+        if (keys['KeyE'] && Math.hypot((player.x + 12) - lever.x, (player.y + 12) - lever.y) < 40) {
+            lever.active = true;
+        }
+        // Hayaletler basıyorsa
+        ghosts.forEach(g => {
+            let state = g[currentFrame];
+            if(state && state.e && Math.hypot((state.x + 12) - lever.x, (state.y + 12) - lever.y) < 40) lever.active = true;
+        });
+
+        // Şalter açıksa hedef kapıya güç ver
+        if(lever.active) doors.find(d => d.id === lever.target).power++;
+    });
+
+    // Turuncu Plakalar (Sadece üzerinde duruldukça aktifleşir)
+    plates.forEach(plate => {
+        plate.active = false; // Her karede sıfırla
+        let entities = [{x: player.x, y: player.y}, ...ghosts.map(g => g[currentFrame]).filter(s => s)];
+        
+        for(let e of entities) {
+            if(e.x + 24 > plate.x && e.x < plate.x + plate.w && e.y + 24 > plate.y && e.y < plate.y + plate.h) {
+                plate.active = true;
+                doors.find(d => d.id === plate.target).power++;
+                break; // Biri basıyorsa yeterli
+            }
+        }
+    });
+}
+
+function resetLoop() {
+    if (ghosts.length >= 3) ghosts.shift();
+    ghosts.push([...currentRun]);
+    currentRun = [];
+    currentFrame = 0;
+    // Checkpoint'e geri ışınla
+    player.x = player.spawnX; 
+    player.y = player.spawnY;
+    // Şalterleri sıfırla
+    levers.forEach(l => l.active = false);
+    document.getElementById('ghostCount').innerText = ghosts.length;
+}
+
+// --- ÇİZİM EKRANI ---
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y); // Bütün ekranı kameraya göre kaydır
+
+    // Duvarlar
+    ctx.fillStyle = "#333";
+    walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
+
+    // Checkpointler (Mor)
+    checkpoints.forEach(cp => {
+        ctx.fillStyle = "rgba(155, 89, 182, 0.3)";
+        ctx.beginPath(); ctx.arc(cp.x, cp.y, 25, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = "#9b59b6"; ctx.lineWidth = 3; ctx.stroke();
+    });
+
+    // Şalterler (Mavi)
+    levers.forEach(l => {
+        ctx.fillStyle = l.active ? "#00d2d3" : "#3498db";
+        ctx.beginPath(); ctx.arc(l.x, l.y, 15, 0, Math.PI*2); ctx.fill();
+    });
+
+    // Basınç Plakaları (Turuncu)
+    plates.forEach(p => {
+        ctx.fillStyle = p.active ? "#f39c12" : "#e67e22";
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+    });
+
+    // Kapılar (Yeşil / Kırmızı)
+    doors.forEach(d => {
+        if(d.power < d.req) {
+            ctx.fillStyle = d.color;
+            ctx.fillRect(d.x, d.y, d.w, d.h);
+        }
+    });
+
+    // Hedef (Sarı)
+    ctx.fillStyle = "#f1c40f";
+    ctx.beginPath(); ctx.arc(goal.x, goal.y, goal.radius, 0, Math.PI*2); ctx.fill();
+
+    // Hayaletler
+    ghosts.forEach((g, i) => {
+        let s = g[currentFrame];
+        if (s) {
+            ctx.fillStyle = `rgba(0, 210, 211, ${0.4 + (i*0.2)})`;
+            ctx.fillRect(s.x, s.y, player.size, player.size);
+        }
+    });
+
+    // Oyuncu (Kare)
+    ctx.fillStyle = keys['KeyE'] ? "#f1c40f" : player.color;
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+
+    ctx.restore();
+    requestAnimationFrame(loop);
+}
+
+function loop() { update(); draw(); }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

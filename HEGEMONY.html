@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Hegemony</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --bg-dark: #0b101a;
+            --panel-bg: rgba(15, 20, 30, 0.95);
+            --neon-blue: #00e5ff;
+            --neon-red: #ff3344;
+            --neon-gold: #ffd700;
+            --neon-green: #00ff88;
+            --neon-teal: #00bfff;
+            --neon-purple: #a855f7;
+            --neon-orange: #ff8c00;
+            --neon-pink: #ff1493;
+            --border: 1px solid #2a3b50;
+        }
+
+        body { margin: 0; padding: 0; background: var(--bg-dark); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; user-select: none; }
+        
+        #map-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; filter: contrast(1.1) brightness(0.9); }
+        .leaflet-container { background: #0b101a !important; }
+        .leaflet-control-attribution { display: none !important; }
+
+        #game-ui { display: none; }
+        #top-hud { position: absolute; top: 0; width: 100%; height: 50px; background: rgba(0,0,0,0.9); border-bottom: var(--border); display: flex; align-items: center; justify-content: space-around; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 14px; }
+        .stat-val { color: var(--neon-blue); font-weight: bold; }
+        
+        #bottom-bar { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 1000; }
+        .main-btn { background: rgba(0,0,0,0.8); color: white; border: 2px solid #444; padding: 12px 20px; font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 8px; transition: 0.3s; letter-spacing: 1px; text-transform: uppercase; }
+        .main-btn:hover:not(:disabled) { border-color: var(--neon-blue); box-shadow: 0 0 15px rgba(0, 229, 255, 0.4); transform: translateY(-3px); }
+
+        #news-ticker { position: absolute; bottom: 0; width: 100%; height: 30px; background: rgba(0,0,0,0.9); border-top: var(--border); z-index: 1000; display: flex; align-items: center; color: #ccc; overflow: hidden; white-space: nowrap; font-family: monospace; }
+        #news-content { animation: scrollNews 30s linear infinite; }
+        @keyframes scrollNews { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+
+        .modal-overlay { display: none; position: absolute; top:0; left:0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--panel-bg); border: 2px solid #444; width: 90vw; max-width: 1400px; height: 85vh; border-radius: 12px; padding: 30px; position: relative; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+        .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 24px; cursor: pointer; transition: 0.2s; }
+        .close-btn:hover { color: var(--neon-red); transform: scale(1.2); }
+        h2.modal-title { margin-top: 0; color: var(--neon-gold); text-align: center; border-bottom: 1px solid #333; padding-bottom: 15px; letter-spacing: 2px; }
+
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; overflow-y: auto; padding-right: 10px; flex-grow: 1; align-content: start; align-items: stretch; }
+        .item-card { background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; transition: 0.2s; min-height: 180px; box-sizing: border-box; }
+        .item-card:hover { border-color: var(--neon-blue); background: rgba(0, 229, 255, 0.05); }
+        .item-title { font-size: 15px; font-weight: bold; margin-bottom: 5px; color: white; }
+        .item-desc { font-size: 12px; color: #aaa; margin-bottom: 15px; line-height: 1.4; }
+        .buy-btn { background: #1a2533; color: white; border: 1px solid #4a5568; padding: 10px; cursor: pointer; border-radius: 4px; font-weight: bold; transition: 0.2s; width: 100%; margin-top: auto; }
+        .buy-btn:hover:not(:disabled) { background: #2b3b4f; border-color: var(--neon-green); }
+        .buy-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #target-panel { display: none; position: absolute; right: 20px; top: 70px; width: 280px; background: var(--panel-bg); border: var(--border); border-radius: 8px; padding: 20px; z-index: 1000; box-shadow: 0 5px 20px rgba(0,0,0,0.6); }
+        .c-stat { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #ddd; border-bottom: 1px dashed #333; padding-bottom: 4px; }
+        
+        #start-country-overlay { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); border: 2px solid var(--neon-blue); padding: 20px 40px; border-radius: 12px; z-index: 1500; text-align: center; box-shadow: 0 0 30px var(--neon-blue); }
+
+        .menu-screen { position: absolute; top:0; left:0; width:100vw; height:100vh; background: var(--bg-dark); z-index: 3000; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow-y: auto; }
+        .menu-wrapper { margin: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; }
+        .game-title { font-size: 4.5rem; color: white; text-shadow: 0 0 30px var(--neon-blue); letter-spacing: 8px; margin-bottom: 10px; text-align: center; }
+
+        #invasion-overlay { display:none; position: absolute; top:0; left:0; width:100vw; height:100vh; background:rgba(150,0,0,0.5); z-index:4000; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
+        .invasion-box { background:#111; border:3px solid var(--neon-red); padding:30px; border-radius:10px; max-width:500px; text-align:center; box-shadow: 0 0 50px rgba(255,0,0,0.5); }
+
+        #game-over-overlay { display:none; position: absolute; top:0; left:0; width:100vw; height:100vh; background:radial-gradient(circle, rgba(138,3,3,0.9) 0%, rgba(10,0,0,1) 100%); z-index:5000; justify-content:center; align-items:center; flex-direction: column; }
+        .game-over-box { background:#0a0000; border:4px solid var(--neon-red); padding:40px; border-radius:10px; max-width:600px; text-align:center; box-shadow: 0 0 100px rgba(255,0,0,0.8); }
+
+        /* SAVAŞ ÇARKI CSS */
+        #battle-overlay { display: none; position: absolute; top:0; left:0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 4500; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .battle-box { background: var(--panel-bg); border: 2px solid var(--neon-red); width: 400px; border-radius: 12px; padding: 30px; text-align: center; display: flex; flex-direction: column; align-items: center; box-shadow: 0 0 30px rgba(255, 51, 68, 0.4); }
+        .roulette-container { position: relative; margin: 30px 0; width: 220px; height: 220px; }
+        .wheel-marker { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid var(--neon-gold); z-index: 10; filter: drop-shadow(0 0 5px black); }
+        .roulette-wheel { width: 100%; height: 100%; border-radius: 50%; border: 4px solid #fff; box-shadow: 0 0 20px #000; overflow: hidden; background: conic-gradient(var(--neon-blue) 0% 50%, var(--neon-red) 50% 100%); transition: transform 3s cubic-bezier(0.1, 0.7, 0.1, 1); }
+        .battle-stats { display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu" class="menu-screen">
+        <div class="menu-wrapper">
+            <h1 class="game-title">HEGEMONY</h1>
+            <p style="color: #aaa; margin-bottom: 30px; font-size: 1.2rem; letter-spacing: 2px;"></p>
+            <button class="main-btn" style="border-color:var(--neon-blue); font-size: 1.5rem; padding: 15px 40px;" onclick="openCommanderSelect()">Yeni Seferi Başlat</button>
+        </div>
+    </div>
+
+    <div id="commander-select" class="menu-screen" style="display: none;">
+        <div class="menu-wrapper">
+            <h2 style="font-size: 2.5rem; color: white; letter-spacing: 3px; margin-bottom: 10px; text-align: center;">LİDERİNİ SEÇ</h2>
+            <p style="color: #aaa; margin-bottom: 30px; text-align: center;">Tüm avantajların bedeli ağırlaştırıldı. Dikkatli seç.</p>
+            
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 1200px; margin-bottom: 40px; padding: 0 20px;">
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:var(--neon-red);" onclick="selectCommander('general')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">⚔️</div><div class="item-title" style="color: var(--neon-red)">Demir General</div>
+                        <div class="item-desc">Güç +%20.<br><span style="color:#ff4444;">Dezavantaj: Aylık Gelir -%30</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:var(--neon-green);" onclick="selectCommander('diplomat')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">🌍</div><div class="item-title" style="color: var(--neon-green)">Halkın Babası</div>
+                        <div class="item-desc">Refah 80 başlar.<br><span style="color:#ff4444;">Dezavantaj: Asker Alımı +%20 Pahalı</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:var(--neon-teal);" onclick="selectCommander('barbaros')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">⚓</div><div class="item-title" style="color: var(--neon-teal)">H.E. Barbaros</div>
+                        <div class="item-desc">Saldırı Menzili +3000km.<br><span style="color:#ff4444;">Dezavantaj: Teknoloji +%20 Pahalı</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:var(--neon-gold);" onclick="selectCommander('industrialist')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">⚙️</div><div class="item-title" style="color: var(--neon-gold)">Demir Sanayici</div>
+                        <div class="item-desc">Teknoloji -%15 Ucuz.<br><span style="color:#ff4444;">Dezavantaj: Askerler +%40 Pahalı</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:var(--neon-orange);" onclick="selectCommander('zealot')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">🔥</div><div class="item-title" style="color: var(--neon-orange)">Kutsal Lider</div>
+                        <div class="item-desc">Savaş kazancı +1 Refah.<br><span style="color:#ff4444;">Dezavantaj: Temel Gelir -%40</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:var(--neon-purple);" onclick="selectCommander('spymaster')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">👁️‍🗨️</div><div class="item-title" style="color: var(--neon-purple)">Gölge Efendisi</div>
+                        <div class="item-desc">AI her ay -%3 zayıflar.<br><span style="color:#ff4444;">Dezavantaj: Savaşta Gücün -%15 Düşer</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:#00ffff;" onclick="selectCommander('scholar')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">👨‍🔬</div><div class="item-title" style="color: #00ffff">Başbilgin</div>
+                        <div class="item-desc">Teknoloji -%20 Ucuz & Sınır Yok.<br><span style="color:#ff4444;">Dezavantaj: Askeri Güç -%20</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:#ffd700;" onclick="selectCommander('merchant')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">💸</div><div class="item-title" style="color: #ffd700">Tüccar Prens</div>
+                        <div class="item-desc">Toplam Gelir +%30.<br><span style="color:#ff4444;">Dezavantaj: Asker Alımı +%30 Pahalı</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:#8b0000;" onclick="selectCommander('pirate')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">🏴‍☠️</div><div class="item-title" style="color: #ff4444">Korsan Kral</div>
+                        <div class="item-desc">Savaş Ganimeti x2.5.<br><span style="color:#ff4444;">Dezavantaj: Nüfus Vergisi -%60</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:#9acd32;" onclick="selectCommander('agrarian')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">🌾</div><div class="item-title" style="color: #9acd32">Toprak Ağası</div>
+                        <div class="item-desc">Nüfus x1.5 hızlı artar.<br><span style="color:#ff4444;">Dezavantaj: Teknolojiler +%30 Pahalı</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:#4682b4;" onclick="selectCommander('defender')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">🛡️</div><div class="item-title" style="color: #4682b4">Garnizon Komutanı</div>
+                        <div class="item-desc">Savunmada Güç x1.3.<br><span style="color:#ff4444;">Dezavantaj: Saldırıda Güç x0.6</span></div>
+                    </div>
+                </div>
+                <div class="item-card" style="width: 260px; cursor: pointer; text-align: center; border-color:var(--neon-pink);" onclick="selectCommander('tyrant')">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 2.5rem;">👑</div><div class="item-title" style="color: var(--neon-pink)">Kanlı Tiran</div>
+                        <div class="item-desc">Suikast sınırı -20'dir.<br><span style="color:#ff4444;">Dezavantaj: Nüfus Artışı %70 Düşer</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="main-btn" style="width: 200px;" onclick="backToMainMenu()">Geri Dön</button>
+        </div>
+    </div>
+
+    <div id="start-country-overlay">
+        <h3 style="margin: 0; color: white; font-size: 20px;">🌍 Haritadan Başkentini Seç</h3>
+        <p style="color:#aaa; font-size:12px; margin-top:5px;">Ekonomi dar boğazda, başlangıçta ekstra hazine verilmeyecek.</p>
+        <button class="main-btn" id="start-btn" style="margin-top: 15px; border-color: var(--neon-green); font-size: 14px; display:none;" onclick="confirmStartCountry()">BU ÜLKEYİ BAŞKENT YAP</button>
+    </div>
+
+    <div id="invasion-overlay">
+        <div class="invasion-box">
+            <div id="invasion-text" style="color:white; font-size:16px; line-height:1.6;"></div>
+            <button class="main-btn" style="border-color:var(--neon-red); width:100%; margin-top:15px;" onclick="document.getElementById('invasion-overlay').style.display='none'">RAPORU KAPAT</button>
+        </div>
+    </div>
+
+    <div id="game-over-overlay">
+        <div class="game-over-box">
+            <h1 style="color:var(--neon-red); font-size:5rem; margin-top:0; margin-bottom:10px; text-shadow: 0 0 20px red;">SUİKAST!</h1>
+            <p style="color:#aaa; font-size:18px; margin-bottom:30px;">Halkın refahı kritik sınırın altına düştü. İsyancılar sarayını bastı!</p>
+            <h2 style="color:var(--neon-gold); letter-spacing: 5px;">İMPARATORLUK ÇÖKTÜ</h2>
+            <button class="main-btn" style="border-color:var(--neon-red); background:#220000; width:100%; margin-top:20px; font-size:20px;" onclick="location.reload()">TARİHİ YENİDEN YAZ</button>
+        </div>
+    </div>
+
+    <div id="battle-overlay">
+        <div class="battle-box">
+            <h2 style="margin-top:0; color:white; border-bottom: 1px solid #333; padding-bottom:10px; width:100%;" id="battle-target-name">Hedef Ülke</h2>
+            <div class="battle-stats">
+                <span style="color:var(--neon-blue); text-align:left;">Bizim Gücümüz<br><span id="battle-player-power">0</span></span>
+                <span style="color:var(--neon-red); text-align:right;">Düşman Gücü<br><span id="battle-enemy-power">0</span></span>
+            </div>
+            <div class="roulette-container">
+                <div class="wheel-marker"></div>
+                <div class="roulette-wheel" id="wheel-inner"></div>
+            </div>
+            <div id="battle-result" style="margin-bottom: 15px; min-height: 40px; font-size:14px; color:#ccc;">Çarkı çevirerek şansını dene...</div>
+            <button class="main-btn" style="border-color:var(--neon-gold); color:var(--neon-gold); width:100%;" id="btn-spin" onclick="spinWheel()">SAVAŞ ÇARKINI ÇEVİR</button>
+            <button class="main-btn" style="display:none; width:100%;" id="btn-battle-close" onclick="closeBattle()">SONUÇLARI ONAYLA</button>
+        </div>
+    </div>
+
+    <div id="game-ui">
+        <div id="top-hud">
+            <span>📅 <span id="date-display" class="stat-val">OCAK 1800</span></span>
+            <span>💰 <span id="gold" class="stat-val">0</span> <span style="font-size:10px; color:#aaa">(+<span id="income-display">0</span>/ay)</span></span>
+            <span>⚔️ <span id="power" class="stat-val">0</span></span>
+            <span>👥 Nüfus: <span id="pop-display" class="stat-val">0</span></span>
+            <span>❤️ Refah: <span id="welfare-display" class="stat-val">%70</span></span>
+        </div>
+
+        <div id="bottom-bar">
+            <button class="main-btn" onclick="openModal('tech-modal')">🔬 TEKNOLOJİ AĞACI</button>
+            <button class="main-btn" onclick="openModal('military-modal')">⚔️ ASKERİ KARARGAH</button>
+            <button class="main-btn" style="border-color:var(--neon-gold); color:var(--neon-gold);" onclick="openModal('public-modal')">🎪 HALK YÖNETİMİ</button>
+        </div>
+
+        <div id="news-ticker"><span id="news-content">DÜNYA HABERLERİ: Savaşlar artık bir kumar. Kazanırken de kaybederken de asker feda edeceksin...</span></div>
+
+        <div id="target-panel">
+            <h2 id="region-name" style="color:var(--neon-blue); margin-top:0; border-bottom: 1px solid #333; padding-bottom: 10px; font-size: 18px;">-</h2>
+            <div class="c-stat"><span>Durum:</span> <span id="c-status" style="font-weight:bold;">Bağımsız</span></div>
+            <div class="c-stat"><span>Mesafe:</span> <span id="c-dist" style="color:white">0 km</span></div>
+            <div class="c-stat"><span>Savunma Gücü:</span> <span id="c-def" style="color:var(--neon-red); font-weight:bold;">???</span></div>
+            <div class="c-stat"><span>Aylık Zenginlik:</span> <span id="c-wealth" style="color:var(--neon-gold)">0</span></div>
+            <div class="c-stat"><span>Nüfus:</span> <span id="c-pop" style="color:var(--neon-blue)">0</span></div>
+            
+            <button id="btn-war" class="buy-btn" style="margin-top:15px; border-color:var(--neon-red); color:var(--neon-red);" onclick="declareWar()">⚔️ SAVAŞ İLAN ET</button>
+            <button id="btn-colonize" class="buy-btn" style="margin-top:10px; border-color:var(--neon-teal); color:var(--neon-teal); display:none;" onclick="colonizeCountry()">⚓ SÖMÜRGE YAP</button>
+        </div>
+    </div>
+
+    <div id="tech-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('tech-modal')">✖</button>
+            <h2 class="modal-title">🔬 TEKNOLOJİ AĞACI (18 Dal)</h2>
+            <div class="grid-container" id="tech-grid"></div>
+        </div>
+    </div>
+
+    <div id="military-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('military-modal')">✖</button>
+            <h2 class="modal-title">⚔️ ASKERİ KARARGAH (17 Birlik Sınıfı)</h2>
+            <div class="grid-container" id="mil-grid"></div>
+        </div>
+    </div>
+
+    <div id="public-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('public-modal')">✖</button>
+            <h2 class="modal-title" style="color:var(--neon-gold);">🎪 HALK YÖNETİMİ VE REFAH</h2>
+            <div class="grid-container" id="public-grid"></div>
+        </div>
+    </div>
+
+    <div id="map-container"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const majorPowers = {
+            "United States of America": { def: 41000, wealth: 80000, pop: 330000000 },
+            "Russia": { def: 40000, wealth: 60000, pop: 144000000 },
+            "China": { def: 39000, wealth: 75000, pop: 1400000000 },
+            "India": { def: 30000, wealth: 40000, pop: 1380000000 },
+            "Brazil": { def: 20000, wealth: 25000, pop: 212000000 },
+            "France": { def: 25000, wealth: 35000, pop: 67000000 },
+            "United Kingdom": { def: 26000, wealth: 38000, pop: 67000000 },
+            "Germany": { def: 22000, wealth: 45000, pop: 83000000 }
+        };
+
+        const techDB = [
+            { id: 'agri', name: 'Tarım Devrimi', desc: 'Nüfus artışını hızlandırır.', baseCost: 14280, type: 'pop', lvl: 0, maxLvl: 20, icon: '🌾' },
+            { id: 'med', name: 'Tıp ve Şehircilik', desc: 'Kalıcı refah artışı sağlar.', baseCost: 22050, type: 'welfare', lvl: 0, maxLvl: 15, icon: '🏥' },
+            { id: 'ind', name: 'Ağır Sanayi', desc: 'Altın gelirini artırır.', baseCost: 25200, type: 'income', lvl: 0, maxLvl: 30, icon: '🏭' },
+            { id: 'infra', name: 'Demiryolu Ağı', desc: 'Ticaret hızlanır.', baseCost: 29925, type: 'income_high', lvl: 0, maxLvl: 20, icon: '🛤️' },
+            { id: 'bank', name: 'Merkez Bankası', desc: 'Vergi toplama verimliliğini artırır.', baseCost: 30240, type: 'tax', lvl: 0, maxLvl: 10, icon: '🏦' },
+            { id: 'conscript', name: 'Zorunlu Askerlik', desc: 'Askeri maliyetleri %5 düşürür.', baseCost: 35700, type: 'mil_discount', lvl: 0, maxLvl: 10, icon: '🪖' },
+            { id: 'logistics', name: 'Askeri Lojistik', desc: 'Saldırı menzilini 1000km artırır.', baseCost: 40320, type: 'range', lvl: 0, maxLvl: 15, icon: '🚂' },
+            { id: 'propaganda', name: 'Propaganda', desc: 'Savaş yorgunluğunu azaltır.', baseCost: 47250, type: 'morale', lvl: 0, maxLvl: 10, icon: '📰' },
+            { id: 'edu', name: 'Eğitim Reformu', desc: 'Bilimsel aydınlanma refahı artırır.', baseCost: 51450, type: 'welfare_pop', lvl: 0, maxLvl: 10, icon: '📚' },
+            { id: 'mil_sci', name: 'Askeri Akademiler', desc: 'Yeni birliklerin kilidini açar.', baseCost: 50400, type: 'unlock', lvl: 0, maxLvl: 16, icon: '🎖️' },
+            { id: 'fort', name: 'Sınır Tahkimatı', desc: 'İstilalara karşı +200 Ücretsiz Savunma.', baseCost: 54600, type: 'def_bonus', lvl: 0, maxLvl: 15, icon: '🧱' },
+            { id: 'spy', name: 'İstihbarat Teşkilatı', desc: 'Tüm düşman güçlerini pasif zayıflatır.', baseCost: 57750, type: 'enemy_nerf', lvl: 0, maxLvl: 10, icon: '🕵️' },
+            { id: 'chem', name: 'Kimya Sanayisi', desc: 'Aşırı yüksek gelir sağlar.', baseCost: 75600, type: 'income_extreme', lvl: 0, maxLvl: 15, icon: '🧪' },
+            { id: 'intel', name: 'Dış İstihbarat Ağı', desc: 'Savaş sisini kaldırır. +1000km/Svy menzildeki düşman gücünü net gösterir.', baseCost: 84000, type: 'vision', lvl: 0, maxLvl: 20, icon: '👁️' },
+            { id: 'aero', name: 'Havacılık Teorisi', desc: 'Menzili uçaklarla 2000km artırır.', baseCost: 84000, type: 'range_high', lvl: 0, maxLvl: 10, icon: '✈️' },
+            { id: 'telecom', name: 'Telekomünikasyon', desc: 'Küresel vergi akışını optimize eder.', baseCost: 110250, type: 'tax_high', lvl: 0, maxLvl: 10, icon: '📡' },
+            { id: 'genetics', name: 'Genetik Tedaviler', desc: 'Hastalıkları bitirir, Nüfus patlar.', baseCost: 315000, type: 'pop_high', lvl: 0, maxLvl: 5, icon: '🧬' },
+            { id: 'nuke_theory', name: 'Nükleer Fizik', desc: 'Askeri alımlara ekstra %10 Çarpan.', baseCost: 525000, type: 'power_mult', lvl: 0, maxLvl: 10, icon: '☢️' },
+            { id: 'space_lab', name: 'Robot ve Uzay Laboratuvarı', desc: 'Robotik Birlikler ve Uzay Silahlarının kilidini kırar.', baseCost: 1260000, type: 'space', lvl: 0, maxLvl: 1, icon: '🛸' },
+            { id: 'cyber', name: 'Siber Güvenlik', desc: 'Dijital kalkan. +50.000 Savunma.', baseCost: 11550000, type: 'def_high', lvl: 0, maxLvl: 10, icon: '💻' }
+        ];
+
+        const unitDB = [
+            { id: 'u0', name: 'Düzensiz Milisler', desc: 'Zayıf köylüler.', cost: 450, power: 50, reqTechLvl: 0, icon: '🪓' },
+            { id: 'u1', name: 'Düzenli Piyade', desc: 'Milli ordu.', cost: 1260, power: 200, reqTechLvl: 1, icon: '💂' },
+            { id: 'u2', name: 'Hafif Süvari', desc: 'Atlı birlikler.', cost: 2700, power: 500, reqTechLvl: 2, icon: '🐎' },
+            { id: 'u3', name: 'Elit Muhafızlar', desc: 'Şok birlikleri.', cost: 4500, power: 1000, reqTechLvl: 3, icon: '🛡️' },
+            { id: 'u4', name: 'Ağır Makineli Birlikler', desc: 'Siperlerin hakimi.', cost: 7200, power: 1800, reqTechLvl: 4, icon: '🔫' },
+            { id: 'u5', name: 'Topçu Bataryası', desc: 'Ağır toplar.', cost: 14400, power: 4500, reqTechLvl: 5, icon: '💣' },
+            { id: 'u6', name: 'Zırhlı Gemiler', desc: 'Buhar gücü.', cost: 27000, power: 9000, reqTechLvl: 6, icon: '⛴️' },
+            { id: 'u7', name: 'Erken Dönem Tanklar', desc: 'Zırhlı canavarlar.', cost: 45000, power: 20000, reqTechLvl: 7, icon: '🚜' },
+            { id: 'u8', name: 'Avcı Uçakları', desc: 'Hava üstünlüğü.', cost: 90000, power: 45000, reqTechLvl: 8, icon: '🛩️' },
+            { id: 'u9', name: 'Ağır Bombardıman', desc: 'Şehirleri haritadan siler.', cost: 216000, power: 110000, reqTechLvl: 9, icon: '🦅' },
+            { id: 'u10', name: 'Saldırı Denizaltıları', desc: 'Görünmez avcılar.', cost: 450000, power: 250000, reqTechLvl: 10, icon: '🦈' },
+            { id: 'u11', name: 'Dreadnought', desc: 'Denizlerin kalesi.', cost: 900000, power: 550000, reqTechLvl: 11, icon: '⚓' },
+            { id: 'u12', name: 'Uçak Gemisi', desc: 'Mobil hava üssü.', cost: 2700000, power: 1800000, reqTechLvl: 12, icon: '🚢' },
+            { id: 'u13', name: 'Modern Ana Muharebe Tankı', desc: 'Durdurulamaz zırh.', cost: 7200000, power: 5000000, reqTechLvl: 13, icon: '🔰' },
+            { id: 'u14', name: 'Özel Kuvvetler (Spec-Ops)', desc: 'Gölge suikastçiler.', cost: 14400000, power: 12000000, reqTechLvl: 14, icon: '🥷' },
+            { id: 'u17', name: 'Otonom Savaş Dronları', desc: 'Gökleri karartan sürüler.', cost: 25000000, power: 25000000, reqTechLvl: 15, reqSpace: true, icon: '🚁' },
+            { id: 'u18', name: 'Mekanize Piyadeler', desc: 'Ağır zırhlı elit askerler.', cost: 40000000, power: 45000000, reqTechLvl: 15, reqSpace: true, icon: '🤖' },
+            { id: 'u19', name: 'Titan Mecha Sınıfı', desc: 'Yürüyen kaleler.', cost: 80000000, power: 90000000, reqTechLvl: 16, reqSpace: true, icon: '🦾' },
+            { id: 'u15', name: 'Kıtalararası Balistik Füze', desc: 'Nükleer Kıyamet.', cost: 150000000, power: 180000000, reqTechLvl: 16, reqSpace: true, icon: '🚀' },
+            { id: 'u16', name: 'Yörünge Lazer Ağı', desc: 'Uzaydan mutlak yıkım.', cost: 300000000, power: 400000000, reqTechLvl: 16, reqSpace: true, icon: '🛰️' }
+        ];
+
+        const publicEventsDB = [
+            { id: 'pe1', name: 'Sokak Şarkıcıları', desc: 'Küçük eğlenceler (+2 Refah)', cost: 1600, welfare: 2, icon: '🪕' },
+            { id: 'pe2', name: 'Bedava Ekmek Dağıtımı', desc: 'Açlığı önler (+5 Refah)', cost: 4800, welfare: 5, icon: '🍞' },
+            { id: 'pe3', name: 'Kahramanları Anma', desc: 'Milli duyguları okşar (+8 Refah)', cost: 9600, welfare: 8, icon: '🕯️' },
+            { id: 'pe4', name: 'Büyük Arena Oyunları', desc: 'Halkı büyüler (+15 Refah)', cost: 19200, welfare: 15, icon: '🏟️' },
+            { id: 'pe5', name: 'İmparatorluk Festivali', desc: 'Devasa kutlama (+25 Refah)', cost: 40000, welfare: 25, icon: '🎇' },
+            { id: 'pe6', name: 'Borç Silme Yasası', desc: 'Köylüleri rahatlatır (+40 Refah)', cost: 80000, welfare: 40, icon: '📜' },
+            { id: 'pe7', name: 'Ücretsiz Konut Projesi', desc: 'Devlet şefkati (+60 Refah)', cost: 160000, welfare: 60, icon: '🏘️' },
+            { id: 'pe8', name: 'Altın Çağ İlanı', desc: 'Tüm dertleri unutturur (+100 Refah)', cost: 400000, welfare: 100, icon: '👑' }
+        ];
+
+        let player = { gold: 0, power: 0, baseIncome: 0, trait: '', monthsPassed: 0, population: 0, welfare: 60, territory: 0, colonizeMultiplier: 1.4, baseRange: 3000 };
+        let gamePhase = 'menu'; 
+        let playerOwnedLayers = [];
+        let countryDB = {}; 
+        let countryKeys = []; 
+        let currentTarget = null; 
+        let currentTargetLayer = null;
+        let gameLoopInterval;
+
+        function openCommanderSelect() { document.getElementById('main-menu').style.display = 'none'; document.getElementById('commander-select').style.display = 'flex'; }
+        function backToMainMenu() { document.getElementById('commander-select').style.display = 'none'; document.getElementById('main-menu').style.display = 'flex'; }
+
+        function selectCommander(trait) {
+            player.trait = trait;
+            document.getElementById('commander-select').style.display = 'none';
+            document.getElementById('start-country-overlay').style.display = 'block';
+            gamePhase = 'select_start';
+            setTimeout(() => { map.invalidateSize(); }, 100);
+        }
+
+        function confirmStartCountry() {
+            if(!currentTarget) return;
+            gamePhase = 'playing';
+            document.getElementById('start-country-overlay').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+            
+            currentTarget.owner = 'player';
+            playerOwnedLayers.push(currentTargetLayer);
+            player.territory++;
+            
+            player.power = currentTarget.defense;
+            player.population = currentTarget.population;
+            player.baseIncome = Math.floor(currentTarget.wealth / 4);
+            player.gold = Math.floor(currentTarget.wealth * 0.30); 
+
+            let pColor = getPlayerColor();
+            currentTargetLayer.setStyle({ fillColor: pColor, color: '#fff', weight: 2, fillOpacity: 0.6 });
+            currentTargetLayer.options.fillColor = pColor; 
+
+            if (player.trait === 'diplomat') player.welfare = 80;
+            if (player.trait === 'zealot') player.welfare = 70;
+            if (player.trait === 'barbaros') player.baseRange += 3000;
+            
+            updateUI();
+            gameLoopInterval = setInterval(gameTick, 2000); 
+        }
+
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'flex'; 
+            if(id === 'tech-modal') renderTechTree(); 
+            if(id === 'military-modal') renderMilitaryBase(); 
+            if(id === 'public-modal') renderPublicMenu(); 
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        function formatNumber(num) {
+            if(num >= 1e12) return (num / 1e12).toFixed(2) + 'T'; 
+            if(num >= 1e9) return (num / 1e9).toFixed(2) + 'B'; 
+            if(num >= 1e6) return (num / 1e6).toFixed(2) + 'M'; 
+            if(num >= 1e3) return (num / 1e3).toFixed(1) + 'K'; 
+            return Math.floor(num);
+        }
+
+        function renderTechTree() {
+            const grid = document.getElementById('tech-grid');
+            grid.innerHTML = '';
+            techDB.forEach(t => {
+                let exponentialCost = Math.floor(t.baseCost * Math.pow(1.45, t.lvl));
+                
+                if (player.trait === 'industrialist') exponentialCost = Math.floor(exponentialCost * 0.85);
+                if (player.trait === 'scholar') exponentialCost = Math.floor(exponentialCost * 0.80);
+                if (player.trait === 'agrarian') exponentialCost = Math.floor(exponentialCost * 1.30); 
+                if (player.trait === 'barbaros') exponentialCost = Math.floor(exponentialCost * 1.20); 
+
+                let isMax = (t.lvl >= t.maxLvl) && !(player.trait === 'scholar'); 
+                let lvlText = (player.trait === 'scholar') ? t.lvl : `${t.lvl}/${t.maxLvl}`;
+                
+                grid.innerHTML += `<div class="item-card"><div style="flex-grow: 1;"><div class="item-title">${t.icon} ${t.name} (Svy: ${lvlText})</div><div class="item-desc">${t.desc}</div></div><button class="buy-btn" ${isMax || player.gold < exponentialCost ? 'disabled' : ''} onclick="buyTech('${t.id}')">${isMax ? 'MAKSİMUM' : `GELİŞTİR (${formatNumber(exponentialCost)})`}</button></div>`;
+            });
+        }
+
+        function renderMilitaryBase() {
+            const grid = document.getElementById('mil-grid');
+            grid.innerHTML = '';
+            let milTechLvl = techDB.find(t => t.id === 'mil_sci').lvl;
+            let conscriptLvl = techDB.find(t => t.id === 'conscript').lvl; 
+            let spaceLabLvl = techDB.find(t => t.id === 'space_lab').lvl;
+
+            unitDB.forEach(u => {
+                let reqMilFail = milTechLvl < u.reqTechLvl;
+                let reqSpaceFail = u.reqSpace && spaceLabLvl === 0;
+                let isLocked = reqMilFail || reqSpaceFail;
+                
+                let lockReason = "";
+                if(reqMilFail) lockReason += `Akademi Svy ${u.reqTechLvl} Gerekli. <br>`;
+                if(reqSpaceFail) lockReason += `Uzay Laboratuvarı Gerekli.`;
+
+                let rawCost = u.cost;
+                rawCost -= rawCost * (conscriptLvl * 0.05); 
+                if (player.trait === 'industrialist') rawCost = Math.floor(rawCost * 1.40);
+                if (player.trait === 'diplomat') rawCost = Math.floor(rawCost * 1.20);
+                if (player.trait === 'merchant') rawCost = Math.floor(rawCost * 1.30);
+                
+                grid.innerHTML += `<div class="item-card"><div style="flex-grow: 1;"><div class="item-title" style="${isLocked ? 'color:#777;' : ''}">${u.icon} ${u.name}</div><div class="item-desc">${isLocked ? lockReason : u.desc}<br><br><b>Güç: +${formatNumber(u.power)}</b></div></div><button class="buy-btn" ${isLocked || player.gold < rawCost ? 'disabled' : ''} onclick="buyUnit('${u.id}')">${isLocked ? 'KİLİTLİ' : `EĞİT (${formatNumber(rawCost)})`}</button></div>`;
+            });
+        }
+
+        function renderPublicMenu() {
+            const grid = document.getElementById('public-grid');
+            grid.innerHTML = '';
+            publicEventsDB.forEach(e => {
+                grid.innerHTML += `<div class="item-card" style="border-color: var(--neon-gold);"><div style="flex-grow: 1;"><div class="item-title" style="color:var(--neon-gold);">${e.icon} ${e.name}</div><div class="item-desc">${e.desc}</div></div><button class="buy-btn" style="border-color:var(--neon-gold);" ${player.gold < e.cost ? 'disabled' : ''} onclick="buyPublicEvent('${e.id}')">DÜZENLE (${formatNumber(e.cost)})</button></div>`;
+            });
+        }
+
+        function buyPublicEvent(id) {
+            let ev = publicEventsDB.find(e => e.id === id);
+            if(player.gold >= ev.cost) {
+                player.gold -= ev.cost;
+                player.welfare = Math.min(100, player.welfare + ev.welfare);
+                updateUI();
+                renderPublicMenu(); 
+                pushNews(`🎉 HALK ETKİNLİĞİ: İmparatorluk çapında ${ev.name} düzenlendi!`);
+            }
+        }
+
+        function buyTech(id) {
+            let tech = techDB.find(t => t.id === id);
+            let exponentialCost = Math.floor(tech.baseCost * Math.pow(1.45, tech.lvl));
+            
+            if (player.trait === 'industrialist') exponentialCost = Math.floor(exponentialCost * 0.85);
+            if (player.trait === 'scholar') exponentialCost = Math.floor(exponentialCost * 0.80);
+            if (player.trait === 'agrarian') exponentialCost = Math.floor(exponentialCost * 1.30); 
+            if (player.trait === 'barbaros') exponentialCost = Math.floor(exponentialCost * 1.20);
+
+            if(player.gold >= exponentialCost && (tech.lvl < tech.maxLvl || player.trait === 'scholar')) {
+                player.gold -= exponentialCost; tech.lvl++;
+                
+                if(tech.type === 'welfare' || tech.type === 'welfare_pop') player.welfare = Math.min(100, player.welfare + 15); 
+                if(tech.type === 'income') player.baseIncome += Math.floor(12 * tech.lvl); 
+                if(tech.type === 'income_extreme') player.baseIncome += Math.floor(75 * tech.lvl); 
+                if(tech.type === 'income_high') player.baseIncome += Math.floor(25 * tech.lvl); 
+                if(tech.type === 'range') player.baseRange += 1000;
+                if(tech.type === 'range_high') player.baseRange += 2000;
+                
+                updateUI(); renderTechTree();
+                if(currentTargetLayer) updateCountryPanel();
+            }
+        }
+
+        function buyUnit(id) {
+            let unit = unitDB.find(u => u.id === id);
+            let conscriptLvl = techDB.find(t => t.id === 'conscript').lvl;
+            let cost = unit.cost;
+            cost -= cost * (conscriptLvl * 0.05);
+            if (player.trait === 'industrialist') cost = Math.floor(cost * 1.40);
+            if (player.trait === 'diplomat') cost = Math.floor(cost * 1.20);
+            if (player.trait === 'merchant') cost = Math.floor(cost * 1.30);
+
+            if(player.gold >= cost) {
+                player.gold -= cost;
+                let finalPower = unit.power;
+                
+                let nukeLvl = techDB.find(t => t.id === 'nuke_theory').lvl;
+                if(nukeLvl > 0) finalPower += finalPower * (nukeLvl * 0.1);
+                if(player.trait === 'general') finalPower = Math.floor(finalPower * 1.20);
+                if(player.trait === 'scholar') finalPower = Math.floor(finalPower * 0.80);
+                
+                player.power += finalPower;
+                
+                updateUI(); 
+                renderMilitaryBase();
+            }
+        }
+
+        function getPlayerColor() {
+            if(player.trait === 'barbaros') return '#00bfff';
+            if(player.trait === 'industrialist') return '#ffd700';
+            if(player.trait === 'zealot') return '#ff8c00';
+            if(player.trait === 'spymaster') return '#a855f7';
+            if(player.trait === 'scholar') return '#00ffff';
+            if(player.trait === 'pirate') return '#ff1e3c';
+            if(player.trait === 'agrarian') return '#9acd32';
+            if(player.trait === 'tyrant') return '#ff1493';
+            return '#ff3344';
+        }
+
+        function gameTick() {
+            player.monthsPassed++;
+            let agriLvl = techDB.find(t => t.id === 'agri').lvl;
+            let geneLvl = techDB.find(t => t.id === 'genetics').lvl;
+            let bankLvl = techDB.find(t => t.id === 'bank').lvl;
+            let telecomLvl = techDB.find(t => t.id === 'telecom').lvl;
+            
+            let popMult = 0.003;
+            if(player.trait === 'agrarian') popMult = 0.0045;
+            if(player.trait === 'tyrant') popMult = 0.001;
+
+            let popGrowth = (player.welfare / 100) * (popMult + (0.001 * agriLvl) + (0.005 * geneLvl));
+            player.population += player.population * popGrowth;
+            
+            if(player.welfare < 40) player.baseIncome = Math.floor(player.baseIncome * 0.9); 
+            if(player.welfare < 50) player.welfare += 1; 
+            
+            let taxFromPop = Math.floor(player.population / 500000) * (1 + (0.2 * bankLvl) + (0.5 * telecomLvl));
+            if(player.trait === 'pirate') taxFromPop = Math.floor(taxFromPop * 0.40);
+            
+            let activeBaseIncome = player.baseIncome;
+            if(player.trait === 'general') activeBaseIncome = Math.floor(activeBaseIncome * 0.70);
+            if(player.trait === 'zealot') activeBaseIncome = Math.floor(activeBaseIncome * 0.60);
+
+            if(player.trait === 'merchant') {
+                player.gold += Math.floor((activeBaseIncome + taxFromPop) * 1.30);
+            } else {
+                player.gold += activeBaseIncome + taxFromPop;
+            }
+            
+            let currentMonth = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"][player.monthsPassed % 12];
+            document.getElementById('date-display').innerText = `${currentMonth} ${1800 + Math.floor(player.monthsPassed / 12)}`;
+            
+            let spyLvl = techDB.find(t => t.id === 'spy').lvl;
+            if((player.trait === 'spymaster' || spyLvl > 0) && countryKeys.length > 0) {
+                let victimName = countryKeys[Math.floor(Math.random() * countryKeys.length)];
+                let victim = countryDB[victimName];
+                
+                let nerfAmount = 1 - (spyLvl * 0.01);
+                if(player.trait === 'spymaster') nerfAmount -= 0.03;
+
+                if(victim.owner !== 'player' && victim.defense > 50) victim.defense = Math.floor(victim.defense * nerfAmount);
+            }
+
+            if (player.monthsPassed >= 12 && player.monthsPassed % 12 === 0) {
+                
+                countryKeys.forEach(key => {
+                    if (countryDB[key].owner !== 'player') {
+                        let naturalGrowth = 1.03 + (Math.random() * 0.05); 
+                        countryDB[key].defense = Math.floor(countryDB[key].defense * naturalGrowth);
+                    }
+                });
+                pushNews(`🌍 YIL DÖNÜMÜ: Ülkeler ekonomilerini ve teknolojilerini yavaşça büyütüyor.`);
+
+                let roll = Math.random() * 100;
+                let attacks = 0;
+                if (roll <= 5) attacks = 3; 
+                else if (roll <= 20) attacks = 2; 
+                else if (roll <= 50) attacks = 1; 
+
+                if (attacks > 0) triggerPlayerInvasion(attacks);
+            }
+
+            if(player.monthsPassed % 3 === 0) runAILoop();
+            
+            updateUI();
+            checkAssassination(); 
+        }
+
+        function checkAssassination() {
+            let killLimit = player.trait === 'tyrant' ? -20 : 0;
+            if (player.welfare <= killLimit) {
+                clearInterval(gameLoopInterval); 
+                document.getElementById('game-over-overlay').style.display = 'flex'; 
+            }
+        }
+
+        function triggerPlayerInvasion(attackCount) {
+            let validEnemies = countryKeys.filter(k => {
+                let c = countryDB[k];
+                if(c.owner === 'player' || c.defense < 50) return false;
+                if(!c.layer) return false;
+                let dist = calculateDistance(c.layer);
+                return dist <= 3000;
+            });
+
+            if(validEnemies.length === 0) return;
+
+            let totalAttackPower = 0;
+            let attackerNames = [];
+
+            for(let i=0; i<attackCount; i++) {
+                if(validEnemies.length === 0) break;
+                let idx = Math.floor(Math.random() * validEnemies.length);
+                let enemyName = validEnemies[idx];
+                let enemy = countryDB[enemyName];
+
+                totalAttackPower += Math.floor(enemy.defense * 0.8);
+                attackerNames.push(enemyName);
+                validEnemies.splice(idx, 1); 
+            }
+
+            if(attackerNames.length === 0) return;
+
+            let fortLvl = techDB.find(t => t.id === 'fort').lvl;
+            let cyberLvl = techDB.find(t => t.id === 'cyber').lvl;
+            let extraDef = (fortLvl * 200) + (cyberLvl * 50000); 
+            
+            let effectivePlayerPower = player.power;
+            if (player.trait === 'defender') effectivePlayerPower = Math.floor(effectivePlayerPower * 1.30);
+            
+            let playerTotalDef = effectivePlayerPower + extraDef;
+
+            let namesText = attackerNames.join(", ");
+            let titleText = attackCount > 1 ? "BÜYÜK KOALİSYON İSTİLASI!" : "DÜŞMAN İSTİLASI";
+
+            let text = `Sınır komşunuz <b>${namesText}</b> orduları sınırlarınıza dayandı!<br>Toplam Düşman Gücü: <b style="color:var(--neon-red)">${formatNumber(totalAttackPower)}</b><br>`;
+            if(extraDef > 0) text += `Tahkimat Savunmanız: <b style="color:var(--neon-blue)">+${formatNumber(extraDef)}</b><br><br>`;
+            else text += `<br>`;
+
+            if (playerTotalDef >= totalAttackPower) {
+                let lossPercent = 0.10 + (Math.random() * 0.15); 
+                let losses = player.trait === 'defender' ? 0 : Math.floor(totalAttackPower * lossPercent);
+                player.power -= losses;
+                if(player.power < 0) player.power = 0; 
+
+                attackerNames.forEach(name => { countryDB[name].defense = Math.floor(countryDB[name].defense * 0.5); });
+
+                text += `<span style="color:var(--neon-green)">ZAFER!</span> Saldırıyı geri püskürttünüz ancak <b>${formatNumber(losses)}</b> asker kaybettiniz.`;
+                pushNews(`🛡️ SAVUNMA: İmparatorluğumuz ${namesText} istilasını durdurdu!`);
+            } else {
+                let lossPercent = 0.30 + (Math.random() * 0.15); 
+                let losses = Math.floor(player.power * lossPercent);
+                player.power -= losses;
+                if(player.power < 0) player.power = 0; 
+                
+                player.gold = Math.floor(player.gold * 0.5); 
+                player.welfare -= 10; 
+                
+                let lostTerritories = [];
+                for(let i=0; i<attackCount; i++) {
+                    if (playerOwnedLayers.length > 1) {
+                        let lostLayer = playerOwnedLayers.pop(); 
+                        let lostName = lostLayer.feature.properties.ADMIN || lostLayer.feature.properties.name;
+                        let conqueror = attackerNames[i] || attackerNames[0];
+                        countryDB[lostName].owner = conqueror;
+                        lostLayer.setStyle({ fillColor: '#121822', color: '#2a3b50', weight: 1, fillOpacity: 0.6 });
+                        player.territory--;
+                        lostTerritories.push(lostName);
+                    }
+                }
+
+                if (lostTerritories.length > 0) {
+                    text += `<span style="color:var(--neon-red)">BOZGUN!</span> Ordularınız ezildi, hazineniz yağmalandı ve <b>${lostTerritories.join(", ")}</b> düşman eline geçti!`;
+                } else {
+                    text += `<span style="color:var(--neon-red)">BOZGUN!</span> Başkentinize kadar girdiler! Oyun Bitti!`;
+                }
+                pushNews(`🔥 YIKIM: ${namesText} orduları savunmamızı yararak topraklarımızı ele geçirdi!`);
+            }
+            
+            document.getElementById('invasion-text').innerHTML = `<h2 style='color:var(--neon-red); margin-top:0;'>${titleText}</h2>` + text;
+            document.getElementById('invasion-overlay').style.display = 'flex';
+            updateUI();
+            checkAssassination();
+        }
+
+        function runAILoop() {
+            if(countryKeys.length === 0) return;
+
+            for(let i=0; i<3; i++) {
+                let aiName = countryKeys[Math.floor(Math.random() * countryKeys.length)];
+                let ai = countryDB[aiName];
+                
+                if(ai.owner !== 'player') {
+                    ai.gold += Math.floor(ai.wealth * 0.25); 
+                    
+                    if(ai.gold > 5000) { 
+                        ai.gold -= 5000; 
+                        ai.defense += Math.floor(Math.random() * 500) + 100; 
+                    }
+
+                    if(ai.defense > 5000) {
+                        let targetName = countryKeys[Math.floor(Math.random() * countryKeys.length)];
+                        let target = countryDB[targetName];
+                        
+                        if(targetName !== aiName && target.owner !== 'player' && target.owner !== ai.owner) {
+                            if(ai.defense >= target.defense * 1.25) {
+                                let lossPercent = 0.10 + (Math.random() * 0.15);
+                                let casualties = Math.floor(target.defense * lossPercent);
+
+                                target.owner = ai.owner === 'neutral' ? aiName : ai.owner;
+                                target.defense = Math.floor(target.defense * 0.2);
+                                ai.defense -= casualties; 
+                                pushNews(`⚔️ SAVAŞ: ${aiName}, ${targetName} topraklarını fethetti!`);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function calculateDistance(targetLayer) {
+            if(playerOwnedLayers.length === 0 || !targetLayer) return Infinity; 
+            let minDistance = Infinity;
+            let tCenter = targetLayer.getBounds().getCenter();
+            playerOwnedLayers.forEach(pLayer => {
+                if(!pLayer) return;
+                let dist = map.distance(tCenter, pLayer.getBounds().getCenter()) / 1000;
+                if(dist < minDistance) minDistance = dist;
+            });
+            return Math.floor(minDistance);
+        }
+
+        function declareWar() {
+            if (!currentTarget || currentTarget.owner === 'player') return;
+            let cName = document.getElementById('region-name').innerText;
+            
+            if(calculateDistance(currentTargetLayer) > player.baseRange && player.trait !== 'barbaros') {
+                return alert("Menzil dışı! Lojistik teknolojinizi geliştirin.");
+            }
+
+            let effPower = player.power;
+            if(player.trait === 'defender') effPower = Math.floor(effPower * 0.60);
+            if(player.trait === 'spymaster') effPower = Math.floor(effPower * 0.85);
+
+            let ePower = currentTarget.defense;
+            let total = effPower + ePower;
+            if(total === 0) total = 1;
+
+            let playerPct = (effPower / total) * 100;
+
+            document.getElementById('battle-player-power').innerText = formatNumber(effPower) + " (%"+playerPct.toFixed(1)+")";
+            document.getElementById('battle-enemy-power').innerText = formatNumber(ePower) + " (%"+(100-playerPct).toFixed(1)+")";
+            document.getElementById('battle-target-name').innerText = cName;
+
+            let wheelInner = document.getElementById('wheel-inner');
+            wheelInner.style.transition = 'none';
+            wheelInner.style.transform = `rotate(0deg)`;
+            wheelInner.style.background = `conic-gradient(var(--neon-blue) 0% ${playerPct}%, var(--neon-red) ${playerPct}% 100%)`;
+            
+            document.getElementById('battle-overlay').style.display = 'flex';
+            document.getElementById('btn-spin').style.display = 'block';
+            document.getElementById('battle-result').innerHTML = 'Çarkı çevirerek şansını dene...';
+            document.getElementById('btn-battle-close').style.display = 'none';
+        }
+
+        function spinWheel() {
+            document.getElementById('btn-spin').style.display = 'none';
+            document.getElementById('battle-result').innerHTML = 'Kader belirleniyor...';
+            
+            let effPower = player.power;
+            if(player.trait === 'defender') effPower = Math.floor(effPower * 0.60);
+            if(player.trait === 'spymaster') effPower = Math.floor(effPower * 0.85);
+
+            let ePower = currentTarget.defense;
+            let total = effPower + ePower;
+            let playerFraction = effPower / total; 
+
+            let randomDeg = Math.floor(Math.random() * 360);
+            let totalSpin = randomDeg + 3600; 
+
+            let wheelInner = document.getElementById('wheel-inner');
+            void wheelInner.offsetWidth; 
+            wheelInner.style.transition = 'transform 3s cubic-bezier(0.1, 0.7, 0.1, 1)';
+            wheelInner.style.transform = `rotate(${totalSpin}deg)`;
+
+            setTimeout(() => {
+                let landedDeg = 360 - (totalSpin % 360);
+                if (landedDeg === 360) landedDeg = 0;
+                
+                let landedFraction = landedDeg / 360;
+                let playerWins = landedFraction <= playerFraction;
+
+                handleBattleResult(playerWins);
+
+            }, 3000);
+        }
+
+        function handleBattleResult(playerWins) {
+            document.getElementById('btn-battle-close').style.display = 'block';
+
+            let resDiv = document.getElementById('battle-result');
+            let cName = document.getElementById('region-name').innerText;
+            
+            if(playerWins) {
+                let lossPercent = 0.10 + (Math.random() * 0.15); 
+                let casualties = Math.floor(currentTarget.defense * lossPercent);
+                player.power -= casualties;
+                if(player.power < 0) player.power = 0;
+                
+                currentTarget.owner = 'player';
+                let pMult = player.trait === 'pirate' ? 2.5 : 1; 
+                player.gold += Math.floor(currentTarget.wealth * pMult); 
+                player.baseIncome += Math.floor(currentTarget.wealth / 20); 
+                
+                if(currentTarget.population > player.population) {
+                    player.welfare -= 30;
+                    pushNews(`⚠️ KRİZ: Azınlık isyanları başladı! (-30 Refah)`);
+                } else if (player.trait === 'zealot') {
+                    player.welfare = Math.min(100, player.welfare + 1);
+                } else {
+                    let propLvl = techDB.find(t => t.id === 'propaganda').lvl;
+                    let weariness = Math.max(1, 8 - propLvl); 
+                    player.welfare -= weariness; 
+                }
+                player.population += currentTarget.population;
+
+                playerOwnedLayers.push(currentTargetLayer);
+                let winColor = getPlayerColor();
+                currentTargetLayer.setStyle({ fillColor: winColor, color: '#fff', weight: 2, fillOpacity: 0.6 });
+                currentTargetLayer.options.fillColor = winColor; 
+
+                resDiv.innerHTML = `<span style="color:var(--neon-green); font-size:18px; font-weight:bold;">ZAFER!</span><br>Savaşı kazandık ancak <b>${formatNumber(casualties)}</b> asker kaybettik.`;
+                pushNews(`🚨 FLAŞ: İmparatorluğunuz ${cName} direnişini kırdı ve toprakları ilhak etti!`);
+            } else {
+                let lossPercent = 0.30 + (Math.random() * 0.15); 
+                let casualties = Math.floor(player.power * lossPercent);
+                player.power -= casualties;
+                if(player.power < 0) player.power = 0;
+                
+                player.welfare -= 15;
+                resDiv.innerHTML = `<span style="color:var(--neon-red); font-size:18px; font-weight:bold;">BOZGUN!</span><br>Savaşı kaybettik. <b>${formatNumber(casualties)}</b> askerimiz yok edildi!`;
+            }
+
+            updateCountryPanel(); 
+            updateUI();
+            checkAssassination(); 
+        }
+
+        function closeBattle() {
+            document.getElementById('battle-overlay').style.display = 'none';
+            document.getElementById('wheel-inner').style.transition = 'none';
+            document.getElementById('wheel-inner').style.transform = 'rotate(0deg)';
+            document.getElementById('btn-spin').style.display = 'block';
+            document.getElementById('btn-battle-close').style.display = 'none';
+        }
+
+        function colonizeCountry() {
+            if (!currentTarget || currentTarget.owner === 'player') return;
+            let cName = document.getElementById('region-name').innerText;
+
+            let reqPower = currentTarget.defense * player.colonizeMultiplier;
+            let reqGold = currentTarget.wealth * player.colonizeMultiplier;
+            let reqPop = currentTarget.population * player.colonizeMultiplier;
+
+            if (player.power >= reqPower && player.gold >= reqGold && player.population >= reqPop) {
+                currentTarget.owner = 'player';
+                let bonusIncome = Math.floor(currentTarget.wealth * 0.1); 
+                player.baseIncome += bonusIncome;
+                player.territory++;
+                playerOwnedLayers.push(currentTargetLayer);
+                
+                if(currentTargetLayer) {
+                    currentTargetLayer.setStyle({ fillColor: '#00bfff', color: '#fff', weight: 2, fillOpacity: 0.6 });
+                    currentTargetLayer.options.fillColor = '#00bfff'; 
+                }
+
+                player.colonizeMultiplier += 0.05;
+                let currentReqText = Math.round((player.colonizeMultiplier - 1) * 100);
+                pushNews(`⚓ SÖMÜRGE: ${cName} sömürgeleştirildi! Artık hedeflerde %${currentReqText} üstünlük istenecek.`);
+                updateCountryPanel(); 
+                updateUI();
+            } else {
+                let reqPercent = Math.round((player.colonizeMultiplier - 1) * 100);
+                alert(`Sömürge kurmak için hedeften en az %${reqPercent} daha güçlü olmalısınız!`);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('gold').innerText = formatNumber(player.gold);
+            document.getElementById('power').innerText = formatNumber(player.power);
+            document.getElementById('income-display').innerText = formatNumber(player.baseIncome);
+            document.getElementById('pop-display').innerText = formatNumber(player.population);
+            
+            document.getElementById('welfare-display').innerText = "%" + Math.floor(player.welfare);
+            let welfElem = document.getElementById('welfare-display');
+            welfElem.style.color = player.welfare > 70 ? "var(--neon-green)" : (player.welfare > 40 ? "var(--neon-gold)" : "var(--neon-red)");
+        }
+
+        function updateCountryPanel() {
+            if(!currentTarget) return;
+            let isOwned = currentTarget.owner === 'player';
+            
+            let dist = calculateDistance(currentTargetLayer);
+            let intelLvl = techDB.find(t => t.id === 'intel').lvl;
+            let visionRange = intelLvl * 1000;
+            let canSeeIntel = isOwned || dist <= visionRange;
+            
+            document.getElementById('c-def').innerText = canSeeIntel ? formatNumber(currentTarget.defense) : "???";
+            document.getElementById('c-def').style.color = canSeeIntel ? "var(--neon-green)" : "var(--neon-red)";
+            
+            document.getElementById('c-wealth').innerText = formatNumber(currentTarget.wealth);
+            document.getElementById('c-pop').innerText = formatNumber(currentTarget.population);
+            
+            document.getElementById('c-status').innerText = isOwned ? "Sizin Toprağınız" : (currentTarget.owner === 'neutral' ? "Bağımsız" : currentTarget.owner + " İşgalinde");
+            document.getElementById('c-status').style.color = isOwned ? "var(--neon-green)" : "#aaa";
+            
+            let distElem = document.getElementById('c-dist');
+            let warBtn = document.getElementById('btn-war');
+            let colBtn = document.getElementById('btn-colonize');
+
+            if (player.trait === 'barbaros' && !isOwned) {
+                let reqPercent = Math.round((player.colonizeMultiplier - 1) * 100);
+                colBtn.innerText = `⚓ SÖMÜRGE YAP (Gerekli: %${reqPercent})`;
+                colBtn.style.display = 'block';
+            } else { colBtn.style.display = 'none'; }
+
+            if(isOwned) { 
+                distElem.innerText = "Sınır İçi"; distElem.style.color = "var(--neon-green)"; warBtn.style.display = 'none'; 
+            } else {
+                warBtn.style.display = 'block';
+                if(dist <= player.baseRange || player.trait === 'barbaros') {
+                    distElem.innerText = `${formatNumber(dist)} km`; distElem.style.color = "var(--neon-blue)"; warBtn.disabled = false;
+                } else {
+                    distElem.innerText = `${formatNumber(dist)} km (Uzak)`; distElem.style.color = "var(--neon-red)"; warBtn.disabled = true;
+                }
+            }
+        }
+
+        const realWorldStats = {
+            "United States of America": { def: 350000, wealth: 250000, pop: 335000000 },
+            "China": { def: 300000, wealth: 200000, pop: 1400000000 },
+            "Russia": { def: 200000, wealth: 80000, pop: 144000000 },
+            "India": { def: 180000, wealth: 90000, pop: 1428000000 },
+            "United Kingdom": { def: 120000, wealth: 110000, pop: 67000000 },
+            "France": { def: 120000, wealth: 105000, pop: 67000000 },
+            "Japan": { def: 110000, wealth: 120000, pop: 125000000 },
+            "South Korea": { def: 110000, wealth: 100000, pop: 51000000 },
+            "Turkey": { def: 68000, wealth: 50000, pop: 85000000 },
+            "Germany": { def: 90000, wealth: 130000, pop: 83000000 },
+            "Pakistan": { def: 90000, wealth: 20000, pop: 240000000 },
+            "Israel": { def: 95000, wealth: 45000, pop: 9000000 },
+            "Iran": { def: 85000, wealth: 30000, pop: 88000000 },
+            "Egypt": { def: 80000, wealth: 25000, pop: 110000000 },
+            "Brazil": { def: 70000, wealth: 60000, pop: 215000000 },
+            "Italy": { def: 70000, wealth: 85000, pop: 59000000 },
+            "Indonesia": { def: 65000, wealth: 50000, pop: 275000000 },
+            "Saudi Arabia": { def: 65000, wealth: 90000, pop: 36000000 },
+            "Spain": { def: 60000, wealth: 70000, pop: 47000000 },
+            "Australia": { def: 50000, wealth: 80000, pop: 26000000 },
+            "Canada": { def: 50000, wealth: 85000, pop: 38000000 },
+            "North Korea": { def: 150000, wealth: 5000, pop: 26000000 },
+            "Ukraine": { def: 80000, wealth: 15000, pop: 38000000 },
+            "Poland": { def: 60000, wealth: 50000, pop: 38000000 },
+            "Taiwan": { def: 70000, wealth: 60000, pop: 23000000 },
+            "Mexico": { def: 40000, wealth: 45000, pop: 128000000 },
+            "Greece": { def: 50000, wealth: 40000, pop: 10000000 },
+            "Vietnam": { def: 60000, wealth: 35000, pop: 98000000 }
+        };
+
+        const map = L.map('map-container', { center: [20, 0], zoom: 2.5, zoomControl: false, minZoom: 2, maxBounds: [[-90, -180], [90, 180]] });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { attribution: '' }).addTo(map);
+
+        const geojsonUrl = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+
+        fetch(geojsonUrl).then(res => res.json()).then(data => {
+            L.geoJSON(data, {
+                style: function() { return { fillColor: '#121822', color: '#2a3b50', weight: 1, fillOpacity: 0.6 }; },
+                onEachFeature: (feature, layer) => {
+                    let cName = feature.properties.ADMIN || feature.properties.name || feature.properties.SOVEREIGN || "Bilinmeyen Bölge";
+                    
+                    let cDef, cWealth, cPop;
+                    
+                    if (realWorldStats[cName]) {
+                        cDef = realWorldStats[cName].def + Math.floor(Math.random() * 5000); 
+                        cWealth = realWorldStats[cName].wealth + Math.floor(Math.random() * 2000);
+                        cPop = realWorldStats[cName].pop + Math.floor(Math.random() * 1000000);
+                    } else {
+                        cDef = Math.floor(Math.random() * 8000) + 2000; 
+                        cWealth = Math.floor(Math.random() * 8000) + 1000;
+                        cPop = Math.floor(Math.random() * 20000000) + 1000000;
+                    }
+
+                    if(cName === "Turkey") {
+                        cDef = 68000;
+                        cWealth = Math.floor(cWealth / 2.2); 
+                    } else {
+                        if(cDef < 40000) {
+                            cDef = Math.floor(cDef * 1.80); 
+                        } else if (cDef >= 40000 && cDef < 70000) {
+                            cDef = Math.floor(cDef * 1.60); 
+                        } else if (cDef >= 100000) {
+                            cDef = Math.floor(cDef * 1.50); 
+                        }
+                        cWealth = Math.floor(cWealth / 2.2); 
+                    }
+
+                    // 10K ALTINDA KALAN TÜM ÜLKELERE +15K GÜÇ EKLENDİ
+                    if(cDef < 10000) {
+                        cDef += 15000;
+                    }
+
+                    countryDB[cName] = { wealth: cWealth, defense: cDef, population: cPop, gold: 0, owner: 'neutral', layer: layer };
+                    countryKeys.push(cName);
+                    
+                    layer.on({
+                        click: () => {
+                            if (currentTargetLayer && currentTargetLayer !== layer) {
+                                let prevOwner = countryDB[currentTargetLayer.feature.properties.ADMIN || currentTargetLayer.feature.properties.name].owner;
+                                if(prevOwner !== 'player') currentTargetLayer.setStyle({ fillColor: '#121822', color: '#2a3b50', weight: 1 });
+                                else currentTargetLayer.setStyle({ color: '#fff', weight: 2 });
+                            }
+                            currentTargetLayer = layer; currentTarget = countryDB[cName];
+                            
+                            if (gamePhase === 'select_start') { 
+                                document.getElementById('start-btn').style.display = 'inline-block';
+                                layer.setStyle({ fillColor: '#2b6cb0', color: 'white', weight: 2 });
+                                return; 
+                            }
+                            if (gamePhase === 'playing') {
+                                layer.setStyle({ color: 'white', weight: 3 });
+                                if(currentTarget.owner !== 'player') layer.setStyle({ fillColor: '#2b6cb0' });
+                                document.getElementById('region-name').innerText = cName;
+                                updateCountryPanel();
+                                document.getElementById('target-panel').style.display = 'block';
+                            }
+                        }
+                    });
+                }
+            }).addTo(map);
+        });
+    </script>
+</body>
+</html>

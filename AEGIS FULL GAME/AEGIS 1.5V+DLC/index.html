@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEGIS OS // KOMUTA MERKEZİ V1.5 (FİNAL SÜRÜM)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --primary: #2563eb; --danger: #ef4444; --success: #10b981;
+            --special: #f59e0b; --boss: #991b1b; --hero: #8b5cf6; 
+            --medic: #14b8a6; --text-main: #1f2937; --glass-bg: rgba(15, 23, 42, 0.95); 
+            --tablet-bg: #0f172a; --tablet-accent: #38bdf8;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: #020617; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; color: white;}
+        h1, h2, h3, .brand { font-family: 'Rajdhani', sans-serif; margin: 0; }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { 
+            width: 6px; 
+            height: 8px; /* YATAY KAYDIRMA ÇUBUĞUNUN KALINLIĞI - BU EKSİKTİ */
+        }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--tablet-accent); }
+
+        /* ANA MENÜ */
+        #main-menu {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #020617 url('ankara-map.jpg') center/cover;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .main-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(2,6,23,0.85); z-index: 1;}
+        .menu-content { z-index: 2; text-align: center; }
+        .game-title { font-family: 'Rajdhani'; font-size: 8em; color: white; margin-bottom: 5px; letter-spacing: 15px; }
+        .game-subtitle { font-family: 'Inter'; font-size: 1.2em; color: var(--tablet-accent); margin-bottom: 40px; letter-spacing: 5px; font-weight: bold;}
+        .btn-start { background: var(--primary); color: white; border: none; padding: 15px 50px; font-family: 'Rajdhani'; font-size: 2em; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+        .btn-start:hover { background: var(--tablet-accent); color: var(--tablet-bg); transform: translateY(-2px); }
+
+        /* Üst Bar */
+        #top-bar { background: var(--glass-bg); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; z-index: 50; position: relative; }
+        #day-progress-container { position: absolute; bottom: -2px; left: 0; width: 100%; height: 4px; background: #0f172a; }
+        #day-progress-fill { height: 100%; width: 0%; background: var(--tablet-accent); transition: width 1s linear; }
+        .brand { font-size: 1.8em; font-weight: bold; color: white; letter-spacing: 2px;}
+        .brand span { color: var(--tablet-accent); }
+        .stats { display: flex; gap: 20px; font-weight: 700; font-size: 1.1em; }
+        .stat-item { display: flex; align-items: center; gap: 8px; background: #0f172a; padding: 8px 15px; border-radius: 5px; border: 1px solid #1e293b;}
+        
+        /* FAZ BUTONU */
+        #phase-btn {
+            position: fixed; top: 90px; left: 50%; transform: translateX(-50%); padding: 12px 40px; 
+            color: white; border: none; border-radius: 5px; font-family: 'Rajdhani'; font-weight: bold; font-size: 1.4em; cursor: pointer; 
+            display: none; z-index: 200; transition: 0.2s;
+        }
+        .btn-end { background: var(--danger); }
+        .btn-start-day { background: var(--success); }
+        #phase-btn:hover { filter: brightness(1.2); transform: translateX(-50%) translateY(-2px); }
+
+        #main-container { display: flex; flex: 1; position: relative; }
+
+        /* Harita */
+        #map-panel { flex: 1; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #020617 url('ankara-map.jpg') center/cover; z-index: 1; }
+        .map-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); z-index: 2; pointer-events: none;}
+        
+        .incident-ping { position: absolute; width: 30px; height: 30px; border-radius: 50%; transform: translate(-50%, -50%); z-index: 10; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
+        .incident-ping:hover { transform: translate(-50%, -50%) scale(1.2); }
+        .ping-core { width: 14px; height: 14px; background: white; border-radius: 50%; z-index: 11; border: 2px solid transparent;}
+        .incident-ping.boss-ping .ping-core { width: 22px; height: 22px; background: var(--boss); border-color: white; }
+        .incident-ping.final-boss .ping-core { width: 35px; height: 35px; background: #6d28d9; box-shadow: 0 0 30px #6d28d9; border-color: white;}
+        
+        /* Roster Paneli */
+        #roster-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 340px; background: #0f172a; border-left: 2px solid #1e293b; z-index: 20; display: flex; flex-direction: column; overflow: hidden;}
+        .roster-header { background: #1e293b; color: white; padding: 20px; font-weight: bold; text-align: center; font-family: 'Rajdhani'; font-size: 1.4em; letter-spacing: 1px; border-bottom: 2px solid var(--primary);}
+        .hero-list { padding: 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px;}
+        .hero-card { background: #020617; padding: 10px; border-radius: 8px; display: flex; align-items: center; border: 1px solid #1e293b; position: relative; overflow: hidden; transition: 0.2s;}
+        .hero-card:hover { border-color: #475569; }
+        .card-img { width: 50px; height: 50px; border-radius: 5px; object-fit: cover; margin-right: 12px; border: 1px solid #334155; z-index: 2;}
+        .card-info { z-index: 2; flex: 1; }
+        .status-bar-bg { position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: transparent; z-index: 1;}
+        .status-bar-fill { height: 100%; width: 0%; background: var(--tablet-accent); transition: width 1s linear; }
+        .injured-tag { background: var(--danger); color: white; padding: 2px 5px; border-radius: 3px; font-size: 0.7em; font-weight: bold; margin-left: 5px;}
+
+        /* TABLET */
+        #tablet-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); display: none; justify-content: center; align-items: center; z-index: 100; }
+        #tablet-device { width: 90vw; height: 90vh; background: var(--tablet-bg); border-radius: 10px; border: 2px solid #334155; display: flex; overflow: hidden; }
+        .tablet-nav { width: 280px; background: #020617; padding: 20px 0; border-right: 2px solid #1e293b; display: flex; flex-direction: column;}
+        .nav-item { padding: 18px 25px; color: #64748b; cursor: pointer; font-family: 'Rajdhani'; font-weight: 700; font-size: 1.2em; transition: 0.2s; border-bottom: 1px solid #0f172a; display: flex; justify-content: space-between; align-items: center;}
+        .nav-item:hover { background: #0f172a; color: white; }
+        .nav-item.active { background: #1e293b; color: var(--tablet-accent); border-left: 4px solid var(--tablet-accent); }
+        .tablet-main { flex: 1; display: flex; flex-direction: column; padding: 30px; position: relative; background: #0f172a;}
+        
+        .view-content { display: none; height: 100%; flex-direction: column; }
+        .view-content.active { display: flex; }
+        .view-header { font-family: 'Rajdhani'; font-size: 2em; color: white; border-bottom: 2px solid #1e293b; padding-bottom: 10px; margin-top: 0; margin-bottom: 20px;}
+
+        /* Grup Sohbeti */
+        #group-chat { flex: 1; overflow-y: auto; background: #020617; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 15px; border: 1px solid #1e293b;}
+        .chat-row { display: flex; gap: 15px; align-items: flex-start; }
+        .chat-avatar { width: 45px; height: 45px; border-radius: 5px; object-fit: cover; border: 1px solid #334155;}
+        .chat-msg { background: #1e293b; padding: 12px 18px; border-radius: 5px; color: #e2e8f0; max-width: 75%; line-height: 1.4; font-size: 0.95em;}
+        .chat-sender { font-family: 'Rajdhani'; font-weight: bold; font-size: 1.1em; margin-bottom: 4px; letter-spacing: 1px;}
+        .mission-report { align-self: center; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); padding: 10px 20px; border-radius: 5px; width: 70%; text-align: center; margin: 5px 0;}
+        .mission-report.fail { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: var(--danger); }
+        .system-msg { align-self: center; color: var(--tablet-accent); font-size: 0.85em; font-weight: bold; margin: 5px 0; background: rgba(56, 189, 248, 0.1); padding: 5px 15px; border-radius: 20px;}
+
+        /* Özel Mesaj Penceresi */
+        .chat-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto;}
+        .contact-card { background: #1e293b; padding: 12px; border-radius: 5px; display: flex; gap: 15px; align-items: center; cursor: pointer; transition: 0.2s;}
+        .contact-card:hover { background: #334155; }
+        #private-chat-window { background: #020617; border-radius: 8px; padding: 20px; flex: 1; display: none; flex-direction: column; border: 1px solid #1e293b;}
+        .pc-bubble-them { background: #1e293b; padding: 12px; border-radius: 5px; color: #e2e8f0; max-width: 70%; margin-bottom: 10px; align-self: flex-start; line-height: 1.4;}
+        .pc-bubble-me { background: var(--primary); color: white; padding: 12px; border-radius: 5px; max-width: 70%; margin-bottom: 10px; align-self: flex-end; font-weight: 500; line-height: 1.4;}
+
+        /* Veritabanı & İşe Alım */
+        .db-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; overflow-y: auto;}
+        .db-card { background: #020617; padding: 20px; border-radius: 8px; display: flex; gap: 20px; border: 1px solid #1e293b;}
+        .stat-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 0.85em; font-weight: bold; color: #cbd5e1;}
+        .stat-label { width: 90px; }
+        .stat-bar-container { flex: 1; background: #0f172a; height: 6px; border-radius: 3px; margin: 0 10px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; transition: width 1s; }
+
+        /* Görev Modalı */
+        #mission-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.9); display: none; justify-content: center; align-items: center; z-index: 150; }
+        .mission-box { background: #0f172a; padding: 30px; border-radius: 10px; width: 600px; text-align: center; border: 2px solid #1e293b;}
+        /* Görev Modalı Karakter Seçici */
+        .hero-picker { 
+            display: flex; 
+            gap: 10px; 
+            justify-content: flex-start; /* HAYAT KURTARAN 1: 'center' sola taşıyıp Brock'u yutuyordu. Bunu flex-start yaptık, artık soldan sağa dizecek. */
+            margin: 20px 0; 
+            overflow-x: auto; 
+            min-height: 100px;
+            padding-bottom: 15px; /* Kaydırma çubuğu (scrollbar) kartların altını kesmesin diye */
+        }
+        
+        /* Seçilebilir Karakter Kartları */
+        .picker-item { 
+            flex-shrink: 0; /* HAYAT KURTARAN 2: Karakter sayısı 10'a çıkınca kartların incelip yamulmasını kesin olarak engeller. */
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            position: relative; 
+            background: #020617; 
+            padding: 10px; 
+            border-radius: 5px; 
+            border: 1px solid #1e293b; 
+            width: 80px;
+        }
+        .picker-item.locked { filter: grayscale(1); opacity: 0.4; cursor: not-allowed; }
+        .picker-item.available:hover { border-color: #475569; }
+        .picker-item img { width: 50px; height: 50px; border-radius: 5px; object-fit: cover; margin-bottom: 8px;}
+        .picker-item.selected { border-color: var(--tablet-accent); background: #1e293b;}
+        .lock-text { position: absolute; bottom: 0; background: var(--danger); color: white; font-size: 0.65em; font-weight: bold; padding: 2px 0; width: 100%; text-align: center;}
+        
+        #intro-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); display: none; justify-content: center; align-items: center; z-index: 300;}
+        .intro-box { background: #0f172a; padding: 40px; border-radius: 10px; width: 550px; text-align: center; display: flex; flex-direction: column; gap: 20px; border: 1px solid #1e293b;}
+
+        /* Acil Durum (Event) Modalı */
+        #event-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(153, 27, 27, 0.4); display: none; justify-content: center; align-items: center; z-index: 400; backdrop-filter: blur(10px); animation: alertPulse 1.5s infinite alternate; }
+        @keyframes alertPulse { from { background: rgba(153, 27, 27, 0.3); } to { background: rgba(153, 27, 27, 0.6); } }
+        .event-box { background: #0f172a; padding: 30px; border-radius: 10px; width: 550px; text-align: center; border: 3px solid var(--danger); box-shadow: 0 0 50px rgba(239, 68, 68, 0.5); }
+        .event-title { font-family: 'Rajdhani'; font-size: 2.5em; color: var(--danger); margin-top: 0; letter-spacing: 2px; }
+        .event-text { color: #e2e8f0; font-size: 1.15em; line-height: 1.5; margin-bottom: 25px; text-align: justify; }
+        .event-btn { display: block; width: 100%; background: #1e293b; color: white; border: 1px solid #475569; padding: 15px; margin-bottom: 10px; border-radius: 5px; cursor: pointer; font-family: 'Inter'; font-weight: bold; font-size: 1em; transition: 0.2s; text-align: left; }
+        .event-btn:hover { background: var(--primary); border-color: var(--tablet-accent); transform: translateX(5px); }
+        .event-btn span { color: var(--special); font-size: 0.85em; float: right; font-style: italic; }
+
+        /* OYUN SONU (CLIFFHANGER) MODALI */
+        #end-game-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; animation: voidFade 2s forwards; }
+        @keyframes voidFade { from { opacity: 0; background: white; } to { opacity: 1; background: #030008; } }
+        .void-title { font-family: 'Rajdhani', sans-serif; font-size: 3.5em; color: var(--danger); text-shadow: 0 0 30px var(--danger); margin-bottom: 20px; letter-spacing: 10px; opacity: 0; animation: textReveal 2s forwards; animation-delay: 1s;}
+        .void-text { font-family: 'Inter', sans-serif; color: #cbd5e1; font-size: 1.25em; max-width: 750px; text-align: center; line-height: 1.8; margin-bottom: 20px; opacity: 0; animation: textReveal 2s forwards; }
+        @keyframes textReveal { to { opacity: 1; } }
+        .btn-void { background: transparent; color: white; border: 2px solid #6d28d9; padding: 15px 50px; margin-top: 30px; font-family: 'Rajdhani'; font-size: 1.6em; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; opacity: 0; animation: textReveal 2s forwards; animation-delay: 8s; box-shadow: inset 0 0 15px rgba(109, 40, 217, 0.4);}
+        .btn-void:hover { background: #6d28d9; box-shadow: 0 0 40px #6d28d9; transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div id="main-menu">
+        <div class="main-overlay"></div>
+        <div class="menu-content">
+            <div class="game-title">AEGIS</div>
+            <div class="game-subtitle">ANKARA KARARGAH PROTOKOLÜ V1.5</div>
+            <button class="btn-start" onclick="startGame()">SİSTEMİ BAŞLAT</button>
+        </div>
+    </div>
+
+    <div id="intro-modal">
+        <div class="intro-box">
+            <h2 style="font-family:'Rajdhani'; font-size: 2.5em; margin: 0; color: var(--tablet-accent);">KOMUTA MERKEZİNE HOŞ GELDİNİZ</h2>
+            <p style="font-size: 1.1em; color: #cbd5e1; line-height: 1.6; text-align: justify;">
+                Sen A.E.G.I.S.'in yeni komutanısın. İstila Ankara'yı harabeye çevirdi. Şehri savunmak için sıradan askerler yetmez. <b>Üst İnsanlara</b> ihtiyacımız var.
+            </p>
+            <div style="font-size: 0.95em; color: #94a3b8; font-style: italic; background:#020617; padding:15px; border-left: 3px solid var(--primary); text-align: left;">
+                "Komutanım, dış kanallara bir sinyal düştü. Kapıda devasa bir sivil bekliyor. Karargaha girmek istiyor. Hemen <b>TABLETİ</b> açıp onu ekibe almanız gerekiyor."
+            </div>
+            <button onclick="startTutorialTablet()" style="background:var(--primary); color:white; padding:15px; border:none; border-radius:5px; font-family:'Rajdhani'; font-weight:bold; font-size:1.3em; cursor:pointer; width: 100%;">TABLETİ AÇ</button>
+        </div>
+    </div>
+
+    <div id="top-bar">
+        <div class="brand">AEGIS <span>//</span> OS</div>
+        <div class="stats">
+            <div class="stat-item">⚡ <span id="ui-energy">50</span></div>
+            <div class="stat-item" style="color:var(--hero)">🧬 <span id="ui-hero-count">0</span></div>
+            <div class="stat-item" style="color:var(--danger); border-color: rgba(239, 68, 68, 0.3);">👾 <span id="ui-threat">5%</span></div>
+        </div>
+        <div style="font-family: 'Rajdhani'; font-size: 1.5em; font-weight: bold; color: white;">GÜN: <span id="ui-day" style="color:var(--tablet-accent)">0</span></div>
+        <div id="day-progress-container"><div id="day-progress-fill"></div></div>
+    </div>
+
+    <button id="phase-btn" class="btn-end" onclick="enterDowntime()">GÜNÜ BİTİR ⏹</button>
+
+    <div id="main-container">
+        <div id="map-panel"><div class="map-overlay"></div><div id="incidents-layer"></div></div>
+        
+        <div id="roster-panel">
+            <div class="roster-header">SAHA PERSONELİ</div>
+            <div class="hero-list" id="ui-roster"></div>
+            <button onclick="openTablet()" style="padding:20px; border:none; border-top: 1px solid #1e293b; background:#020617; color:var(--tablet-accent); cursor:pointer; font-family:'Rajdhani'; font-size:1.3em; font-weight:bold; letter-spacing: 1px;">A.E.G.I.S AĞI</button>
+        </div>
+    </div>
+
+    <div id="tablet-overlay">
+        <div id="tablet-device">
+            <div class="tablet-sidebar">
+                <div style="padding: 25px; font-family: 'Rajdhani'; font-size: 2em; font-weight: bold; color: white; border-bottom: 1px solid #1e293b; text-align: center;">AEGIS <span style="color:var(--tablet-accent)">OS</span></div>
+                <div class="nav-item active" onclick="setTabletView('chat')">Saha Raporları <span id="chat-badge" style="display:none; background:var(--tablet-accent); color:#0f172a; font-size:0.7em; padding:2px 8px; border-radius:10px;">YENİ</span></div>
+                <div class="nav-item" onclick="setTabletView('private')">Özel İletişim</div>
+                <div class="nav-item" onclick="setTabletView('recruits')" id="nav-recruits">Dış Sinyaller <span id="new-badge" style="background:var(--danger); color:white; font-size:0.7em; padding:2px 6px; border-radius:4px; display:none;">YENİ</span></div>
+                <div class="nav-item" onclick="setTabletView('db')">Veritabanı</div>
+                <div style="flex:1"></div>
+                <div class="nav-item" onclick="closeTablet()" id="nav-close" style="color:var(--danger); border-top:1px solid #1e293b; justify-content:center;">SİSTEMİ KAPAT</div>
+            </div>
+            <div class="tablet-main">
+                <div id="view-chat" class="view-content active">
+                    <h2 class="view-header">GENEL HABERLEŞME</h2>
+                    <div id="group-chat"></div>
+                </div>
+                
+                <div id="view-private" class="view-content">
+                    <h2 class="view-header">GİZLİ KANALLAR</h2>
+                    <div style="display:flex; height:calc(100% - 60px); gap:20px;">
+                        <div class="chat-list" id="private-hero-list" style="width:280px; border-right:1px solid #1e293b; padding-right:15px;"></div>
+                        <div id="private-chat-window">
+                            <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #1e293b;">
+                                <img id="pc-avatar" src="" style="width:50px; height:50px; border-radius:5px; object-fit:cover; display:none;">
+                                <div id="pc-name" style="color:white; font-weight:bold; font-size:1.4em; font-family:'Rajdhani'">Kişi Seçin</div>
+                            </div>
+                            <div id="pc-messages" style="display:flex; flex-direction:column; overflow-y:auto; flex:1;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-recruits" class="view-content">
+                    <h2 class="view-header">ONAY BEKLEYEN SİNYALLER</h2>
+                    <div id="recruit-list" style="display:flex; flex-direction:column; gap:15px; overflow-y:auto; padding-right:10px;"></div>
+                </div>
+
+                <div id="view-db" class="view-content">
+                    <h2 class="view-header">PERSONEL SİCİL DOSYALARI</h2>
+                    <div id="db-list" class="db-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mission-modal">
+        <div class="mission-box">
+            <h2 id="m-title" style="font-family:'Rajdhani'; font-size:2.2em; margin-top:0;">GÖREV</h2>
+            <p id="m-desc" style="color:#cbd5e1; font-size:1.05em; margin-bottom: 20px; line-height: 1.4;"></p>
+            <div style="background:#020617; padding:15px; border-radius:5px; margin-bottom:20px; border:1px solid #1e293b;" id="m-chance-box">
+                Başarı İhtimali: %0 <br><span style="font-size:0.8em; font-weight:normal; color:#94a3b8;">(Gereken: <span id="m-req-stat"></span>)</span>
+            </div>
+            <div class="hero-picker" id="m-picker"></div>
+            <button id="dispatch-btn" onclick="confirmDispatch()" style="background:var(--primary); color:white; padding:15px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:1.1em; width:100%; opacity: 0.5;">GÖREVE SEVK ET</button>
+            <button onclick="closeMissionModal()" style="background:transparent; color:#94a3b8; border:1px solid #334155; padding:12px; margin-top:10px; border-radius:5px; cursor:pointer; font-weight:bold; width:100%;">İPTAL ET</button>
+        </div>
+    </div>
+
+    <div id="event-modal">
+        <div class="event-box">
+            <h2 class="event-title">⚠️ SAHADAN ÇAĞRI </h2>
+            <div id="e-target-mission" style="color:var(--special); font-weight:bold; margin-bottom:15px; font-family:'Rajdhani'; font-size:1.3em;">Görev: Bilinmiyor</div>
+            <div id="e-text" class="event-text">Sahadan gelen acil durum metni buraya gelecek.</div>
+            <div id="e-choices"></div>
+        </div>
+    </div>
+
+    <div id="end-game-modal">
+        <h1 class="void-title">SİSTEM BAĞLANTISI KOPTU</h1>
+        <p class="void-text" style="animation-delay: 2.5s;">Zeon Ana Gemisi'nin çekirdeği patladığında her şeyin biteceğini sanmıştın. Ancak patlama bir yıkım değil, uzay-zamanı yırtan devasa bir anomali yarattı.</p>
+        <p class="void-text" style="animation-delay: 4.5s; color:#94a3b8; font-style:italic;">Komuta merkezin, ekranların ve bildiğin Ankara bir anda gözünün önünden silindi...</p>
+        <p class="void-text" style="animation-delay: 6.5s; color:var(--tablet-accent); font-weight:bold; font-size: 1.4em;">Gözlerini açtığında kurak, kızıl gökyüzüne sahip bir hiçliğin ortasındasın. Öte Alem ile Dünya'nın arafında. Kendi ekibinden kimse yok... Etrafında sana şaşkınlıkla bakan, daha önce hiç görmediğin 4 yabancı Üst İnsan var.</p>
+        <button class="btn-void" onclick="window.location.href='bolum2.html'">GÖZLERİNİ AÇ (BÖLÜM 2'YE GEÇ)</button>
+    </div>
+
+    <script>
+        let state = {
+            day: 0, energy: 50, threat: 5, time: 0, 
+            dayDuration: 40,
+            isPaused: true, isTutorial: true, dayEnded: false, isBetweenDays: false,
+            selectedIncident: null, selectedHeroes: [], hasDoctor: false,
+            eventsToday: 0, activeEventInc: null
+        };
+
+        const heroBase = {
+            "Brock": { img: "Brock.jpg", color: "#fb923c", restTime: 5, bio: "Ölümsüzlük laneti. Acıyı hissetmesine rağmen ölemiyor. Bu travma, zihninin parçalanmasına sebep oldu.", stats: {guc: 6, hiz: 2, day: 8, zihin: 1} },
+            "Leyla": { img: "Leyla.jpg", color: "#06b6d4", restTime: 6, bio: "Eski milli okçu. Mutasyonlu gözleri termal izleri görür. Zeonları kilometrelerce öteden sessizce avlar.", stats: {guc: 3, hiz: 8, day: 3, zihin: 7} },
+            "Yavuz": { img: "Yavuz.jpg", color: "#94a3b8", restTime: 10, bio: "Torunlarını kaybetmiş eski avukat. Adaleti antika katanasıyla dağıtıyor. Saf acı onu durdurulamaz yapıyor.", stats: {guc: 4, hiz: 8, day: 3, zihin: 7} },
+            "Timur": { img: "Timur.jpg", color: "#14b8a6", restTime: 10, bio: "Eski cerrah. Zeon cesetlerinden ilaç üreten, etik sınırları aşmış bir doktor. (PASİF: Ekipteyse yaralanma süresini kısaltır).", stats: {guc: 3, hiz: 2, day: 6, zihin: 9} },
+            "Barbaros": { img: "Barbaros.jpg", color: "#ef4444", restTime: 6, bio: "Bedeninde kadim bir varlık mühürlü. Kontrolü kaybederse her yeri yok edebilir. Dinlenmesi çok uzun sürer.", stats: {guc: 10, hiz: 7, day: 9, zihin: 6} },
+            "Silvia": { img: "Silvia.jpg", color: "#ec4899", restTime: 8, bio: "Kozmik enerjiyi hücrelerinde hapseden fizikçi. Yıkıcı enerji dalgaları yaratır ama bedeni çok kırılgan ve yorgundur.", stats: {guc: 2, hiz: 6, day: 2, zihin: 9} },
+            "Kaan": { img: "Kaan.jpg", color: "#10b981", restTime: 4, bio: "Hasta kardeşine ilaç bulmaya çalışan sokak savaşçısı. Kahramanlık umrunda değil, kusursuz hançer kullanır.", stats: {guc: 3, hiz: 9, day: 4, zihin: 5} },
+"Tengu": { img: "Tengu.jpg", color: "#d97706", restTime: 5, bio: "Yüzündeki sibernetik implantları dahi bir Japon mühendis taktı. İmplantların içindeki Zeon enerjisini dizginlemek için kadim mühürler (Ofuda) kullanıyor. Lanetli ve onurlu bir gazi.", stats: {guc: 9, hiz: 2, day: 6, zihin: 8} },
+"Dost": { img: "Dost.jpg", color: "#854d0e", restTime: 5, bio: "Doğal Zeon biyolojik silahı, bir çocuk ve eski K-9 Kangal köpeğini tek bir bedende birleşti. Korkunç bir canavar gibi görünmesine rağmen, insan bilincini ve sarsılmaz askeri disiplinini koruyor.", stats: {guc: 8, hiz: 5, day: 8, zihin: 3} },
+"Emirhan": { img: "Emirhan.jpg", color: "#38bdf8", restTime: 12, bio: "Zeon radyasyonu sinir sistemini yakıp ona 'Bilişsel Aşırı Yükleme' gücü verdi. Fiziksel olarak tükenmiş halde karargaha ulaştı. Evrenin işleyişini, düşmanların algoritmalarını ve dünyanın kurallarını ürkütücü bir netlikle okuyabiliyor. Arkadaşının ve kendisinin yarattığı cehennemde hayatta kalmaya çalışan gizli bir mimar.", stats: {guc: 6, hiz: 2, day: 4, zihin: 5} }
+        };
+
+        const recruitsDb = [
+            { day: 0, key: "Brock", msg: "Komutan, devasa bir adam kapıda. Bize yardım etmek istiyor ama zihinsel durumu pek stabil görünmüyor." }, 
+            { day: 2, key: "Leyla", msg: "A.E.G.I.S... Çatılarınızı kullanmama izin verirseniz, sokaklarınızı temizlerim." },
+            { day: 3, key: "Yavuz", msg: "Kılıçlı bir adam Zeon devriyesini tek başına yok etti. Telsizden 'Adalet tecelli edecek' dedi." },
+            { day: 7, key: "Timur", msg: "Ben Dr. Timur. Taze Zeon kanına ihtiyacım var. Karşılığında askerlerinizi hayatta tutarım." },
+            { day: 4, key: "Barbaros", msg: "Ankara Kalesi'nden yoğun radyasyon alıyoruz.Radyasonun kaynağı sizinle görüşmek istiyor." },
+            { day: 9, key: "Silvia", msg: "Trafolardan çekilen enerjide anormallik var. Silvia adında biri bizimle bağlantı kurdu." },
+            { day: 11, key: "Kaan", msg: "Gölgede hızlı hareket eden bir genç depolarımızdan ilaç çalarken yakalandı. Pazarlık yapmak istiyor." },
+	    { day: 13, key: "Tengu", msg: "Kılıç ustası Yavuz, devriyesinden yanında garip bir adamla döndü. Yüzü demir ve kablolarla kaplı, zırhından Japonca yazılı muskalar sarkıyor. Bize yardım etmek istiyor." },
+	    { day: 15, key: "Dost", msg: "Karargah kapısında yarı insan yarı Kangal bir mutant bekliyor. Silahlarımızı ona doğrulttuk ama o, kalın ve boğuk bir insan sesiyle konuştu: 'Ben Dost. Ben Dostum. Emirlerinizi bekliyorum.'" },
+{ day: 17, key: "Emirhan", msg: "Kapıya ağır yaralı bir genç yığıldı. Kameralara bakıp kanlı ve yorgun bir gülümsemeyle konuştu: 'Kendi kurduğum tuzağa düştüm... Beni içeri alın, size bu sistemin nasıl yenileceğini anlatayım.'" }
+        ];
+
+        // GÖREV BAŞARILI OLDUĞUNDA VERİLECEK TEPKİLER
+        const taskSuccessReactionPool = {
+            "Brock": [
+                "Abi hepsini ezdim! Paramparça oldular!", 
+                "Görev bitti, şimdi dondurma yiyebilir miyiz?", 
+                "Kafaları karpuz gibi patladı! Çok eğlenceliydi!", 
+                "Hiç yorulmadım ki! Bir daha ne zaman eziyoruz?", 
+                "Kötüleri temizledim komutan! Ben iyi bir çocuk muyum?",
+		"Kemiklerinin kırılma sesi başlarda komikti... ama sonra aniden sustular. Neden hep susuyorlar komutan?", 
+                "Bana ateş ettiler! Vücudumdaki kurşunları kusana kadar HEPSİNİ PARAMPARÇA ETTİM! HİÇBİRİ YAŞAMIYOR!", 
+                "Kan ellerimden çıkmıyor... Ne kadar yıkarsam yıkayım çıkmıyor! Komutan... ben neye dönüştüm?", 
+                "Görev bitti. Bir tanesinin kafasını kopan kolumun yerine dikmeye çalıştım ama tutmadı. Neyse, dondurma var mı?", 
+                "Bitti. Artık kıpırdamıyorlar. Tıpkı benim içimdeki o karanlık sessizlik gibi... Sırada kim var?"
+            ],
+            "Leyla": [
+                "Rüzgar benden yanaydı. Hedef temizlendi.", 
+                "Oklarım hedefini şaşmaz. Karargaha dönüyorum.", 
+                "Termal izleri tamamen silindi. Görev tamam.", 
+                "Gözümün gördüğü hiçbir şey benden kaçamaz.", 
+                "Sessizce girdim, sessizce işlerini bitirdim."
+            ],
+            "Yavuz": [
+                "Bir leke daha silindi bu şehirden.", 
+                "Kılıcım adaleti sağladı. Kanlarını temizlemem lazım.", 
+                "Torunlarımın intikamı için bir adım daha.", 
+                "Bu dünyada kanun benim katanamın ucundadır.", 
+                "Kusursuz bir infaz. Görev tamamlandı komutan."
+            ],
+            "Timur": [
+                "Harika biyolojik örnekler topladım. Laboratuvara dönüyorum.", 
+                "Deneklerin anatomisi büyüleyici. Otopsi için sabırsızlanıyorum.", 
+                "Bilim adına çok verimli bir sahaydı.", 
+                "Kusursuz bir av. Taze kan ve doku getirdim komutan.", 
+                "Düşmanın zaaflarını kaydettim, yeni serumlar üretebilirim."
+            ],
+            "Barbaros": [
+                "Görev tamamlandı komutan. Mühürler hala sağlam, ekibe zarar gelmedi.", 
+                "Bu gücü serbest bırakmak her seferinde ruhumdan bir parça koparıyor... Ama insanlık için buna değer.", 
+                "Düşman küle döndü. İçimdeki varlık bu yıkımdan keyif alıyor, işte beni asıl korkutan bu.", 
+                "Operasyon başarılı. İzninizle karargaha dönüp meditasyon yapmalıyım, zihnimi toplamam gerek.", 
+                "Onlara acımıyorum, ancak taşıdığım bu ilahi gücün adaleti bu kadar acımasız olmamalı."
+            ],
+            "Silvia": [
+                "Enerji deşarjı tamamlandı. Hedef yok edildi.", 
+                "Fizik kanunları benim emrimde. Görev başarılı.", 
+                "Kozmik dalgalanmalar stabil. Düşman buharlaştı.", 
+                "Hedefin atomik bağlarını parçaladım. Geri dönüyorum.", 
+                "Beklenen yıkım sağlandı komutan."
+            ],
+            "Kaan": [
+                "İşi hallettim. Kardeşime söz verdiğiniz ilacı hazırlayın.", 
+                "Gölgeden geldim, gölgeye dönüyorum.", 
+                "Paket bende. Anlaşmamıza sadık kalın komutan.", 
+                "Beni kimse göremedi bile. Görev tamam.", 
+                "Para ve ilaç... Tek derdim bu. İş bitti."
+            ],
+            "Tengu": [
+                "Mızrağım hedefini buldu. Mühürlerim hala sağlam. Karargaha dönüyorum.", 
+                "Bu lanetli beden hala işe yarıyor komutan. Düşman temizlendi.", 
+                "İçimdeki Zeon fısıltıları kan dökülünce sustu. Görev başarılı.", 
+                "Mühendis Arisaka'nın tasarımı kusursuz çalıştı. Onurumu korudum.", 
+                "Rüzgarı dinledim ve vurdum. Hiçbir şey benden kaçamaz."
+            ],
+	    "Dost": [
+                "Bölge temizlendi komutan. Sürüm güvende.", 
+                "İçgüdülerim onları vahşice parçalamamı söyledi ama disiplinimi korudum. Görev başarılı.", 
+                "Düşman kokusu silindi. Beklemeye geçiyorum.", 
+                "Kangal çenesi Zeon zırhını rahatça kırabiliyor. Yeni bir şey değil.", 
+                "Yaralarım var ama sadakatim acıdan üstündür. Operasyon tamam."
+            ],
+	    "Emirhan": [
+                "Yukardı yeşil olduğuna göre başardım! .... ama pek tatmin olmadım.", 
+                "Bu bölgenin kurallarını agamdan dinlemiş olsamda, bizzat yaşamak çok daha yorucuymuş. Görev tamam.", 
+                "Canavarların saldırı düzeni tamamen algoritmik. Sadece ritmi okudum ve vurdum.", 
+                "Şans faktörü bu sefer benden yanaydı. Temiz bir iş çıkardık.", 
+                "Zar zor ayakta duruyorum ama mekanikler... s*keceğim bu repklikleri."
+            ]
+        };
+
+        // GÖREV BAŞARISIZ OLDUĞUNDA VERİLECEK TEPKİLER
+        const taskFailReactionPool = {
+            "Brock": [
+                "Abi çok kalabalıklardı... Oyun hiç adil değildi.", 
+                "Her yerim koptu... Yeniden çıkarken çok acıyor.", 
+                "Özür dilerim komutan, hepsini yakalayamadım...", 
+                "Neden ölemiyorum komutan? Sadece uyumak istiyorum.", 
+                "Canavarlar çok güçlüydü. Saklanmak istiyorum.",
+		"Yine öldüm komutan... Yine öldüm ve geri geldim! BU ACI HİÇ BİTMİYOR! BİTMİYOR!", 
+                "KAFAMIN İÇİNDEKİ SESLER SUSMUYOR! GÖREVİ YAPAMADIM DİYE BANA GÜLÜYORLAR! HEPSİNİ EZECEĞİM!", 
+                "Neden ben?! Neden sadece ben acı çekiyorum?! Neden onlar gibi ölüp kurtulamıyorum?! HİÇ ADİL DEĞİL!", 
+                "Çok fazlalardı... Her yerimi kopardılar. Etlerim birleşirken hissettiğim o yanma... ONLARIN DA ETLERİNİ YAKMAK İSTİYORUM!", 
+                "Başaramadım. Ama sorun değil... Gece çöktüğünde gizlice gidip hepsini uykularında yiyeceğim. Evet... tek tek yiyeceğim."
+            ],
+            "Leyla": [
+                "Sis termal vizyonumu kör etti. Hedefi kaçırdım.", 
+                "Oklarım zırhlarını delemeyecek kadar zayıf kaldı.", 
+                "Görüş açım kapandı, operasyon başarısız.", 
+                "Gözlerim yanıyor... Lanet olası mutasyon geri tepiyor.", 
+                "Hedef çok hızlıydı. Kendimi affettireceğim komutan."
+            ],
+            "Yavuz": [
+                "Kılıcım köreldi... Adaleti sağlayamadım.", 
+                "Beni affedin çocuklar... Bugün başaramadım.", 
+                "Düşman beklediğimden dişe dokunurdu. Geri çekildim.", 
+                "Ellerim titriyor. Yaşlanıyorum sanırım...", 
+                "Bugün merhamet etmedim ama gücüm de yetmedi."
+            ],
+            "Timur": [
+                "Denekler çok çabuk parçalandı. Kullanılamaz haldeler.", 
+                "Deneylerim için daha fazla zamana ihtiyacım vardı. Çekiliyorum.", 
+                "Tüm numunelerim mahvoldu! Bu ne biçim bir operasyon?", 
+                "Ekip çok kırılgan, sürekli onları hayatta tutmakla uğraştım.", 
+                "Cehaletiniz bilimin önüne geçiyor komutan. Başarısız olduk."
+            ],
+            "Barbaros": [
+                "Komutan, geri çekiliyorum. Mühürler zayıfladı, eğer orada kalsaydım dostlarımı da yakabilirdim. Başarısızlık benim suçum.", 
+                "Bağışlayın... Zihnimdeki ses o kadar bağırdı ki, savaşmaya odaklanamadım.", 
+                "Bedenim bu ilahi yükü taşırken bazen iflas ediyor. Sizi hayal kırıklığına uğrattım.", 
+                "Enerji kontrolden çıkmak üzereydi. Ekibi tehlikeye atmamak için görevi yarıda kestim.", 
+                "Onları kurtaramadım. Bu kadar büyük bir güce sahip olup bu kadar çaresiz hissetmek... çok ağır."
+            ],
+            "Silvia": [
+                "Çok yoruldum. Gözlerim kararıyor...", 
+                "Hücresel bütünlüğüm bozuluyor. Enerjimi tutamıyorum!", 
+                "Aşırı yüklendim! Patlamadan önce geri çekiliyorum.", 
+                "Gücüm yetmedi komutan. Titriyorum...", 
+                "Bu gidişle kendi enerjim beni yutacak. Başaramadım."
+            ],
+            "Kaan": [
+                "Kardeşim için bunu başarmalıydım! Lanet olsun!", 
+                "Çok fazlalardı... Gölgeler bile beni saklayamadı.", 
+                "Hedefi alamadım. Kardeşim bu gece aç kalacak...", 
+                "Yaralandım komutan. Hançerim kırıldı.", 
+                "Eğer kardeşime bir şey olursa bunun hesabını sorarım."
+            ],
+	    "Tengu": [
+                "Muskalarım yanıyor! Zeon kanı zihnime sızıyor... Acil geri çekilmeliyim!", 
+                "Bedenimdeki kablolar koptu. Eski bir adamım ben, başaramadım komutan.", 
+                "Zihnimdeki lanet beni ele geçirmek üzereydi. Kılıcımı çekemedim. Affedin.", 
+                "Çok fazlalardı. Arisaka'nın parçaları hasar gördü, tamir olmam gerek.", 
+                "Onurumu lekeledim... Bugün adaletimi sağlayamadım."
+            ],
+	    "Dost": [
+                "Kan kokusu aklımı bulandırdı... Canavara dönüşmemek için geri çekildim.", 
+                "Beni affedin komutan. Hayvansal tarafım ağır bastı, taktiksel hata yaptım.", 
+                "Çok fazlalardı. Geri adım atmak doğama aykırı ama sürüyü korumak zorundaydım.", 
+                "Zırhlarını aşamadım. Daha fazla güç, daha fazla öfke lazım...", 
+                "Görev başarısız. Kendime ceza olarak bu gece dışarıda nöbet tutacağım."
+            ],
+	    "Emirhan": [
+                "Aynı görevleri başaramamak sarmıyo ya.", 
+                "Başaramadık abi.", 
+                "Başaramayacağımı bildiğin için keyfine beni buraya gönderdin dimi?", 
+                "Burada bir denge sorunu var! Benim statlarım neden bu kadar düşük la.", 
+                "Ağır hasar aldık, acilen senin beni 30 saniye beklemen gerek."
+            ]
+	    
+        };
+
+        const privateChatPool = {
+            "Brock": [ { them: "Komutan... acı hiç bitmiyor. Acaba ben kötü bir çocuk muyum?", me: "Hayır Brock. Sen hayatta kalan birisin." } ],
+            "Leyla": [ { them: "Yukarıdan bakınca bu şehir koca bir mezarlık gibi.", me: "O mezarlığın bekçileri biziz Leyla. Odaklan." } ],
+            "Yavuz": [ { them: "Kılıcımı bilerken torunlarımın sesini duyuyorum... Susmuyorlar.", me: "Onların huzur bulması için savaşıyoruz. Aklını kaybetme." } ],
+            "Timur": [ { them: "Brock'un hücre yenilenmesi inanılmaz. Bir doku örneği almama izin verin.", me: "O bir çocuk Timur. Onu rahat bırak, sadece işini yap." } ],
+            "Kaan": [ { them: "Kardeşim bugün yine kan öksürdü. Ona bir şey olursa burayı yakarım.", me: "Sakin ol Kaan. İlaç bulmak için ilk ekibi ben göndereceğim." } ],
+            "Silvia": [ { them: "İçimdeki enerji damarlarımı yakıyor. Ne kadar dayanırım bilmiyorum.", me: "Kendini çok zorlama Silvia. Bize lazımsın." } ],
+            "Barbaros": [ 
+                { them: "Komutan, bazen içimdeki varlık bana evrenin sırlarını fısıldıyor. Bu dünyanın ne kadar küçük olduğunu gösteriyor. Ama ben insan kalmak istiyorum.", me: "Sen bir kap değil, bir koruyucusun Barbaros. İnsanlığını koruyan şey bu sadakatin." },
+                { them: "Eğer bir gün mühürler tamamen kırılırsa... tereddüt etmeyin komutan. Beni Ankara ile birlikte yok edin.", me: "O günün gelmemesi için buradayız. Bu yükü tek başına taşımıyorsun." }
+            ]
+        };
+
+        const dailyConversations = [
+            { req: ["Leyla", "Brock"], played: false, lines: [
+                { s: "Leyla", t: "Brock, o kadar gürültü yapıyorsun ki 2 kilometre öteden yerimizi belli ediyorsun." },
+                { s: "Brock", t: "Ama abla Zeonlar saklambaç oynamayı bilmiyor ki, ben de bağırarak çağırıyorum!" }
+            ]},
+            { req: ["Timur", "Yavuz"], played: false, lines: [
+                { s: "Yavuz", t: "O laboratuvarından gelen çığlıkları duyuyorum doktor. Ne yapıyorsun orada?" },
+                { s: "Timur", t: "Bilim fedakarlık gerektirir Avukat. Sizin adalete taptığınız gibi ben de gerçeğe tapıyorum." },
+                { s: "Yavuz", t: "Haddini aşarsan kılıcım boynunda olur." }
+            ]},
+            { req: ["Timur", "Brock", "Yavuz"], played: false, lines: [
+                { s: "Timur", t: "Brock, çocuğum... Sadece küçük bir kan örneği vereceksin. Acımayacak." },
+                { s: "Brock", t: "Tamam doktor amca! Zaten her gün bir yerim kopuyor, iğne acıtmaz ki." },
+                { s: "Yavuz", t: "O çocuğa o şırıngayla yaklaşırsan o elini keserim Timur. Onu rahat bırak." },
+                { s: "Timur", t: "Ah, klasik ahlak bekçisi. İnsanlığın evrimine engel oluyorsunuz." }
+            ]},
+            { req: ["Kaan", "Timur"], played: false, lines: [
+                { s: "Kaan", t: "Doktor, kardeşimin ilaçları azalıyor. Elinde alternatif bir şeyler var mı?" },
+                { s: "Timur", t: "Zeon adrenal bezlerinden sentezlediğim bir serum var. Ama... yan etkilerini henüz test etmedim." },
+                { s: "Kaan", t: "Kardeşimi senin ucube deneylerine alet etmem. İlacı kendim bulurum." }
+            ]},
+            { req: ["Silvia", "Barbaros", "Leyla"], played: false, lines: [
+                { s: "Leyla", t: "İkinize de tavsiyem, sahadayken benden uzak durun. Termal dürbünümü kör ediyorsunuz." },
+                { s: "Silvia", t: "Hücrelerimdeki enerji sızıntısını durduramıyorum Leyla, üzgünüm." },
+                { s: "Barbaros", t: "Benim yaydığım radyasyonun yanında senin enerjin bir mum ışığı kalır fizikçi." }
+            ]},
+            { req: ["Yavuz", "Kaan"], played: false, lines: [
+                { s: "Yavuz", t: "Sokaklarda hırsızlık yaparak kardeşine iyi bir gelecek sunamazsın evlat. Bu yasal değil." },
+                { s: "Kaan", t: "Eski kanun kitapların bu dünyada geçmiyor ihtiyar. Benim kanunum bu hançer." }
+            ]},
+            { req: ["Brock", "Barbaros"], played: false, lines: [
+                { s: "Brock", t: "Barbaros abi, gözlerin bazen yıldızlar gibi parlıyor. İçinde uzay mı var?" },
+                { s: "Barbaros", t: "İçimde çok eski ve yorgun bir gökyüzü var Brock. Ve inan bana, o yıldızlara çok yakından bakmak istemezsin." },
+                { s: "Brock", t: "Ben yüksekten korkmam ki! Zaten düşersem tekrar canlanıyorum!" }
+            ]},
+	    { req: ["Timur", "Barbaros"], played: false, lines: [
+                { s: "Timur", t: "Barbaros, kanındaki o kozmik partiküller... İnsanlığı bir sonraki evrime taşıyabilir. Lütfen bilime bir şans ver." },
+                { s: "Barbaros", t: "Bu evrim değil doktor, bu kıyamet. Bu gücün bir damlası bile senin dünyanı yakar. Lütfen benden uzak dur, seni incitmek istemiyorum." }
+            ]},
+	    { req: ["Yavuz", "Barbaros"], played: false, lines: [
+                { s: "Yavuz", t: "Barbaros... Kılıcım sadece etten olanı keser. İçindeki o ilahi varlık serbest kalırsa, seni nasıl durduracağım?" },
+                { s: "Barbaros", t: "Kılıcına değil, inancına güveneceksin Yavuz. Eğer o gün gelirse, beni fiziksel olarak değil, ruhen yok etmen gerekecek." }
+            ]},
+	    { req: ["Silvia", "Barbaros"], played: false, lines: [
+                { s: "Barbaros", t: "Silvia, hücrelerindeki o dengesiz enerji... Acı çektiğini görebiliyorum. Lütfen sınırlarını bu kadar zorlama." },
+                { s: "Silvia", t: "Bunu içinde yürüyen bir nükleer reaktör taşıyan adam mı söylüyor? İkimiz de bu uğurda yanmaya yemin etmedik mi?" }
+            ]},
+	    { req: ["Kaan", "Silvia"], played: false, lines: [
+                { s: "Kaan", t: "Kardeşimin odasını ısıtmak için o jeneratöre ihtiyacım var Silvia. Bana o güçlerinden biraz veremez misin?" },
+                { s: "Silvia", t: "Bu enerji onu ısıtmaz Kaan, hücrelerini saniyeler içinde kül eder. Onu korumak istiyorsan benden uzak tutmalısın." }
+            ]},
+	    { req: ["Tengu", "Timur"], played: false, lines: [
+                { s: "Timur", t: "Cengiz, yüzündeki o sibernetik yapıyı incelememe izin ver. O Japon mühendis Zeon dokusunu metale bağlamayı nasıl başardı? Bu bir mucize!" },
+                { s: "Tengu", t: "Bu bir mucize değil Doktor, bu bir lanet. Kutsal mühürlerimi deşmene asla izin vermem. Merakın seni öldürür.Ve gerçek adımı bir daha asla söyleme." }
+            ]},
+            { req: ["Tengu", "Yavuz"], played: false, lines: [
+                { s: "Yavuz", t: "Senin mızrağında da benim kılıcım gibi eski bir dünyanın onuru var. Ama yüzündeki o demir yığını senin ruhunu zehirliyor dostum." },
+                { s: "Tengu", t: "Adaletin kılıcı senin ellerinde Avukat. Benim ellerimde ise sadece hayatta kalmanın utancı var. Bizler, ölmesi gereken ama ölemeyen iki yaşlı kurduz." }
+            ]},
+            { req: ["Tengu", "Brock"], played: false, lines: [
+                { s: "Brock", t: "Demir yüzlü amca! Sopanın ucundaki o uçuşan kağıtlarda ne yazıyor? Yemek tarifi mi?" },
+                { s: "Tengu", t: "O kağıtlar içimdeki kötü ruhları dışarı çıkmaktan alıkoyan kilitler Brock. Eğer onları yersen, içimdeki canavar uyanır." },
+                { s: "Brock", t: "Aaa... O zaman ben gidip konserve yiyeyim bari." }
+            ]},
+            { req: ["Tengu", "Barbaros"], played: false, lines: [
+                { s: "Tengu", t: "İçindeki o yıkıcı varlığı hissedebiliyorum Barbaros. Benim yüzümdeki mühürler (ofuda) gibi, senin mühürlerin de gün geçtikçe zayıflıyor." },
+                { s: "Barbaros", t: "Haklısın ronin. Eğer ikimizden birinin zincirleri tamamen kırılırsa... ilk darbeyi vuranın kim olacağını ikimiz de biliyoruz." }
+            ]},
+	    { req: ["Dost", "Yavuz"], played: false, lines: [
+                { s: "Yavuz", t: "Bir zamanlar bu sokaklarda kanun vardı. Şimdi ise adaleti devasa bir yarı-köpek sağlıyor. Dünya ne hale geldi..." },
+                { s: "Dost", t: "Kanunlar kağıda yazılır Avukat, ama sadakat kana kazınır. Benim kanunum komutanın sözüdür." }
+            ]},
+            { req: ["Dost", "Timur"], played: false, lines: [
+                { s: "Timur", t: "Muazzam bir biyolojik sentez! İnsan zekası ve Kangalın fiziksel üstünlüğü... Dost, senden sadece küçük bir kas dokusu almalıyım!" },
+                { s: "Dost", t: "Eğer elindeki o neşteri bir milim daha yaklaştırırsan, insan zekamı bir kenara bırakır, hayvan içgüdülerimle o kolunu koparırım doktor." }
+            ]},
+            { req: ["Dost", "Brock"], played: false, lines: [
+                { s: "Brock", t: "Kocaman köpek abi! Neden hiç havlamıyorsun? Benimle top oynar mısın? Kopan kollarımı atsam getirir misin?" },
+                { s: "Dost", t: "(Derin bir hırlama) Ben evcil bir köpek değilim çocuk. Ben bir askerim. Ve hayır, o iğrenç şeyleri getirmeyeceğim." }
+            ]},
+            { req: ["Emirhan", "Timur"], played: false, lines: [
+                { s: "Timur", t: "Emirhan, beynindeki o mutasyon... Sinir ağların adeta bir bilgisayar işlemcisi gibi çalışıyor. Kafatasını açıp o bağlantıları görmek için çıldırıyorum!" },
+                { s: "Emirhan", t: "Şu tacizi kendim bizzat yaşayacağımı bunu yazarken hiç düşünmemiştim." }
+            ]},
+            { req: ["Emirhan", "Yavuz"], played: false, lines: [
+                { s: "Yavuz", t: "Olaylara bu kadar ruhsuz ve analitik yaklaşman sinirimi bozuyor evlat. Ortada dökülen kanlar var, hesaplanacak sayılar değil." },
+                { s: "Emirhan", t: "Olaylara karşı olan duruşun kişiliğin ve davranışlarına bayılıyorum ihtiyar." }
+            ]},
+            { req: ["Emirhan", "Brock"], played: false, lines: [
+                { s: "Brock", t: "Emirhan abi! Her şeyi biliyorsun ya, sence bugün bana ne olacak? Kolum mu kopacak, bacağım mı?" },
+                { s: "Emirhan", t: "Bana sorma şans oranına bağlı ve bir kere teknik olarak sen kendi isteğinle koparttırıyorsun onları." },
+                { s: "Brock", t: "hehe! Yenisi çıkarken çok komik karıncalanıyor!" }
+            ]},
+	    // 1. Emirhan ve Leyla (Karakter Derinliği / Klişeler Üzerine)
+            { req: ["Emirhan", "Leyla"], played: false, lines: [
+                { s: "Emirhan", t: "Senin o soğuk, mesafeli ve sessiz keskin nişancı tavırların... Bazen diyorum ki, acaba sana biraz daha derinlik mi katsaydım? Çok mu 'tek boyutlu' (one-dimensional) kaldın sence?" },
+                { s: "Leyla", t: "Benim derinliğim, okumun girdiği yerde başlar Emirhan. Laf kalabalığı yapmayı bırak da rüzgarı oku." },
+                { s: "Emirhan", t: "İşte tam da bu replikten bahsediyorum! Çok klasik bir 'cool' karakter satırı. Neyse, oyuncuların... yani pardon, insanların hoşuna gidiyor sonuçta." }
+            ]},
+
+            // 2. Emirhan ve Silvia (Oyun Dengesi / Balancing Üzerine)
+            { req: ["Emirhan", "Silvia"], played: false, lines: [
+                { s: "Emirhan", t: "Sana o devasa kozmik gücü verirken, bedel olarak hücrelerinin yanmasını eklemek bence çok dramatik bir dokunuştu. 'Trajik kahraman' konseptini tam yansıtıyorsun." },
+                { s: "Silvia", t: "Buna dramatik bir dokunuş mu diyorsun? Ben her nefes aldığımda iç organlarımın kavrulduğunu hissediyorum!" },
+                { s: "Emirhan", t: "Evet, işte buna dengeleme diyoruz. Yoksa çok aşırı güçlü olurdun ve sistemin tadı kaçardı. Katlanmak zorundasın." }
+            ]},
+            { req: ["Emirhan", "Kaan"], played: false, lines: [
+                { s: "Emirhan", t: "Hasta kardeşini kurtarmaya çalışan asi, hırçın sokak çocuğu... Kabul etmeliyim, bu backstory empati yaratmak için çok klasik ama her zaman işe yarar." },
+                { s: "Kaan", t: "Sen benim kardeşim hakkında ne biliyorsun lan?! O lafları ağzına tıkmadan önce düzgün konuş!" },
+                { s: "Emirhan", t: "Sakin ol Kaan, hemen 'agresif savunma' moduna geçmene gerek yok. Karakter arkının böyle işlemesi gerekiyordu, sadece sesli düşünüyordum." }
+            ]},
+            { req: ["Emirhan", "Barbaros"], played: false, lines: [
+                { s: "Emirhan", t: "İçindeki o kadim varlığın loresini yazan arkadaşım... Yani, o varlığın frekanslarını analiz eden arkadaşım demek istedim." },
+                { s: "Barbaros", t: "Bu varlık bir frekans değil Emirhan, bir lanet. Ve senin o yorgun zihnin, onun gerçek karanlığını asla kavrayamaz." },
+                { s: "Emirhan", t: "Emin ol kavrıyorum Barbaros. Ne de olsa o 'karanlığın' tüm parametrelerini agamın ellerinde... öhöm, yani zihnimle ben şekillendirdim." }
+            ]},
+            { req: ["Emirhan", "Dost"], played: false, lines: [
+                { s: "Emirhan", t: "Seni incelerken fark ettim de, yarı insan yarı kangal fikri gerçekten çok underrated bir konseptmiş. Görsel dizaynın harika." },
+                { s: "Dost", t: "(Derin bir hırlama) Ben bir görsel değilim Emirhan. Ben hayatta kalan bir ucube ve bir askerim. Bu sözlerin iltifat mı, yoksa alay mı karar veremiyorum." },
+                { s: "Emirhan", t: "Tamamen iltifat! Karakter dizaynı  on üzerinden yedi. Sadece .... Furry değilim." }
+            ]},
+            { req: ["Emirhan", "Tengu"], played: false, lines: [
+                { s: "Emirhan", t: "Samuray estetiği ile sibernetik parçaları birleştirip üstüne bir de Şinto mühürleri eklemek... Görsel bir şaheser yaratmışım. Seni tasarlarken kim bilir ne içiyordum." },
+                { s: "Tengu", t: "Dr. Arisaka'nın parçaları benim utancım ve cezamdır çocuk. Benim acılarıma bakıp estetik diyorsan, zihnin Zeonlardan daha zehirli demektir." },
+                { s: "Emirhan", t: "Haklısın... Estetik uğruna biraz acımasız davranmış olabilirim. Kusura bakma ihtiyar." }
+            ]},
+{ req: ["Emirhan", "Yavuz"], played: false, lines: [
+                { s: "Emirhan", t: "Kıyametin ortasında, uzaylı yaratıklara karşı antika bir katanayla savaşman... 'Melee (Yakın Dövüş)' fantezimi çok iyi yansıtıyorsun. Hasar çarpanların (damage multiplier) o yüzden epey yüksek." },
+                { s: "Yavuz", t: "Bu kılıç bir fantezi değil evlat. Torunlarımın kanıyla sulanmış, adaleti arayan bir terazi. O radyasyonlu beyninden çıkan kelimelere dikkat et." },
+                { s: "Emirhan", t: "Klasik bir trajik intikam motivasyonu (revenge plot). Zaten bu güçlü arka plan (backstory) olmadan o kılıcı mermilere karşı savurmanın mantıklı bir açıklaması olamazdı. Kusursuz bir yazım." }
+            ]},
+            { req: ["Emirhan", "Timur"], played: false, lines: [
+                { s: "Emirhan", t: "Seni tasarlarken sadece sıradan bir Şifacı olmanı istemedim. Cesetlerden loot toplayıp kendi takımında deney yapan Deli Bilim Adamı arketipine tam oturdun." },
+                { s: "Timur", t: "Benim dehamı o aptal oyun terimlerinle ve radyasyon yanığı aklınla basitleştirme Emirhan! Ben insanlığın evrimini hızlandırıyorum!" },
+                { s: "Emirhan", t: "Tamam tamam, kızma." }
+            ]},
+        ];
+
+        // SAHA OLAYLARI (Kararlar ve Sonuçları)
+        // SAHA OLAYLARI (40 Adetlik Dev ve Gizli İhtimalli Havuz)
+        const eventPool = [
+            // --- ESKİ 10 OLAY ---
+            { 
+                text: "Komutan, görev rotamızda bir grup sivil Zeonlar tarafından köşeye sıkıştırılmış. Müdahale edersek zaman kaybederiz ve pusuya düşebiliriz. Ne yapalım?",
+                choices: [
+                    { label: "Sivilleri Kurtarın", statMod: -25, threatMod: -10, log: "Siviller kurtarıldı ama ekip ağır hasar aldı. Operasyon riske girdi!" },
+                    { label: "Göreve Odaklanın (Sivilleri Bırakın)", statMod: +15, threatMod: +5, log: "Çığlıklar kesildi... Ekip hedefe sorunsuz ilerliyor. Vicdanlar yaralı." }
+                ]
+            },
+            { 
+                text: "Hedef bölgeye yaklaştık ancak Zeonların ağır zırhlı bir devriyesi binanın önünü kapatmış. Etrafından dolaşabiliriz ya da direkt üstlerine çökebiliriz.",
+                choices: [
+                    { label: "Gizlice Etrafından Dolaşın", statMod: -10, threatMod: 0, log: "Sessizce geçtiler ama zaman kaybettiler. Zeonlar alarma geçebilir." },
+                    { label: "Sürpriz Saldırı Yapın!", statMod: +20, threatMod: +5, log: "Kanlı bir çatışma oldu. Devriye yok edildi, hedefe yol açıldı!" }
+                ]
+            },
+            {
+                text: "İçeride kilitli, askeri sınıf bir kasa bulduk. İçinde ekstra enerji çekirdeği olabilir ama kilit mekanizması bubi tuzaklı duruyor.",
+                choices: [
+                    { label: "Hacklemeyi Dene (Risk Al)", statMod: -15, energyMod: +30, log: "Kasa açıldı, +30 Enerji kazanıldı! Ancak bubi tuzağı ekibi sersemletti." },
+                    { label: "Kasayı Bırak, Hedefe İlerle", statMod: +5, energyMod: 0, log: "Ekip gereksiz risk almadı ve ana hedefe odaklandı." }
+                ]
+            },
+            {
+                text: "Bölgede tuhaf, yeşil bir sis var. Filtrelerimiz dayanmıyor. Ekip halüsinasyon görmeye başladı!",
+                choices: [
+                    { label: "Geri Çekilin ve Sis Dağılana Kadar Bekleyin", statMod: -20, threatMod: +2, log: "Sis dağılana kadar beklediler ama operasyonun ivmesi tamamen kayboldu." },
+                    { label: "Nefesinizi Tutun ve Sisin İçine Koşun!", statMod: +15, threatMod: 0, log: "Delice bir koşuyla sise girdiler. Ciğerleri yanıyor ama hedefe ulaştılar!" }
+                ]
+            },
+            {
+                text: "Yaralı bir Zeon komutanı can çekişiyor. Bizi henüz fark etmedi. Ondan veri çalabiliriz ama bu vakit kaybettirir ve bizi açığa çıkarabilir.",
+                choices: [
+                    { label: "Verileri Çalmaya Çalış", statMod: -15, threatMod: -15, log: "Zeon şifreleri ele geçirildi (Tehdit -15 düştü). Ancak ekip fark edildi, kuşatılabilirler!" },
+                    { label: "Kafasına Sık ve Hızla Devam Et", statMod: +10, threatMod: 0, log: "Hedefe acımasızca ilerleniyor. Operasyon tıkırında." }
+                ]
+            },
+            {
+                text: "Terk edilmiş bir A.E.G.I.S. zırhlı aracı bulduk. Kapıları mühürlü. İçeride hayatta kalanlar veya cephane olabilir, ancak Zeonlar aracı izliyor olabilir.",
+                choices: [
+                    { label: "Aracın Kapılarını Zorla", statMod: -20, energyMod: +20, threatMod: -5, log: "Araçta erzak bulundu (+20 Enerji) ama kapı sesi Zeonları üzerlerine çekti!" },
+                    { label: "Tuzak Olabilir, Görmezden Gel", statMod: +5, threatMod: 0, log: "Araç geride bırakıldı. Güvenli rota izleniyor." }
+                ]
+            },
+            {
+                text: "Geçtiğimiz tünelin tavanı çökmek üzere! Geri dönüp başka bir yol bulursak operasyon çok uzayacak.",
+                choices: [
+                    { label: "Depar Atıp Çöküntüden Kaçın!", statMod: +15, threatMod: +5, log: "Toz bulutunun içinden son anda çıktılar! Ancak çok gürültü koptu." },
+                    { label: "Geri Dönün ve Güvenli Bir Yol Arayın", statMod: -25, threatMod: 0, log: "Ekip güvenli yolu seçti ancak hedefe giden yolda çok fazla zaman kaybedildi." }
+                ]
+            },
+            {
+                text: "Bir Zeon iletişim kulesinin yanından geçiyoruz. Kabloları kesersek iletişimleri kopar ama bu bizi ana hedefimizden saptırır.",
+                choices: [
+                    { label: "Kuleyi Sabote Edin", statMod: -15, threatMod: -10, log: "Kule çöktü! Bölgedeki Zeon koordinasyonu bozuldu (Tehdit düştü) ama ekip yoruldu." },
+                    { label: "Görevi Riske Atmayın, Geçip Gidin", statMod: +10, threatMod: 0, log: "Kuleye dokunmadılar. Görev planlandığı gibi gidiyor." }
+                ]
+            },
+            {
+                text: "Karşımızda aklını tamamen yitirmiş ve mutasyon geçirmiş eski bir A.E.G.I.S. askeri var. Bizi düşman sanıp saldırıyor!",
+                choices: [
+                    { label: "Zor Kullanarak Öldürün", statMod: +15, threatMod: +5, log: "Eski dostlarını kanlı bir şekilde indirdiler. Psikolojileri bozuk ama yolları açık." },
+                    { label: "Sadece Etkisiz Hale Getirip Bağlayın", statMod: -20, threatMod: 0, log: "Onu bağlamak çok zor oldu, ekip hırpalandı ve ciddi vakit kaybetti." }
+                ]
+            },
+            {
+                text: "Telsizlerimize parazit giriyor. Komuta Merkezinden geldiğini iddia eden sahte bir sesten 'ACİL GERİ ÇEKİLİN' emri alıyoruz.",
+                choices: [
+                    { label: "Bu Bir Zeon Tuzağı! Telsizi Kapatıp İlerleyin!", statMod: +20, threatMod: 0, log: "Telsizleri kapattılar. Psikolojik harbe boyun eğmediler, hedefe kilitlendiler!" },
+                    { label: "Emri Doğrulamak İçin Durup Bekleyin", statMod: -25, threatMod: +5, log: "Telsiz başında dakikalarca beklediler. İvme kaybedildi, Zeonlar yaklaşıyor." }
+                ]
+            },
+            // --- YENİ EKLENEN 30 OLAY ---
+            {
+                text: "Görev yolunda devasa bir Zeon yeraltı solucanı uyuyor. Etrafından sessizce geçmek sinir bozucu derecede yavaş olacak.",
+                choices: [
+                    { label: "Sessizce ve Yavaşça Geçin", statMod: -15, threatMod: 0, log: "Canavarı uyandırmadılar ama çok büyük vakit kaybettiler." },
+                    { label: "Bombalarla Dikkatini Başka Yöne Çekin ve Koşun!", statMod: +15, threatMod: +5, log: "Solucan bombalara yöneldi, ekip hedefe hızla ulaştı! Ancak gürültü tehdidi artırdı." }
+                ]
+            },
+            {
+                text: "Eski bir sahra hastanesinden geçiyoruz. İçeride hala kullanılabilir sağlam tıbbi malzemeler var gibi duruyor.",
+                choices: [
+                    { label: "İlaçları Toplayın", statMod: -10, energyMod: +15, log: "Tıbbi malzemeler enerjiye dönüştürüldü (+15) ancak oyalanmak başarı şansını düşürdü." },
+                    { label: "Zamanımız Yok, İlerleyin", statMod: +5, energyMod: 0, log: "Hastane geride bırakıldı, operasyon hedefine odaklanıldı." }
+                ]
+            },
+            {
+                text: "Zeonlara ait deneysel bir silah kasası bulduk. Alıp kullansak işimiz çok kolaylaşır ama taşıması çok ağır.",
+                choices: [
+                    { label: "Silahı Yanınıza Alın", statMod: -20, threatMod: -15, log: "Ağır silah ekibi yavaşlattı (Başarı düştü) ancak yıkım gücü Zeonları korkuttu! (Tehdit -15)" },
+                    { label: "Silahı Parçalayın ve İlerleyin", statMod: +10, threatMod: 0, log: "Silah imha edildi. Ekip hafif ve hızlı bir şekilde yola devam ediyor." }
+                ]
+            },
+            {
+                text: "Asit yağmuru başladı! Zırhlarımız erimeye başlıyor. Yakında bir tünel var ama rotamızı çok uzatır.",
+                choices: [
+                    { label: "Tünele Girip Saklanın", statMod: -25, threatMod: 0, log: "Asitten korundular ama görev süresi tehlikeye girdi!" },
+                    { label: "Acıya Dayanıp Yağmurda Koşun!", statMod: +15, threatMod: +5, log: "Zırhları eridi, etleri yandı ama hedefe zamanında ulaştılar!" }
+                ]
+            },
+            {
+                text: "Rotamızın üzerinde Zeon propaganda yayınları yapan devasa hoparlörler var. Askerlerin moralini bozuyor.",
+                choices: [
+                    { label: "Kuleyi Havaya Uçurun", statMod: -15, threatMod: -5, log: "Yayın susturuldu! (Tehdit düştü) Ama patlama ekibin dikkatini dağıttı." },
+                    { label: "Kulaklıkları Takıp Görmezden Gelin", statMod: +10, threatMod: 0, log: "Psikolojik baskıya direndiler ve göreve devam ettiler." }
+                ]
+            },
+            {
+                text: "Bir grup çöpçü (insan) bizi fark etti. Eğer onları bırakırsak yerimizi Zeonlara satabilirler.",
+                choices: [
+                    { label: "Çöpçüleri Etkisiz Hale Getir (Öldür)", statMod: +15, threatMod: 0, log: "Gözlerini kırpmadan kendi türlerini indirdiler. Sırları güvende ama ruhları karardı." },
+                    { label: "Onlara Erzak Verip Susmalarını Sağla", statMod: -10, energyMod: -10, log: "Rüşvet işe yaradı (-10 Enerji) ama zaman kaybettiler." }
+                ]
+            },
+            {
+                text: "Gökten A.E.G.I.S. mühürlü bir destek kapsülü düştü! Ancak Zeon devriyeleri de oraya yöneliyor.",
+                choices: [
+                    { label: "Çatışmaya Gir ve Kapsülü Al", statMod: -25, energyMod: +40, log: "Kapsül alındı! (+40 Enerji). Ancak çok ağır bir çatışma atlattılar, başarı şansı çakıldı." },
+                    { label: "Tuzak Olabilir, Göreve Devam Et", statMod: +10, energyMod: 0, log: "Kapsül geride bırakıldı, ekip disiplinini koruyor." }
+                ]
+            },
+            {
+                text: "Eski bir yeraltı otoparkından geçerken alarmlar tetiklendi! Kapılar üzerimize kapanıyor!",
+                choices: [
+                    { label: "Kapının Altından Kayarak Çıkın (Zırhları Bırakın)", statMod: +20, threatMod: +5, log: "Sıyrıldılar! Başarı şansı arttı ama zırhları hasar gördüğü için savunmasızlar." },
+                    { label: "Kapıyı Kırmak İçin Güç Kullanın", statMod: -15, threatMod: 0, log: "Kapı kırıldı ama ekip çok enerji harcadı ve yoruldu." }
+                ]
+            },
+            {
+                text: "Hedefe giden köprü yıkılmış. Ya tehlikeli lağım sularından geçeceğiz ya da vinç halatlarından sallanarak geçeceğiz.",
+                choices: [
+                    { label: "Lağımdan Yürüyün (Sessiz ama Zehirli)", statMod: -10, threatMod: 0, log: "Zehirli sular ekibi sersemletti. Operasyon yavaşladı." },
+                    { label: "Vinç Halatlarından Atlayın (Hızlı ama Riskli)", statMod: +15, threatMod: +5, log: "Tehlikeli bir akrobasiyle karşıya geçtiler! Hız kazandılar." }
+                ]
+            },
+            {
+                text: "Yolda terk edilmiş bir köpek bulduk. Boynunda patlayıcı bir Zeon tasması var ve peşimize takıldı.",
+                choices: [
+                    { label: "Tasmasını Hackleyip Çıkar", statMod: -20, threatMod: -2, log: "Köpek kurtarıldı ama hack işlemi çok uzun sürdü. Görev riske girdi." },
+                    { label: "Hayvanı Geride Bırakıp Kaç", statMod: +10, threatMod: +2, log: "Arkamızda bir patlama sesi duyduk... Ekip hedefe sorunsuz ilerledi." }
+                ]
+            },
+            {
+                text: "Karargahla olan şifreli iletişimimiz koptu. Koordinatları körleme girmemiz gerekiyor.",
+                choices: [
+                    { label: "Açık Radyo Frekansına Geçin (Riskli)", statMod: +15, threatMod: +10, log: "Bağlantı kuruldu (Başarı arttı) ama Zeonlar frekansı dinliyor! Tehdit %10 arttı!" },
+                    { label: "Telsiz Kapat, Ezberden İlerle", statMod: -15, threatMod: 0, log: "Körlemesine ilerlemek ekibin hızını çok düşürdü." }
+                ]
+            },
+            {
+                text: "Düşman karargahından çok önemli bir sabit disk çaldık. Ancak veriyi yüklemek için 10 dakika yerimizde durmamız lazım.",
+                choices: [
+                    { label: "Veriyi Yükle ve Koru", statMod: -25, threatMod: -15, log: "Veri yüklendi! Düşman sırları çözüldü (Tehdit düştü) ama ekip köşeye sıkıştı!" },
+                    { label: "Diski Parçala ve Çık", statMod: +15, threatMod: 0, log: "Disk yok edildi. Ekip hiç beklemeden hedefe doğru koşuyor." }
+                ]
+            },
+            {
+                text: "Önümüzde bir mayın tarlası var. Temizleyerek mi geçelim, yoksa rastgele depar mı atalım?",
+                choices: [
+                    { label: "Mayınları Temizle (Güvenli)", statMod: -20, threatMod: 0, log: "Mayınlar temizlendi ancak hedefe giden yolda çok zaman kaybedildi." },
+                    { label: "Şansınıza Güvenip Depar Atın!", statMod: +20, threatMod: +5, log: "Patlamaların arasından çizik bile almadan geçtiler! Adrenalin tavan!" }
+                ]
+            },
+            {
+                text: "Bir Zeon devriyesi farkında olmadan bize doğru yürüyor. Pusuda beklersek kendi kendilerine geçip gidecekler.",
+                choices: [
+                    { label: "Sessizce Geçmelerini Bekle", statMod: -15, threatMod: 0, log: "Devriye geçti ama pusuda beklemek ekibin ivmesini düşürdü." },
+                    { label: "Fırsat Bu Fırsat, İndirin Onları!", statMod: +10, threatMod: -5, log: "Hızlı bir katliam. Düşman sayısını azalttılar ve ilerlemeye devam ettiler." }
+                ]
+            },
+            {
+                text: "İlerlerken eski bir yeraltı sığınağı bulduk. İçeriden taze su sesi geliyor.",
+                choices: [
+                    { label: "İçeri Girip Dinlenin", statMod: -15, energyMod: +20, log: "Ekip suyunu tazeledi (+20 Enerji) ancak görev süresi çok daraldı." },
+                    { label: "Zaman Yok, Göreve Devam", statMod: +5, energyMod: 0, log: "Susuzluğa rağmen hedefe odaklandılar." }
+                ]
+            },
+            {
+                text: "Komutan, devasa bir fırtına koptu. Göz gözü görmüyor. Rüzgar bizi geriye itiyor.",
+                choices: [
+                    { label: "Rüzgara Karşı Omuz Omuza Yürüyün", statMod: +15, threatMod: +5, log: "Fırtınayı delip geçtiler! Fiziksel olarak tükendiler ama hedefe yaklaştılar." },
+                    { label: "Siper Alıp Fırtınanın Dinmesini Bekle", statMod: -20, threatMod: 0, log: "Fırtına dindi ancak görev çoktan tehlikeye girdi." }
+                ]
+            },
+            {
+                text: "Görev yerinde, kendi arkadaşlarını yiyen mutasyona uğramış Zeonlar var. Bu bir virüs olabilir.",
+                choices: [
+                    { label: "Yakından İnceleyip Virüs Örneği Al", statMod: -25, threatMod: -10, log: "Tehlikeli örnekler merkeze gönderildi. Ancak ekip fark edildi, başarı şansı çakıldı!" },
+                    { label: "Oraya Bulaşma, Hedefe Git", statMod: +15, threatMod: 0, log: "Mide bulandırıcı manzarayı görmezden gelip hedefe ulaştılar." }
+                ]
+            },
+            {
+                text: "Ekibimizden birinin gaz maskesi çatladı! Filtresi yakında bitecek.",
+                choices: [
+                    { label: "Maskeyi Onarmak İçin Dur", statMod: -20, threatMod: 0, log: "Maske onarıldı ama görevde büyük vakit kaybedildi." },
+                    { label: "Nefesini Tut ve Daha Hızlı Koş!", statMod: +20, threatMod: +2, log: "Zehirli hava ciğerlerini yaktı ama öfkeyle hedefe vardılar!" }
+                ]
+            },
+            {
+                text: "Zeonlara ait devasa bir jeneratör bulduk. Patlatırsak tüm mahallenin elektriği kesilir ve karanlıkta kalırız.",
+                choices: [
+                    { label: "Jeneratörü Havaya Uçur", statMod: +15, threatMod: -5, log: "Her yer zifiri karanlık oldu. Zeonlar kör, ekibimiz avantaj sağladı!" },
+                    { label: "Dokunma, Işığa İhtiyacımız Var", statMod: -10, threatMod: 0, log: "Aydınlıkta ilerlemek Zeon keskin nişancılarına hedef olmalarına yol açtı." }
+                ]
+            },
+            {
+                text: "Görev hedefimizin yakınlarında tuhaf, mavi parlayan bir uzay-zaman yırtığı (anomali) var. Enerjisi aklımızı çeliyor.",
+                choices: [
+                    { label: "Anomalinin İçinden Geçerek Kısayol Kullan", statMod: +25, threatMod: +10, log: "Uzayı bükerek anında hedefe ulaştılar! Ancak akıl sağlıkları ciddi zarar gördü." },
+                    { label: "O Şeyden Uzak Durun!", statMod: -10, threatMod: 0, log: "Yırtığın etrafından dolanmak güvenliydi ama çok uzun sürdü." }
+                ]
+            },
+            {
+                text: "Terk edilmiş bir hastanede, komaya girmiş A.E.G.I.S. askerleri bulduk. Yaşam destek üniteleri kapanmak üzere.",
+                choices: [
+                    { label: "Üniteleri Ana Şebekeye Bağlamakla Uğraş", statMod: -30, threatMod: -5, log: "Askerler kurtarıldı. Ancak ekip tamamen bitkin düştü, görev başarı şansı dibi gördü!" },
+                    { label: "Onları Kaderine Terk Et", statMod: +15, threatMod: +5, log: "Gözlerini kapatıp fişleri çektiler. Moralleri bozuk ama operasyon hızla devam ediyor." }
+                ]
+            },
+            {
+                text: "Zeonların kullandığı ağır bir lazer topu karargahımıza doğru nişan almış durumda! Bizim görevimiz farklı ama...",
+                choices: [
+                    { label: "Kendi Görevini Bırak, Topu Sabote Et", statMod: -25, threatMod: -20, log: "Karargah kurtuldu (Tehdit -20 düştü)! Ancak ana operasyon büyük ölçüde başarısızlığa uğradı." },
+                    { label: "O Savunmanın İşi, Siz Göreve Odaklanın", statMod: +10, threatMod: +10, log: "Top ateşlendi! Karargah sarsıldı (+10 Tehdit), ancak ekip hedefini vurmak üzere." }
+                ]
+            },
+            {
+                text: "Yolda ilerlerken yere döşenmiş çok hassas sensörler fark ettik. Eğer üstüne basarsak alarm çalacak.",
+                choices: [
+                    { label: "Tek Tek Sensörleri İptal Et", statMod: -15, threatMod: 0, log: "Sessiz ve titiz bir iş. Güvendeler ama hedeften saptılar." },
+                    { label: "Duvarlara Tırmanarak Atlayın", statMod: +15, threatMod: +5, log: "Duvarlardan sekerek geçtiler. Hızlılar ama birkaçı düşüp yaralandı." }
+                ]
+            },
+            {
+                text: "Düşman kampının mutfağında zehirli Zeon erzakları var. Zehirleyebiliriz ama bu laboratuvar malzemelerimizi tüketir.",
+                choices: [
+                    { label: "Tüm Kampı Zehirle", statMod: -10, threatMod: -10, log: "Zeonlar içeriden çöktü (Tehdit düştü). Ama ekip kendi ekipmanlarını kaybettiği için yavaşladı." },
+                    { label: "Bırakın Ne Hâlkeri Varsa Görsünler", statMod: +10, threatMod: 0, log: "Mutfaktan çıkıp doğrudan ana hedefe saldırdılar." }
+                ]
+            },
+            {
+                text: "Bir enkazın altında eski bir askeri drone bulduk. Bataryası bitmiş. Kendi enerjimizle çalıştırırsak bize havadan destek verebilir.",
+                choices: [
+                    { label: "Enerji Verip Drone'u Uçur", statMod: +20, energyMod: -20, log: "Drone havalandı ve yolu açtı! (Başarı arttı) Ancak merkezin enerjisinden 20 çekildi." },
+                    { label: "Drone'u Bırak", statMod: -5, energyMod: 0, log: "Ekstra destek olmadan ilerliyorlar." }
+                ]
+            },
+            {
+                text: "Zeonlar yollara holografik sahte hedefler koymuş. Hangi koridorun gerçek olduğunu anlamakta zorlanıyoruz.",
+                choices: [
+                    { label: "Tüm Koridorları Tarayarak İlerle", statMod: -20, threatMod: 0, log: "Zaman kaybettiler ama tuzağa düşmekten kurtuldular." },
+                    { label: "İçgüdülerine Güven ve Birine Dal!", statMod: +15, threatMod: +5, log: "Doğru koridoru tutturdular! Operasyon müthiş bir hız kazandı." }
+                ]
+            },
+            {
+                text: "Geçtiğimiz sokakta eskiden tanıdığımız, zombileşmiş siviller var. Bize doğru sürünüyorlar.",
+                choices: [
+                    { label: "Ateş Etmek İstemiyoruz, Kaçın!", statMod: -15, threatMod: +5, log: "Eski dostlarından kaçarken dar bir sokağa sıkıştılar." },
+                    { label: "Hepsini İndirin ve Yolu Açın", statMod: +15, threatMod: 0, log: "Acımasızca ateş açtılar. Travmatik ama kesin bir çözüm oldu." }
+                ]
+            },
+            {
+                text: "Görev yerinde bir Zeon şifreleme cihazı bulduk. Ancak cihazı taşımak için silahlarımızı bırakmamız gerekecek.",
+                choices: [
+                    { label: "Silahı Bırak, Cihazı Al", statMod: -25, threatMod: -15, log: "Büyük bir istihbarat zaferi (Tehdit düştü)! Ama silahsız kaldıkları için operasyon tehlikede." },
+                    { label: "Cihazı Ez, Silahını Sıkı Tut", statMod: +15, threatMod: 0, log: "Cihaz parçalandı. Ekip tam teçhizatlı olarak hedefe hücum ediyor." }
+                ]
+            },
+            {
+                text: "Zeonların devasa bir cephane yük treni geçiyor. Eğer trenin üstüne atlarsak bizi doğrudan hedefe götürebilir ama düşersek ölürüz.",
+                choices: [
+                    { label: "Trene Atlayın!", statMod: +25, threatMod: +5, log: "Trene tutundular! Kilometrelerce yolu saniyeler içinde geçtiler. Başarı şansı fırladı!" },
+                    { label: "Çok Riskli, Yürüyerek Devam", statMod: -15, threatMod: 0, log: "Trenin geçmesini beklemek saatler sürdü. Başarı şansı azaldı." }
+                ]
+            },
+            {
+                text: "Binanın kolonları çatırdıyor, yapı her an çökebilir. Görev hedefimiz ise binanın en üst katında!",
+                choices: [
+                    { label: "Asansör Boşluğundan Zirveye Tırmanın", statMod: +20, threatMod: +5, log: "Ölümcül bir tırmanıştı ama hedefe vardılar! Adrenalin en üst seviyede." },
+                    { label: "Destek Kolonları Bularak Yavaşça Çıkın", statMod: -20, threatMod: 0, log: "Güvenliği seçtiler ancak hedef kaçmak üzere." }
+                ]
+            }
+        ];
+
+        let myHeroes = []; let incidents = [];
+        let groupMessages = [{ sender: "SİSTEM", text: "A.E.G.I.S İletişim Ağı Başlatıldı.", type: "system" }];
+
+        function startGame() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('intro-modal').style.display = 'flex';
+        }
+
+        function startTutorialTablet() {
+            document.getElementById('intro-modal').style.display = 'none';
+            state.isTutorial = true; state.day = 0; 
+            document.getElementById('nav-close').style.display = 'none'; 
+            openTablet(); setTabletView('recruits'); renderRecruits();
+        }
+
+        function addHero(key) {
+            let h = { name: key, ...heroBase[key], status: 'idle', restTimer: 0, missionId: null, isInjured: false };
+            myHeroes.push(h);
+            
+            addGroupChat("SİSTEM", `>> ${h.name} KARARGAHA GİRİŞ YAPTI.`, "system");
+            
+            if(key === "Timur") state.hasDoctor = true;
+
+            if (state.isTutorial && key === "Brock") {
+                state.isTutorial = false; state.day = 1;
+                document.getElementById('ui-day').innerText = state.day;
+                document.getElementById('nav-close').style.display = 'flex';
+                closeTablet();
+                alert("SİSTEM OPERATÖRÜ: Eğitim tamamlandı. 1. Gün başlıyor.");
+                state.isPaused = false;
+            }
+            updateUI(); renderRoster(); renderDB(); renderRecruits(); renderPrivateList();
+        }
+
+        // --- GÜN DÖNGÜSÜ ---
+        setInterval(() => {
+            if (state.isPaused || state.isBetweenDays) return;
+
+            state.time++;
+            let pct = (state.time / state.dayDuration) * 100;
+            document.getElementById('day-progress-fill').style.width = pct + "%";
+
+            if (state.time >= state.dayDuration && !state.dayEnded) {
+                state.dayEnded = true;
+                let btn = document.getElementById('phase-btn');
+                btn.style.display = 'block';
+                btn.innerText = "GÜNÜ BİTİR ⏹";
+                btn.className = "btn-end";
+                btn.onclick = enterDowntime;
+            }
+
+            processGameLoop(); updateUI();
+        }, 1000);
+
+        function processGameLoop() {
+            myHeroes.forEach(h => {
+                if (h.status === 'resting') {
+                    h.restTimer--;
+                    if (h.restTimer <= 0) { h.status = 'idle'; h.isInjured = false; }
+                }
+            });
+            
+            incidents.forEach(inc => {
+                if (inc.resolved) return;
+                
+                if (inc.assigned) {
+                    inc.missionTimer--;
+                    if (inc.missionTimer <= 0) finishMission(inc);
+                } 
+                else {
+                    inc.timeLeft--;
+                    if (inc.timeLeft <= 0) {
+                        inc.resolved = true;
+                        state.threat += inc.penalty;
+                        addGroupChat("SİSTEM", `GÖREV ZAMAN AŞIMI: ${inc.name}. Tehdit +${inc.penalty}% arttı.`, "system");
+                        incidents = incidents.filter(i => i.id !== inc.id);
+                        renderMap();
+                    }
+                }
+            });
+
+            // RASTGELE OLAY TETİKLEYİCİSİ (Günde max 3 defa)
+            let activeMissions = incidents.filter(i => i.assigned && !i.resolved);
+            if (activeMissions.length > 0 && state.eventsToday < 3) {
+                if (Math.random() < 0.04) {
+                    triggerRandomEvent(activeMissions[Math.floor(Math.random() * activeMissions.length)]);
+                }
+            }
+
+            renderRoster();
+        }
+
+        // --- GÖREV BİTİRME (Cliffhanger Bitişi Eklendi) ---
+        function finishMission(inc) {
+            inc.resolved = true;
+            let assignedHeroes = myHeroes.filter(h => h.missionId === inc.id);
+            let isSuccess = (Math.random() * 100) <= inc.successChance;
+
+            let reportClass = isSuccess ? "mission-report" : "mission-report fail";
+            let reportTitle = isSuccess ? "GÖREV BAŞARILI" : "GÖREV BAŞARISIZ";
+            let reportDesc = isSuccess ? `Kazanılan Enerji: +${inc.reward.energy}` : `Tehdit Artışı: +${inc.penalty}%`;
+
+            groupMessages.push({ 
+                sender: "SİSTEM",
+                type: "html", 
+                text: `<div class="${reportClass}"><div class="report-title">[A.E.G.I.S RAPORU] <br>${reportTitle}</div><div style="font-size:0.9em; color:#cbd5e1;">${inc.name} <br> ${reportDesc}</div></div>`
+            });
+
+            if (isSuccess) {
+                state.energy += inc.reward.energy;
+                state.threat = Math.max(0, state.threat + inc.reward.threat);
+                
+                // OYUN BİTİŞ KONTROLÜ (YENİ SİNEMATİK GEÇİŞ)
+                if (inc.isFinal) {
+                    state.isPaused = true;
+                    
+                    // UI Elemanlarını Gizle
+                    document.getElementById('top-bar').style.display = 'none';
+                    document.getElementById('main-container').style.display = 'none';
+                    document.getElementById('tablet-overlay').style.display = 'none';
+                    document.getElementById('mission-modal').style.display = 'none';
+                    document.getElementById('event-modal').style.display = 'none';
+                    document.getElementById('phase-btn').style.display = 'none';
+                    
+                    // Araf ekranını aç
+                    document.getElementById('end-game-modal').style.display = 'flex';
+                    return; 
+                }
+
+            } else {
+                state.threat += inc.penalty;
+            }
+
+            assignedHeroes.forEach(ah => {
+                let injuryChance = isSuccess ? 0.15 : 0.60;
+                let getsInjured = Math.random() < injuryChance;
+
+                ah.status = 'resting'; ah.restTimer = ah.restTime; ah.missionId = null;
+                
+                if (getsInjured && ah.name !== "Brock") { 
+                    let penalty = state.hasDoctor ? 5 : 10; 
+                    ah.restTimer += penalty; 
+                    ah.isInjured = true;
+                    let docText = state.hasDoctor ? " (Dr. Timur müdahale ediyor)" : "";
+                    addGroupChat(ah.name, `Ağır yaralandım... İyileşmem zaman alacak.${docText}`, "normal");
+                } else {
+                    ah.isInjured = false;
+                    // Başarı durumuna göre doğru havuzu seç
+                    let pool = isSuccess ? taskSuccessReactionPool : taskFailReactionPool;
+                    let msgs = pool[ah.name];
+                    
+                    if(msgs) {
+                        let randomMsg = msgs[Math.floor(Math.random() * msgs.length)];
+                        addGroupChat(ah.name, randomMsg, "normal");
+                    }
+                }
+            });
+
+            incidents = incidents.filter(i => i.id !== inc.id);
+            renderMap();
+            if(document.getElementById('tablet-overlay').style.display === 'flex') renderGroupChat();
+            else document.getElementById('chat-badge').style.display = 'inline-block';
+        }
+
+        // GECE EVRESİ
+        function enterDowntime() {
+            state.isPaused = true; state.isBetweenDays = true;
+            
+            let activeMissions = incidents.filter(i => i.assigned);
+            if(activeMissions.length > 0) {
+                addGroupChat("SİSTEM", "GÜN BİTTİ: Açık sahadaki tüm ekipler operasyonu acil sonuçlandırıp merkeze döndü.", "system");
+                activeMissions.forEach(inc => finishMission(inc));
+            }
+
+            incidents = []; renderMap(); 
+            openTablet();
+            
+            let btn = document.getElementById('phase-btn');
+            btn.innerText = "YENİ GÜNE BAŞLA ⏭";
+            btn.className = "btn-start-day";
+            btn.onclick = startNextDay;
+        }
+
+        function startNextDay() {
+            state.day++; state.time = 0; state.dayEnded = false; 
+            state.isBetweenDays = false; state.isPaused = false;
+            state.eventsToday = 0; // Olay sayacını sıfırla
+            
+            document.getElementById('phase-btn').style.display = 'none';
+            document.getElementById('day-progress-fill').style.width = "0%";
+            document.getElementById('ui-day').innerText = state.day;
+            
+            closeTablet();
+            triggerDailyConversation(); 
+
+            // GÜNLERE GÖRE GÖREV ÇIKARMA (Final Boss)
+            if (state.day === 30) {
+                spawnIncident(false, false, true); // Final Boss'u Çağır
+                addGroupChat("SİSTEM", "KIRMIZI ALARM: Zeon Ana Gemisi atmosfere girdi! Tüm ekibi topla komutan!", "system");
+            }
+            else if (state.day % 10 === 0) {
+                spawnIncident(false, true, false); // Ara Boss
+            }
+            else {
+                spawnIncident(true, false, false); // Altın Görev
+            }
+            
+            renderRecruits();
+        }
+
+        function triggerDailyConversation() {
+            let activeHeroes = myHeroes.map(h => h.name);
+            let validConv = dailyConversations.find(c => !c.played && c.req.every(r => activeHeroes.includes(r)));
+            if (validConv) {
+                validConv.played = true;
+                validConv.lines.forEach((line, index) => {
+                    setTimeout(() => { addGroupChat(line.s, line.t, "normal"); }, index * 2500);
+                });
+            }
+        }
+
+        // --- OLAY EKRANINI AÇMA VE KARAR UYGULAMA ---        
+        function triggerRandomEvent(incident) {
+            state.isPaused = true;
+            state.eventsToday++;
+            state.activeEventInc = incident;
+
+            let evt = eventPool[Math.floor(Math.random() * eventPool.length)];
+            
+            document.getElementById('e-target-mission').innerText = `GÖREV: ${incident.name}`;
+            document.getElementById('e-text').innerText = evt.text;
+            
+            let choicesHtml = "";
+            evt.choices.forEach((choice) => {
+                // Objeyi butona güvenle gömmek için escape işlemi
+                let safeChoice = JSON.stringify(choice).replace(/"/g, '&quot;');
+
+                // Artık butonlarda matematiksel ihtimaller (+%15 vb.) YAZMIYOR. Sadece seçim metni var.
+                choicesHtml += `<button class="event-btn" onclick="resolveEvent(${safeChoice})">
+                    > ${choice.label}
+                </button>`;
+            });
+            
+            document.getElementById('e-choices').innerHTML = choicesHtml;
+            document.getElementById('event-modal').style.display = 'flex';
+        }
+
+        function resolveEvent(choice) {
+            let inc = state.activeEventInc;
+            if (inc) {
+                // Arka planda gizlice başarı şansını güncelle
+                inc.successChance = Math.min(95, Math.max(5, inc.successChance + choice.statMod));
+                
+                // Gizli statları uygula
+                if (choice.threatMod) state.threat = Math.max(0, state.threat + choice.threatMod);
+                if (choice.energyMod) state.energy += choice.energyMod;
+
+                // Kararın sonucunu ve görevin "yeni" durumunu günlüğe düş.
+                // Oyuncu yaptığının iyi mi kötü mü olduğunu buradan anlayacak.
+                addGroupChat("SİSTEM", `SAHA KARARI: ${choice.log} (Güncel Başarı İhtimali: %${inc.successChance})`, "system");
+            }
+
+            document.getElementById('event-modal').style.display = 'none';
+            state.activeEventInc = null;
+            state.isPaused = false;
+        }
+
+        // --- TABLET İŞLEMLERİ ---
+        function openTablet() {
+            document.getElementById('tablet-overlay').style.display = 'flex';
+            renderGroupChat(); renderRecruits(); renderDB(); renderPrivateList();
+        }
+
+        function closeTablet() {
+            document.getElementById('tablet-overlay').style.display = 'none';
+        }
+
+        function setTabletView(view) {
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            event.target.classList.add('active');
+            
+            if(view === 'chat') { 
+                let b = document.getElementById('group-chat'); b.scrollTop = b.scrollHeight; 
+                document.getElementById('chat-badge').style.display = 'none';
+            }
+        }
+
+        function addGroupChat(sender, text, type) {
+            groupMessages.push({sender: sender, text: text, type: type});
+            if(groupMessages.length > 50) groupMessages.shift(); 
+            
+            if(document.getElementById('tablet-overlay').style.display === 'flex') {
+                renderGroupChat();
+            } else {
+                document.getElementById('chat-badge').style.display = 'inline-block';
+            }
+        }
+
+        function renderGroupChat() {
+            const box = document.getElementById('group-chat');
+            box.innerHTML = groupMessages.map(m => {
+                if(m.type === 'system') return `<div class="system-msg">${m.text}</div>`;
+                if(m.type === 'html') return m.text; 
+                
+                let h = heroBase[m.sender];
+                if (!h) return ""; 
+
+                return `<div class="chat-row"><img src="${h.img}" class="chat-avatar" onerror="this.src='https://via.placeholder.com/50'"><div><div class="chat-sender" style="color:${h.color}">${m.sender}</div><div class="chat-msg">${m.text}</div></div></div>`;
+            }).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderPrivateList() {
+            document.getElementById('private-hero-list').innerHTML = myHeroes.map(h => `<div class="contact-card" onclick="openPrivateChat('${h.name}')"><img src="${h.img}" style="width:40px;height:40px;border-radius:5px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/40'"><div style="color:white; font-weight:bold; font-size:1.1em;">${h.name}</div></div>`).join('');
+        }
+
+        function openPrivateChat(name) {
+            let h = heroBase[name];
+            document.getElementById('pc-avatar').src = h.img; document.getElementById('pc-avatar').style.display = 'block';
+            document.getElementById('pc-name').innerText = name; document.getElementById('pc-name').style.color = h.color;
+            let dialogue = privateChatPool[name][Math.floor(Math.random() * privateChatPool[name].length)];
+            document.getElementById('pc-messages').innerHTML = `<div class="pc-bubble-them">${dialogue.them}</div><div class="pc-bubble-me">${dialogue.me}</div>`;
+        }
+
+        function renderRecruits() {
+            const box = document.getElementById('recruit-list'); const badge = document.getElementById('new-badge');
+            box.innerHTML = ''; let count = 0;
+            recruitsDb.forEach(p => {
+                if (state.day >= p.day && !myHeroes.find(h => h.name === p.key)) {
+                    count++; let hInfo = heroBase[p.key];
+                    box.innerHTML += `
+                        <div style="background:#1e293b; padding:15px; border-radius:5px; display:flex; gap:15px; align-items:center; border:1px solid #334155;">
+                            <img src="${hInfo.img}" style="width:60px; height:60px; border-radius:5px; object-fit:cover; border:1px solid ${hInfo.color};" onerror="this.src='https://via.placeholder.com/60'">
+                            <div style="flex:1;"><div style="color:${hInfo.color}; font-family:'Rajdhani'; font-size:1.4em; font-weight:bold;">${p.key}</div><div style="color:#cbd5e1; font-size:0.9em; margin-top:5px;">${p.msg}</div></div>
+                            <button onclick="addHero('${p.key}');" style="background:var(--success); color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold;">KABUL ET</button>
+                        </div>`;
+                }
+            });
+            if(count > 0) badge.style.display = 'inline-block'; else { badge.style.display = 'none'; box.innerHTML = '<div style="color:#64748b; padding:20px; text-align:center;">Onay bekleyen sinyal yok.</div>'; }
+        }
+
+        function renderDB() {
+            document.getElementById('db-list').innerHTML = myHeroes.map(h => `
+                <div class="db-card">
+                    <img src="${h.img}" style="width:100px; height:100px; border-radius:5px; object-fit:cover; border: 1px solid ${h.color};" onerror="this.src='https://via.placeholder.com/100'">
+                    <div style="flex:1;">
+                        <div style="color:${h.color}; font-family:'Rajdhani'; font-size:1.5em; font-weight:bold;">${h.name}</div>
+                        <p style="font-size:0.85em; color:#94a3b8; font-style:italic; margin-bottom:10px; line-height: 1.3;">"${h.bio}"</p>
+                        <div class="stat-row"><div class="stat-label">GÜÇ</div><div class="stat-bar-container"><div class="stat-bar-fill" style="width:${h.stats.guc*10}%; background:var(--danger)"></div></div>${h.stats.guc}/10</div>
+                        <div class="stat-row"><div class="stat-label">HIZ</div><div class="stat-bar-container"><div class="stat-bar-fill" style="width:${h.stats.hiz*10}%; background:var(--special)"></div></div>${h.stats.hiz}/10</div>
+                        <div class="stat-row"><div class="stat-label">DAYANIKLILIK</div><div class="stat-bar-container"><div class="stat-bar-fill" style="width:${h.stats.day*10}%; background:var(--success)"></div></div>${h.stats.day}/10</div>
+                        <div class="stat-row"><div class="stat-label">ZİHİN</div><div class="stat-bar-container"><div class="stat-bar-fill" style="width:${h.stats.zihin*10}%; background:#8b5cf6"></div></div>${h.stats.zihin}/10</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // --- GÖREVLER (Çoklu Kişi Sistemi) ---
+        // --- GÖREVLER (V1.6: Genişletilmiş Çeşitlilik ve Çoklu Kişi Sistemi) ---
+        const normals = [
+            { n: "Ufak Devriye", desc: "Sokakları hızlıca temizle.", c: "var(--danger)", r: {energy: 15, threat: -2}, penalty: 2, t: 8, reqStat: 'hiz', difficulty: 6 },
+            { n: "Sivil Tahliyesi", desc: "Sivilleri güvenli bölgeye çek.", c: "var(--success)", r: {energy: 25, threat: -1}, penalty: 3, t: 8, reqStat: 'day', difficulty: 8 },
+            { n: "Erzak Baskını", desc: "Zeon deposuna gir ve zorla al.", c: "var(--special)", r: {energy: 20, threat: 0}, penalty: 4, t: 6, reqStat: 'guc', difficulty: 9 },
+            { n: "İletişim Sabotajı", desc: "Kısa menzilli antenleri hackle.", c: "var(--primary)", r: {energy: 10, threat: -4}, penalty: 3, t: 7, reqStat: 'zihin', difficulty: 8 },
+            { n: "Hurdacı Koruması", desc: "Parça toplayan ekibi koru.", c: "var(--success)", r: {energy: 15, threat: -1}, penalty: 3, t: 10, reqStat: 'day', difficulty: 7 },
+            { n: "Tıbbi Malzeme Avı", desc: "Terk edilmiş eczaneyi yağmala.", c: "var(--primary)", r: {energy: 25, threat: 0}, penalty: 2, t: 5, reqStat: 'hiz', difficulty: 8 },
+            { n: "İzci Temizliği", desc: "Karargaha yaklaşan Zeon izcilerini ez.", c: "var(--danger)", r: {energy: 10, threat: -5}, penalty: 5, t: 6, reqStat: 'guc', difficulty: 9 },
+            { n: "Şifre Çözümü", desc: "Zeon devriyesinden düşen tableti kır.", c: "var(--primary)", r: {energy: 5, threat: -6}, penalty: 2, t: 7, reqStat: 'zihin', difficulty: 12 },
+            { n: "Barikat İnşası", desc: "Zayıf savunma hattını güçlendir.", c: "var(--success)", r: {energy: 10, threat: -3}, penalty: 4, t: 6, reqStat: 'day', difficulty: 6 },
+            { n: "Kayıp Kurye", desc: "Haberleşme kuryesini bul ve getir.", c: "var(--success)", r: {energy: 20, threat: -2}, penalty: 3, t: 6, reqStat: 'hiz', difficulty: 6 },
+            { n: "Yeraltı Tüneli", desc: "Çöken tüneldeki molozları temizle.", c: "var(--special)", r: {energy: 15, threat: -1}, penalty: 3, t: 6, reqStat: 'guc', difficulty: 6 },
+            { n: "Jeneratör Tamiri", desc: "Kopan kabloları zekanla birleştir.", c: "var(--primary)", r: {energy: 30, threat: 0}, penalty: 5, t: 5, reqStat: 'zihin', difficulty: 8 },
+            { n: "Mayın Döşeme", desc: "Stratejik noktalara patlayıcı yerleştir.", c: "var(--danger)", r: {energy: 10, threat: -4}, penalty: 6, t: 7, reqStat: 'zihin', difficulty: 9 },
+            { n: "Cephanelik Yağması", desc: "Eski polis karakolunu boşalt.", c: "var(--special)", r: {energy: 35, threat: +2}, penalty: 4, t: 6, reqStat: 'guc', difficulty: 8 },
+            { n: "Dikkat Dağıtma", desc: "Zeonları üzerine çek ve kaç.", c: "var(--danger)", r: {energy: 15, threat: -5}, penalty: 7, t: 12, reqStat: 'hiz', difficulty: 10 },
+            { n: "Yaralı Taşıma", desc: "Ağır yaralı birliğe destek ol.", c: "var(--success)", r: {energy: 20, threat: 0}, penalty: 5, t: 10, reqStat: 'day', difficulty: 9 },
+            { n: "Radyasyon Haritası", desc: "Yeni yayılan toksik sisin sınırlarını çiz.", c: "var(--primary)", r: {energy: 10, threat: -3}, penalty: 2, t: 10, reqStat: 'zihin', difficulty: 7 },
+            { n: "Mutant Köpekler", desc: "Kontrolden çıkan sürüyü dağıt.", c: "var(--danger)", r: {energy: 15, threat: -3}, penalty: 4, t: 15, reqStat: 'guc', difficulty: 8 },
+            { n: "Sniper Yemi", desc: "Keskin nişancının yerini belli etmek için siper al.", c: "var(--special)", r: {energy: 5, threat: -4}, penalty: 6, t: 11, reqStat: 'day', difficulty: 6 },
+            { n: "Su Deposu", desc: "Şehrin kalan son temiz su vanasını koru.", c: "var(--success)", r: {energy: 25, threat: -2}, penalty: 5, t: 5, reqStat: 'day', difficulty: 9 },
+            { n: "Erzak Zehirleme", desc: "Zeon kampının suyuna toksin karıştır.", c: "var(--danger)", r: {energy: 10, threat: -6}, penalty: 8, t: 6, reqStat: 'hiz', difficulty: 8 },
+            { n: "Kamera Hackleme", desc: "Mobese kameralarını ağımıza bağla.", c: "var(--primary)", r: {energy: 15, threat: -4}, penalty: 3, t: 5, reqStat: 'zihin', difficulty: 8 },
+            { n: "Metro İstasyonu", desc: "Kızılay metrosunun girişini tut.", c: "var(--danger)", r: {energy: 20, threat: -3}, penalty: 6, t: 10, reqStat: 'guc', difficulty: 10 },
+            { n: "Hızlı Teslimat", desc: "Önemli veriyi diğer sığınağa ulaştır.", c: "var(--primary)", r: {energy: 30, threat: 0}, penalty: 4, t: 5, reqStat: 'hiz', difficulty: 6 }
+        ];
+
+        const dailySpecials = [
+            { n: "Biyolojik Sızıntı", desc: "Zehirli gaz sızıyor. Kapatılması lazım.", c: "var(--special)", r: {energy: 30, threat: -5}, penalty: 5, t: 10, reqStat: 'day', difficulty: 12 },
+            { n: "Siber Savunma Kalkanı", desc: "Zeon ağına girip kalkan kodlarını çal.", c: "var(--special)", r: {energy: 40, threat: -6}, penalty: 5, t: 15, reqStat: 'zihin', difficulty: 16 },
+            { n: "Ağır Zeon Komutanı", desc: "Sokaklarda terör estiren bir komutanı indir.", c: "var(--special)", r: {energy: 35, threat: -8}, penalty: 8, t: 10, reqStat: 'guc', difficulty: 10 },
+            { n: "Keskin Nişancı Kulesi", desc: "Yüksekteki Zeon gözcüsünü gizlice avla.", c: "var(--special)", r: {energy: 35, threat: -7}, penalty: 6, t: 15, reqStat: 'hiz', difficulty: 13 },
+            { n: "Kuluçka Merkezi", desc: "Zeon yumurtalarını çatlamadan yak.", c: "var(--danger)", r: {energy: 45, threat: -10}, penalty: 12, t: 28, reqStat: 'guc', difficulty: 12 },
+            { n: "VIP Tahliyesi", desc: "Kritik bir bilim insanını enkazdan çıkar.", c: "var(--success)", r: {energy: 60, threat: -2}, penalty: 15, t: 15, reqStat: 'day', difficulty: 12 },
+            { n: "Veri Merkezi Baskını", desc: "Zeon ana sunucusundan yörünge verilerini çal.", c: "var(--primary)", r: {energy: 50, threat: -12}, penalty: 10, t: 20, reqStat: 'zihin', difficulty: 13 },
+            { n: "Gölge Suikastçı", desc: "Karargaha sızmaya çalışan elit katili bul.", c: "var(--danger)", r: {energy: 30, threat: -15}, penalty: 18, t: 20, reqStat: 'hiz', difficulty: 10 },
+            { n: "Kimyasal Silah", desc: "Patlamak üzere olan gaz bombasını etkisiz kıl.", c: "var(--special)", r: {energy: 20, threat: -20}, penalty: 25, t: 22, reqStat: 'zihin', difficulty: 19 },
+            { n: "Devasa Mutant Sürüsü", desc: "Kapılara dayanan kana susamış sürüyü durdur.", c: "var(--danger)", r: {energy: 40, threat: -8}, penalty: 14, t: 35, reqStat: 'guc', difficulty: 19 },
+            { n: "Bombardıman Geciktirme", desc: "Koordinat sistemini bozarak füzeleri saptır.", c: "var(--primary)", r: {energy: 15, threat: -18}, penalty: 22, t: 26, reqStat: 'zihin', difficulty: 17 },
+            { n: "EMP Cihazı Yerleştirme", desc: "Düşman karargahının ortasına koş ve EMP'yi kur.", c: "var(--special)", r: {energy: 35, threat: -14}, penalty: 10, t: 18, reqStat: 'hiz', difficulty: 10 },
+            { n: "Sığınağı Mühürle", desc: "İçeri sızan gazı durdurmak için dev çelik kapıyı tut.", c: "var(--success)", r: {energy: 25, threat: -5}, penalty: 15, t: 30, reqStat: 'day', difficulty: 16 },
+            { n: "Çalınan Zırh", desc: "Zeonların ele geçirdiği A.E.G.I.S. prototipini parçala.", c: "var(--danger)", r: {energy: 55, threat: -6}, penalty: 12, t: 24, reqStat: 'guc', difficulty: 17 },
+            { n: "Zihin Okuyucu", desc: "Psionik dalga yayan mutantı sustur.", c: "var(--primary)", r: {energy: 40, threat: -15}, penalty: 20, t: 28, reqStat: 'zihin', difficulty: 12 },
+            { n: "Düşen SİHA", desc: "Düşen dronumuzdaki şifreli kara kutuyu alıp kaç.", c: "var(--special)", r: {energy: 60, threat: -4}, penalty: 12, t: 16, reqStat: 'hiz', difficulty: 17 },
+            { n: "Lojistik Treni", desc: "Zeon erzak trenini raydan çıkar.", c: "var(--danger)", r: {energy: 80, threat: -5}, penalty: 16, t: 32, reqStat: 'guc', difficulty: 15 },
+            { n: "Radyasyon Fırtınası", desc: "Fırtına sırasında dışarıda kalan sivilleri koru.", c: "var(--success)", r: {energy: 45, threat: -8}, penalty: 20, t: 40, reqStat: 'day', difficulty: 17 },
+            { n: "Tünel Ağını Çökert", desc: "Zeonların yeraltı tünellerine patlayıcı döşe ve tüy.", c: "var(--special)", r: {energy: 50, threat: -12}, penalty: 14, t: 22, reqStat: 'hiz', difficulty: 16 },
+            { n: "Kusurlu İnfaz", desc: "Dostken mutasyona uğrayan eski komutanı öldür.", c: "var(--danger)", r: {energy: 30, threat: -10}, penalty: 25, t: 25, reqStat: 'guc', difficulty: 18 },
+            { n: "Zeon Tuzağı", desc: "Pusuya düşen devriyeyi dayanarak hayatta tut.", c: "var(--success)", r: {energy: 20, threat: -6}, penalty: 18, t: 35, reqStat: 'day', difficulty: 16 },
+            { n: "Hipnoz Dalgası", desc: "Halkı delirten sinyal kulesinin frekansını tersine çevir.", c: "var(--primary)", r: {energy: 35, threat: -20}, penalty: 25, t: 28, reqStat: 'zihin', difficulty: 16 },
+            { n: "Ağır Topçu Bataryası", desc: "Bize ateş eden enerji topunu hızla etkisiz hale getir.", c: "var(--special)", r: {energy: 40, threat: -15}, penalty: 15, t: 18, reqStat: 'hiz', difficulty: 16 },
+            { n: "Protokol Sıfırlama", desc: "Zeonlar ağımıza giriyor! Sistemi manuel olarak sıfırla.", c: "var(--primary)", r: {energy: 25, threat: -25}, penalty: 30, t: 24, reqStat: 'zihin', difficulty: 15 }
+        ];
+
+        const bosses = [
+            { n: "MECHA-GOLIATH (BOSS)", desc: "Devasa savaş makinesi. En az 2 kişi gerektirir!", c: "var(--boss)", r: {energy: 100, threat: -25}, penalty: 20, t: 40, reqStat: 'guc', difficulty: 16, minHeroes: 2 },
+            { n: "PSİONİK ENGİZİTÖR (BOSS)", desc: "Zihin kontrolcüsü. En az 3 kişiyle saldırın.", c: "var(--boss)", r: {energy: 120, threat: -30}, penalty: 25, t: 45, reqStat: 'zihin', difficulty: 25, minHeroes: 3 },
+            { n: "ZEON GOD AVATAR (FİNAL)", desc: "Ankara'nın kaderi bu savaşa bağlı. TÜM EKİP GEREKLİ!", c: "var(--boss)", r: {energy: 500, threat: -100}, penalty: 100, t: 60, reqStat: 'guc', difficulty: 30, minHeroes: 5, isFinal: true }
+        ];
+
+        function spawnIncident(isSpecial = false, isBoss = false, isFinal = false) {
+            if (incidents.length > 5 || state.isTutorial || state.isBetweenDays) return;
+            
+            let tmpl;
+            let reqMinHeroes = 1;
+            let reqMaxHeroes = 1;
+            let diffMultiplier = 1 + (state.day * 0.05); 
+
+            if (isFinal) {
+                tmpl = bosses[2]; // 30. Gün Final Boss
+                reqMinHeroes = myHeroes.length; // Herkes
+                reqMaxHeroes = myHeroes.length;
+            }
+            else if (isBoss) {
+                tmpl = state.day >= 20 ? bosses[1] : bosses[0];
+                reqMinHeroes = state.day >= 20 ? 3 : 2; // Bosslar her zaman takım ister
+                reqMaxHeroes = reqMinHeroes + 1; 
+            }
+            else if (isSpecial) {
+                tmpl = dailySpecials[Math.floor(Math.random()*dailySpecials.length)];
+                reqMinHeroes = state.day >= 20 ? 3 : 2; // Özel görevler 2 veya 3 kişi ister
+                reqMaxHeroes = reqMinHeroes;
+            }
+            else {
+                tmpl = normals[Math.floor(Math.random()*normals.length)];
+                // NORMAL GÖREVLERDE TEK KİŞİ GİTME ŞANSI (Oyun sonuna kadar)
+                // 15. günden sonra %40 ihtimalle 2 kişi, %60 ihtimalle 1 kişi (Solo) ister.
+                reqMinHeroes = (state.day >= 15 && Math.random() > 0.6) ? 2 : 1; 
+                reqMaxHeroes = reqMinHeroes;
+            }
+
+            let finalDifficulty = Math.floor(tmpl.difficulty * diffMultiplier);
+
+            let inc = { 
+                id: Date.now(), name: tmpl.n, desc: tmpl.desc, color: tmpl.c, reward: tmpl.r, penalty: tmpl.penalty, time: tmpl.t, 
+                reqStat: tmpl.reqStat, diff: finalDifficulty, minHeroes: reqMinHeroes, maxHeroes: reqMaxHeroes, isFinal: tmpl.isFinal || false,
+                x: 20 + Math.random() * 60 + "%", y: 20 + Math.random() * 60 + "%", assigned: false, resolved: false, timeLeft: 45 
+            };
+            incidents.push(inc); renderMap();
+        }
+        
+
+        function renderMap() {
+            const layer = document.getElementById('incidents-layer');
+            layer.innerHTML = incidents.map(inc => {
+                let pClass = inc.isFinal ? "final-boss" : (inc.isBoss ? "boss-ping" : "");
+                return `<div class="incident-ping ${pClass}" style="left:${inc.x}; top:${inc.y};" onclick="openMissionModal(${inc.id})"><div class="ping-core" style="background:${inc.assigned ? '#475569' : inc.color}"></div></div>`
+            }).join('');
+        }
+
+        function openMissionModal(id) {
+            if (state.isBetweenDays) return; 
+            let inc = incidents.find(i => i.id === id);
+            if(inc.assigned) return; 
+            
+            state.isPaused = true; state.selectedIncident = inc; state.selectedHeroes = [];
+            document.getElementById('m-title').innerText = inc.name;
+            document.getElementById('m-title').style.color = inc.color;
+            document.getElementById('m-desc').innerHTML = `${inc.desc} <br><br> <span style="color:#94a3b8;">Operasyon: ${inc.time}s | Kalan: ${inc.timeLeft}s</span>`;
+            
+            document.getElementById('m-picker').innerHTML = myHeroes.map(h => {
+                let isAvail = h.status === 'idle';
+                let lockClass = isAvail ? 'available' : 'locked';
+                let subText = h.status === 'idle' ? 'HAZIR' : (h.isInjured ? `YARALI` : `MEŞGUL`);
+                return `<div class="picker-item ${lockClass}" onclick="${isAvail ? `toggleHeroSelection('${h.name}')` : ''}" id="picker-${h.name}">
+                    <img src="${h.img}" onerror="this.src='https://via.placeholder.com/70'">
+                    <div style="font-size:0.8em; font-weight:bold; margin-top:5px; color:${h.color}">${h.name}</div>
+                    ${!isAvail ? `<div class="lock-text">${subText}</div>` : ''}
+                </div>`;
+            }).join('');
+            
+            updateMissionModalUI();
+            document.getElementById('mission-modal').style.display = 'flex';
+        }
+
+        function toggleHeroSelection(name) {
+            let hero = myHeroes.find(h => h.name === name);
+            if (hero.status !== 'idle') return; 
+
+            let inc = state.selectedIncident;
+            let idx = state.selectedHeroes.findIndex(h => h.name === name);
+
+            if (idx > -1) {
+                state.selectedHeroes.splice(idx, 1); 
+            } else {
+                if (state.selectedHeroes.length < inc.maxHeroes) {
+                    state.selectedHeroes.push(hero); 
+                } else {
+                    state.selectedHeroes.shift();
+                    state.selectedHeroes.push(hero);
+                }
+            }
+            updateMissionModalUI();
+        }
+
+        function updateMissionModalUI() {
+            document.querySelectorAll('.picker-item').forEach(el => el.classList.remove('selected'));
+            state.selectedHeroes.forEach(sh => { document.getElementById('picker-' + sh.name).classList.add('selected'); });
+
+            let inc = state.selectedIncident;
+            let totalStat = 0; state.selectedHeroes.forEach(h => { totalStat += h.stats[inc.reqStat]; });
+            
+            let chance = state.selectedHeroes.length < inc.minHeroes ? 0 : Math.floor(Math.min(95, Math.max(5, (totalStat / inc.diff) * 100)));
+            
+            let chanceBox = document.getElementById('m-chance-box');
+            let reqName = {guc: "Güç", hiz: "Hız", day: "Dayanıklılık", zihin: "Zihin"}[inc.reqStat];
+            
+            chanceBox.innerHTML = `Başarı İhtimali: %${chance} <br><span style="font-size:0.8em; font-weight:normal; color:#94a3b8;">(Gereken: ${reqName} | Zorluk: ${inc.diff} | İstenen Kişi: ${state.selectedHeroes.length}/${inc.minHeroes})</span>`;
+            chanceBox.style.borderColor = chance >= 70 ? 'var(--success)' : (chance >= 40 ? 'var(--special)' : 'var(--danger)');
+            chanceBox.style.color = chance >= 70 ? 'var(--success)' : (chance >= 40 ? 'var(--special)' : 'var(--danger)');
+
+            document.getElementById('dispatch-btn').style.opacity = state.selectedHeroes.length >= inc.minHeroes ? '1' : '0.5';
+        }
+
+        function confirmDispatch() {
+            let inc = state.selectedIncident;
+            if (state.selectedHeroes.length < inc.minHeroes || !inc) return;
+            
+            inc.assigned = true; inc.missionTimer = inc.time;
+            let totalStat = 0; state.selectedHeroes.forEach(h => { totalStat += h.stats[inc.reqStat]; });
+            inc.successChance = Math.min(95, Math.max(5, (totalStat / inc.diff) * 100));
+
+            state.selectedHeroes.forEach(h => { h.status = 'mission'; h.missionId = inc.id; });
+            
+            closeMissionModal();
+            let names = state.selectedHeroes.map(h => h.name).join(', ');
+            addGroupChat("SİSTEM", `SEVKİYAT ONAYLANDI: ${names} göreve başladı.`, "system");
+            renderRoster(); renderMap();
+        }
+
+        function closeMissionModal() {
+            document.getElementById('mission-modal').style.display = 'none';
+            if (!state.dayEnded && !state.isBetweenDays) state.isPaused = false;
+            state.selectedHeroes = []; state.selectedIncident = null;
+        }
+
+        function renderRoster() {
+            document.getElementById('ui-roster').innerHTML = myHeroes.map(h => {
+                let subText = ""; let barW = 0; let barColor = "var(--primary)";
+                if (h.status === 'mission') { 
+                    let inc = incidents.find(i=>i.id===h.missionId);
+                    subText = `GÖREVDE (${inc ? inc.missionTimer : 0}s)`; 
+                    barW = inc ? (inc.missionTimer / inc.time) * 100 : 0; 
+                }
+                if (h.status === 'resting') { 
+                    subText = `DİNLENİYOR (${h.restTimer}s)`; 
+                    let penalty = h.isInjured && h.name!=='Brock' ? (state.hasDoctor ? 5 : 10) : 0;
+                    barW = (h.restTimer / (h.restTime + penalty)) * 100; 
+                    barColor = 'var(--special)'; 
+                }
+                if (h.status === 'idle') { subText = "SAHAYA HAZIR"; }
+                
+                let injuredTag = h.isInjured ? `<span class="injured-tag">YARALI</span>` : '';
+
+                return `<div class="hero-card" style="${h.status==='resting' ? 'border-color:var(--special)' : ''}">
+                    <img src="${h.img}" class="card-img" onerror="this.src='https://via.placeholder.com/50'">
+                    <div class="card-info"><div style="font-weight:bold; color:${h.color}; font-size:1.1em;">${h.name} ${injuredTag}</div><div style="font-size:0.75em; color:#94a3b8; font-weight:bold; margin-top:4px;">${subText}</div></div>
+                    ${h.status !== 'idle' ? `<div class="status-bar-bg"><div class="status-bar-fill" style="width:${barW}%; background:${barColor};"></div></div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function updateUI() {
+            document.getElementById('ui-energy').innerText = state.energy;
+            document.getElementById('ui-threat').innerText = state.threat + "%";
+            document.getElementById('ui-hero-count').innerText = myHeroes.length;
+            if(state.threat >= 100) { alert("TEHDİT %100'E ULAŞTI. ANKARA DÜŞTÜ!"); location.reload(); }
+        }
+
+        // Dinamik görev çıkarma hızı
+        setInterval(() => { 
+            if(!state.isPaused && !state.isTutorial && !state.isBetweenDays) {
+                spawnIncident(false, false); 
+            }
+        }, Math.max(6000, 18000 - (state.day * 1000))); 
+
+    </script>
+</body>
+</html>
