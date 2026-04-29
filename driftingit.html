@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRIFTING IT! - Pro Drift</title>
+    <style>
+        body {
+            margin: 0; overflow: hidden; background-color: #1e272e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas { display: block; }
+        
+        /* GİRİŞ MENÜSÜ TASARIMI (Simcade Teması) */
+        #menu-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        #menu-overlay::before {
+            content: ""; position: absolute; width: 100%; height: 100%;
+            background-image: radial-gradient(#222 1px, transparent 1px);
+            background-size: 20px 20px; opacity: 0.2;
+        }
+        #menu-overlay h1 { 
+            position: relative; color: #fff; font-size: 6rem; margin: 0; 
+            letter-spacing: -2px; font-style: italic; text-transform: uppercase;
+            text-shadow: 4px 4px 0px #c0392b; animation: slideIn 0.8s ease-out;
+        }
+        #start-btn {
+            position: relative; margin-top: 50px; padding: 18px 80px; font-size: 1.4rem; 
+            font-weight: 800; background: transparent; color: #fff;
+            border: 2px solid #fff; border-radius: 4px; cursor: pointer; 
+            transition: all 0.3s; text-transform: uppercase; letter-spacing: 4px;
+        }
+        #start-btn:hover { background: #fff; color: #000; letter-spacing: 8px; box-shadow: 0 0 30px rgba(255,255,255,0.4); }
+
+        @keyframes slideIn { from { opacity: 0; transform: skewX(-20deg) translateX(-100px); } to { opacity: 1; transform: skewX(-10deg) translateX(0); } }
+
+        /* KULLANICI ARAYÜZÜ (Senin Tasarımın) */
+        #ui {
+            position: absolute; top: 20px; left: 20px;
+            color: #d2dae2; background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px; border-radius: 8px;
+            pointer-events: none; border-left: 4px solid #e74c3c;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+            min-width: 250px;
+            display: none; /* Menüdeyken gizli */
+        }
+        h2 { margin: 0 0 10px 0; font-size: 1.2rem; color: #e74c3c; text-transform: uppercase; }
+        p { margin: 5px 0; font-size: 0.9rem; font-weight: bold; }
+        .score-text { color: #f1c40f; font-size: 1.1rem; }
+        .combo-text { color: #3498db; }
+        
+        #dynamic-alerts {
+            margin-top: 10px; font-size: 0.85rem; font-weight: bold; min-height: 20px;
+        }
+        .donut-alert { color: #9b59b6; display: none; }
+        .prox-alert { color: #e67e22; display: none; }
+        
+        /* SPAM UYARISI EKLENDİ */
+        #spam-warn { color: #ff4757; font-size: 0.8rem; font-weight: bold; display: none; margin-top: 10px; }
+        
+        #message-box {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; background: rgba(0, 0, 0, 0.85); padding: 30px;
+            border-radius: 10px; text-align: center; border: 2px solid #2ecc71;
+            display: none; font-size: 1.5rem; font-weight: bold; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="menu-overlay">
+        <h1>DRIFTING IT!</h1>
+        <button id="start-btn">BAŞLA</button>
+    </div>
+
+    <div id="ui">
+        <h2 id="level-title">Bölüm 1</h2>
+        <p>Hedef: <span id="target-score">3750</span></p>
+        <p>Toplam Puan: <span id="total-score" class="score-text">0</span></p>
+        <p>
+            Drift Puanı: <span id="drift-score">0</span> 
+            <span id="combo-text" class="combo-text">x1.0</span>
+        </p>
+        <div id="dynamic-alerts">
+            <span id="prox-alert" class="prox-alert">YAKIN GEÇİŞ! x<span id="prox-val">2.0</span></span>
+            <span id="donut-alert" class="donut-alert"> (+DONUT 140)</span>
+        </div>
+        <div id="spam-warn">⚠️ PATİNAJ TESPİT EDİLDİ - PUAN DURDURULDU ⚠️</div>
+    </div>
+
+    <div id="message-box">
+        <span id="msg-title">BÖLÜM GEÇİLDİ!</span><br>
+        <span style="font-size: 1rem; color: #bdc3c7;">Sonraki bölüme geçmek için ENTER'a bas.</span>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const menuOverlay = document.getElementById('menu-overlay');
+        const startBtn = document.getElementById('start-btn');
+        const ui = document.getElementById('ui');
+
+        const levelTitleEl = document.getElementById('level-title');
+        const targetScoreEl = document.getElementById('target-score');
+        const totalScoreEl = document.getElementById('total-score');
+        const driftScoreEl = document.getElementById('drift-score');
+        const comboTextEl = document.getElementById('combo-text');
+        
+        const proxAlertEl = document.getElementById('prox-alert');
+        const proxValEl = document.getElementById('prox-val');
+        const donutAlertEl = document.getElementById('donut-alert');
+        const spamWarn = document.getElementById('spam-warn');
+        const messageBox = document.getElementById('message-box');
+
+        let cw, ch;
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            cw = canvas.width; ch = canvas.height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        const keys = { w: false, a: false, s: false, d: false, ' ': false, enter: false };
+        window.addEventListener('keydown', (e) => { 
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = true; 
+        });
+        window.addEventListener('keyup', (e) => { 
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = false; 
+        });
+
+        let gameState = {
+            active: false, level: 1, score: 0, targetScore: 3750,
+            currentDriftScore: 0, combo: 1.0, isLevelComplete: false,
+            totalAngleDrifted: 0, 
+            donutTimer: 0, proxTimer: 0,
+            lastPos: {x: 0, y: 0}, distTravelledSinceLastDrift: 0, isSpamming: false
+        };
+
+        let car = {
+            x: cw / 2, y: ch / 2,
+            width: 20, length: 40, angle: -Math.PI/2, 
+            vx: 0, vy: 0, angularVelocity: 0,
+            
+            turnAccel: 0.005, maxAngularVelocity: 0.04, angularFriction: 0.95,
+            enginePower: 0.067, reversePower: 0.043,
+            dragFriction: 0.985, brakePower: 0.94,
+            normalGrip: 0.88, driftGrip: 0.98,
+            skidTimer: 0, radius: 14 
+        };
+
+        const skidMarks = [];
+        let obstacles = []; 
+
+        function spawnBuilding(x, y, w, h) { obstacles.push({ type: 'building', x, y, w, h }); }
+        function spawnCar(x, y, w, h) { obstacles.push({ type: 'parked_car', x, y, w, h }); }
+        function spawnCone(x, y) { obstacles.push({ type: 'cone', x, y, r: 8, knocked: false, vx: 0, vy: 0 }); }
+
+        function loadLevel(levelNum) {
+            car.vx = 0; car.vy = 0; car.angularVelocity = 0;
+            gameState.score = 0; gameState.currentDriftScore = 0; gameState.combo = 1.0;
+            gameState.totalAngleDrifted = 0;
+            gameState.distTravelledSinceLastDrift = 0; gameState.isSpamming = false;
+            gameState.isLevelComplete = false; messageBox.style.display = 'none';
+            obstacles = [];
+
+            car.x = cw / 2; car.y = ch / 2 + 150; car.angle = -Math.PI/2;
+            const midX = cw / 2; const midY = ch / 2;
+
+            // Hedef Skor Katlayıcı (Zorluk)
+            let baseScore = [0, 1500, 3000, 4500, 6000, 8500, 11000, 14000, 18000, 25000];
+            let multiplier = 10.0; // Puan gereksinimleri katlandı
+
+            if(levelNum <= 9) {
+                gameState.targetScore = baseScore[levelNum] * multiplier;
+            } else {
+                gameState.targetScore = Infinity;
+            }
+
+            // GÜNCELLENMİŞ 10 HARİTA
+            switch(levelNum) {
+                case 1:
+                    levelTitleEl.innerText = "Bölüm 1: Koni Parkı";
+                    for(let i=0; i<30; i++) spawnCone(cw*0.1 + Math.random()*cw*0.8, ch*0.1 + Math.random()*ch*0.8);
+                    break;
+                case 2:
+                    levelTitleEl.innerText = "Bölüm 2: Şehir Blokları";
+                    spawnBuilding(midX-200, midY-250, 400, 100);
+                    spawnBuilding(midX-200, midY+150, 400, 100);
+                    for(let i=0; i<8; i++) spawnCar(midX-250+(i*70), midY-20, 40, 20);
+                    break;
+                case 3:
+                    levelTitleEl.innerText = "Bölüm 3: Dar Slalom";
+                    for(let i=0; i<6; i++) spawnBuilding(midX + (i%2===0 ? -250 : 50), ch*0.1 + (i*150), 200, 60);
+                    break;
+                case 4:
+                    levelTitleEl.innerText = "Bölüm 4: Konteyner Alanı";
+                    for(let i=0; i<4; i++) spawnBuilding(midX-400 + (i*250), midY-200, 100, 400);
+                    break;
+                case 5:
+                    levelTitleEl.innerText = "Bölüm 5: Otopark Kaosu";
+                    for(let i=0; i<6; i++) { for(let j=0; j<4; j++) spawnCar(midX-350+(i*140), midY-250+(j*140), 40, 20); }
+                    break;
+                case 6:
+                    levelTitleEl.innerText = "Bölüm 6: İğne Deliği";
+                    spawnBuilding(0, 0, cw, midY-80); 
+                    spawnBuilding(0, midY+80, cw, ch);
+                    for(let i=0; i<15; i++) spawnCone(i*100, midY);
+                    car.x = cw*0.1; car.y = midY; car.angle = 0;
+                    break;
+                case 7:
+                    levelTitleEl.innerText = "Bölüm 7: Labirent";
+                    for(let i=0; i<12; i++) spawnBuilding(Math.random()*cw, Math.random()*ch, 80, 80);
+                    break;
+                case 8:
+                    levelTitleEl.innerText = "Bölüm 8: Endüstriyel Bölge";
+                    spawnBuilding(midX-300, midY-300, 600, 50); spawnBuilding(midX-300, midY+250, 600, 50);
+                    spawnBuilding(midX-300, midY-300, 50, 600); spawnBuilding(midX+250, midY-300, 50, 600);
+                    for(let i=0; i<20; i++) spawnCar(midX-200+Math.random()*400, midY-200+Math.random()*400, 40, 20);
+                    break;
+                case 9:
+                    levelTitleEl.innerText = "Bölüm 9: Drift King Finali";
+                    spawnBuilding(midX-50, midY-50, 100, 100); 
+                    for(let i=0; i<20; i++) {
+                        let a = (i/20) * Math.PI * 2;
+                        spawnBuilding(midX + Math.cos(a)*250 - 40, midY + Math.sin(a)*250 - 40, 80, 80);
+                    }
+                    car.x = cw*0.2; car.y = midY; car.angle = 0;
+                    break;
+                default:
+                    levelTitleEl.innerText = "Bölüm 10: Sandbox (Serbest)";
+                    spawnCone(midX, midY);
+                    break;
+            }
+            
+            targetScoreEl.innerText = gameState.targetScore === Infinity ? "Sonsuz" : gameState.targetScore;
+        }
+
+        // BAŞLA BUTONU TETİKLEYİCİ
+        startBtn.onclick = () => {
+            menuOverlay.style.display = 'none';
+            ui.style.display = 'block';
+            gameState.active = true;
+            loadLevel(1);
+            loop();
+        };
+
+        function checkProximityAndCollisions() {
+            let maxProxMultiplier = 1.0;
+            let crashed = false;
+
+            for (let obs of obstacles) {
+                let testX = car.x; let testY = car.y;
+                let obsR = 0;
+
+                if (obs.type === 'cone') {
+                    if (obs.knocked) continue; 
+                    testX = obs.x; testY = obs.y; obsR = obs.r;
+                } else {
+                    if (car.x < obs.x) testX = obs.x; 
+                    else if (car.x > obs.x + obs.w) testX = obs.x + obs.w; 
+                    if (car.y < obs.y) testY = obs.y; 
+                    else if (car.y > obs.y + obs.h) testY = obs.y + obs.h; 
+                }
+
+                let dX = car.x - testX; let dY = car.y - testY;
+                let distCenter = Math.sqrt(dX*dX + dY*dY);
+                let actualDist = distCenter - car.radius - obsR;
+
+                if (actualDist <= 0) {
+                    if (obs.type === 'cone') {
+                        obs.knocked = true; obs.vx = car.vx * 1.5; obs.vy = car.vy * 1.5;
+                        car.vx *= 0.8; car.vy *= 0.8;
+                    } else {
+                        car.vx = 0; car.vy = 0;
+                        if (actualDist > -car.radius) {
+                            car.x += (dX / distCenter) * (Math.abs(actualDist) + 0.1);
+                            car.y += (dY / distCenter) * (Math.abs(actualDist) + 0.1);
+                        }
+                    }
+                    crashed = true;
+                    break; 
+                }
+
+                if (actualDist > 0 && actualDist < 40) {
+                    let currentMult = 1.0 + (((40 - actualDist) / 10) * 3);
+                    if (currentMult > maxProxMultiplier) maxProxMultiplier = currentMult;
+                }
+            }
+
+            if (crashed) {
+                gameState.currentDriftScore = 0; gameState.combo = 1.0;
+                gameState.totalAngleDrifted = 0;
+                maxProxMultiplier = 1.0; 
+            }
+
+            return maxProxMultiplier;
+        }
+
+        function update() {
+            if (!gameState.active || gameState.isLevelComplete) {
+                if (keys.enter && gameState.isLevelComplete) { gameState.level++; loadLevel(gameState.level); }
+                return; 
+            }
+
+            for(let obs of obstacles) {
+                if (obs.type === 'cone' && obs.knocked) {
+                    obs.x += obs.vx; obs.y += obs.vy;
+                    obs.vx *= 0.92; obs.vy *= 0.92;
+                }
+            }
+
+            // ANTİ-SPAM: Mesafe Hesaplama
+            let moveDist = Math.sqrt(Math.pow(car.x - gameState.lastPos.x, 2) + Math.pow(car.y - gameState.lastPos.y, 2));
+            gameState.distTravelledSinceLastDrift += moveDist;
+            gameState.lastPos = {x: car.x, y: car.y};
+
+            const fX = Math.cos(car.angle); const fY = Math.sin(car.angle);
+            const rX = Math.cos(car.angle + Math.PI / 2); const rY = Math.sin(car.angle + Math.PI / 2);
+
+            let forwardVelocity = car.vx * fX + car.vy * fY;
+            let lateralVelocity = car.vx * rX + car.vy * rY;
+
+            if (keys.w) forwardVelocity += car.enginePower;
+            if (keys.s) forwardVelocity -= car.reversePower;
+
+            const isBraking = keys[' '];
+            let currentGrip = car.normalGrip;
+
+            if (isBraking) {
+                forwardVelocity *= car.brakePower; currentGrip = car.driftGrip;
+            } else {
+                if (Math.abs(lateralVelocity) > 1.0) currentGrip = car.driftGrip - 0.015; 
+            }
+
+            forwardVelocity *= car.dragFriction; 
+            lateralVelocity *= currentGrip;       
+
+            const speed = Math.abs(forwardVelocity) + Math.abs(lateralVelocity);
+            
+            if (speed > 0.15) {
+                const turnDirection = forwardVelocity >= -0.05 ? 1 : -1;
+                if (keys.a) car.angularVelocity -= car.turnAccel * turnDirection;
+                if (keys.d) car.angularVelocity += car.turnAccel * turnDirection;
+            }
+
+            if (car.angularVelocity > car.maxAngularVelocity) car.angularVelocity = car.maxAngularVelocity;
+            if (car.angularVelocity < -car.maxAngularVelocity) car.angularVelocity = -car.maxAngularVelocity;
+            car.angularVelocity *= car.angularFriction;
+            car.angle += car.angularVelocity;
+
+            car.vx = forwardVelocity * fX + lateralVelocity * rX;
+            car.vy = forwardVelocity * fY + lateralVelocity * rY;
+            car.x += car.vx; car.y += car.vy;
+
+            let proxMult = checkProximityAndCollisions();
+
+            const isSliding = Math.abs(lateralVelocity) > 0.6 && speed > 1.0; 
+            const isHeavyBraking = isBraking && speed > 1.0;
+
+            if (isSliding) {
+                // SPAM KONTROLÜ
+                if (gameState.distTravelledSinceLastDrift < 20 && speed < 1.6) {
+                    gameState.isSpamming = true;
+                    spamWarn.style.display = 'block';
+                } else {
+                    gameState.isSpamming = false;
+                    spamWarn.style.display = 'none';
+
+                    car.skidTimer = 120;
+                    
+                    if (Math.abs(car.angularVelocity) > 0.015) {
+                        gameState.combo += 0.0015 * speed; 
+                        if (gameState.combo > 5.0) gameState.combo = 5.0; 
+                    }
+
+                    let sharpness = Math.abs(lateralVelocity) / (speed + 0.1); 
+                    
+                    // ZORLAŞTIRILMIŞ PUAN
+                    let frameScore = (speed * 0.05) + (sharpness * 0.15);
+                    frameScore *= proxMult;
+                    gameState.currentDriftScore += frameScore * gameState.combo;
+
+                    if (proxMult > 1.0) {
+                        gameState.proxTimer = 30;
+                        proxValEl.innerText = proxMult.toFixed(1);
+                    }
+
+                    // DONUT PUANI (140) VE SPAM ENGELİ
+                    gameState.totalAngleDrifted += Math.abs(car.angularVelocity);
+                    
+                    if (gameState.totalAngleDrifted >= Math.PI * 2) {
+                        if (speed > 1.5 && !gameState.isSpamming) {
+                            gameState.currentDriftScore += 140 * gameState.combo; 
+                            gameState.donutTimer = 90;
+                        }
+                        gameState.totalAngleDrifted -= Math.PI * 2; 
+                        gameState.distTravelledSinceLastDrift = 0; // Yeni donut için gezmek şart
+                    }
+                }
+
+            } else if (isHeavyBraking) {
+                car.skidTimer = 120; 
+            } else {
+                if (speed < 0.8) gameState.totalAngleDrifted = 0; 
+
+                if (gameState.currentDriftScore > 0 && car.skidTimer <= 0) {
+                    gameState.score += Math.floor(gameState.currentDriftScore);
+                    gameState.currentDriftScore = 0; 
+                    gameState.combo = 1.0;
+                    gameState.totalAngleDrifted = 0; 
+                }
+            }
+
+            if (car.x > cw + car.length) car.x = -car.length;
+            if (car.x < -car.length) car.x = cw + car.length;
+            if (car.y > ch + car.length) car.y = -car.length;
+            if (car.y < -car.length) car.y = ch + car.length;
+
+            if (car.skidTimer > 0 && speed > 0.05) {
+                const backLeftX = car.x - Math.cos(car.angle) * (car.length / 2) + Math.cos(car.angle - Math.PI/2) * (car.width / 2);
+                const backLeftY = car.y - Math.sin(car.angle) * (car.length / 2) + Math.sin(car.angle - Math.PI/2) * (car.width / 2);
+                const backRightX = car.x - Math.cos(car.angle) * (car.length / 2) + Math.cos(car.angle + Math.PI/2) * (car.width / 2);
+                const backRightY = car.y - Math.sin(car.angle) * (car.length / 2) + Math.sin(car.angle + Math.PI/2) * (car.width / 2);
+
+                skidMarks.push({ x: backLeftX, y: backLeftY, life: 180 });
+                skidMarks.push({ x: backRightX, y: backRightY, life: 180 });
+                car.skidTimer--;
+            } else { car.skidTimer = 0; }
+
+            if (gameState.score >= gameState.targetScore && !gameState.isLevelComplete && gameState.level < 10) {
+                gameState.isLevelComplete = true; messageBox.style.display = 'block';
+            }
+
+            totalScoreEl.innerText = Math.floor(gameState.score);
+            driftScoreEl.innerText = Math.floor(gameState.currentDriftScore);
+            comboTextEl.innerText = `x${gameState.combo.toFixed(1)}`;
+            driftScoreEl.style.color = gameState.currentDriftScore > 0 ? '#2ecc71' : '#d2dae2';
+
+            if (gameState.donutTimer > 0) { donutAlertEl.style.display = 'inline'; gameState.donutTimer--; } 
+            else { donutAlertEl.style.display = 'none'; }
+
+            if (gameState.proxTimer > 0) { proxAlertEl.style.display = 'inline'; gameState.proxTimer--; } 
+            else { proxAlertEl.style.display = 'none'; }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#1e272e'; ctx.fillRect(0, 0, cw, ch);
+
+            for (let i = skidMarks.length - 1; i >= 0; i--) {
+                const mark = skidMarks[i];
+                ctx.fillStyle = `rgba(5, 5, 5, ${mark.life / 360})`; 
+                ctx.beginPath(); ctx.arc(mark.x, mark.y, 2.5, 0, Math.PI * 2); ctx.fill();
+                mark.life--; if (mark.life <= 0) skidMarks.splice(i, 1);
+            }
+
+            for (let obs of obstacles) {
+                if (obs.type === 'cone') {
+                    ctx.save(); ctx.translate(obs.x, obs.y);
+                    if (obs.knocked) ctx.scale(1, 0.5); 
+                    ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(0, 0, obs.r, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, obs.r * 0.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.restore();
+                } else if (obs.type === 'building') {
+                    ctx.fillStyle = '#34495e'; ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+                    ctx.fillStyle = '#2c3e50'; ctx.fillRect(obs.x + 10, obs.y + 10, obs.w - 20, obs.h - 20);
+                } else if (obs.type === 'parked_car') {
+                    ctx.save(); ctx.translate(obs.x + obs.w/2, obs.y + obs.h/2);
+                    ctx.fillStyle = '#95a5a6'; ctx.beginPath(); ctx.roundRect(-obs.w/2, -obs.h/2, obs.w, obs.h, 3); ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            ctx.save(); ctx.translate(car.x, car.y); ctx.rotate(car.angle);
+            ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.roundRect(-car.length / 2, -car.width / 2, car.length, car.width, 5); ctx.fill();
+            ctx.fillStyle = '#2f3542'; ctx.beginPath(); ctx.roundRect(-2, -car.width / 2 + 2, 8, car.width - 4, 2); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(-car.length / 2 + 3, -car.width / 2 + 3, 5, car.width - 6, 1); ctx.fill();
+            ctx.fillStyle = '#f1c40f'; ctx.fillRect(car.length / 2 - 3, -car.width / 2 + 1, 3, 4); ctx.fillRect(car.length / 2 - 3, car.width / 2 - 5, 3, 4);
+            if (keys.s && !keys[' ']) ctx.fillStyle = '#ecf0f1'; else if (keys[' ']) ctx.fillStyle = '#ff0000'; else ctx.fillStyle = '#8b0000';
+            ctx.fillRect(-car.length / 2, -car.width / 2 + 1, 2, 4); ctx.fillRect(-car.length / 2, car.width / 2 - 5, 2, 4);
+            ctx.restore();
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+    </script>
+</body>
+</html>
