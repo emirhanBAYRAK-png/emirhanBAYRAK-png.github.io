@@ -317,7 +317,8 @@
         <div class="story-text" id="story-text">Omega Tesisi Başlatılıyor... Protokoller aktif.</div>
         <div class="story-options" id="story-options"></div>
     </div>
-
+    
+    <script src="dialogue_pool.js"></script>
     <script>
         const state = {
             day: 1, talkLeft: 2, expLeft: 2, focusedIdx: -1, eventDone: false,
@@ -387,38 +388,49 @@
         }
 
         // --- HİKAYE VE OLAY MOTORU ---
+        // --- YENİ DİNAMİK HİKAYE VE OLAY MOTORU ---
         function updateStoryUI() {
             if (checkGameState()) return;
             const optCont = document.getElementById('story-options');
             optCont.innerHTML = ''; state.eventDone = false;
             document.getElementById('btn-next-day').disabled = true;
 
-            const s0 = state.subjects[0]; const s1 = state.subjects[1]; const s2 = state.subjects[2];
-            let ev = { speaker: "SİSTEM", text: `GÜN ${state.day}: Gözlemler devam ediyor. Stabilite düşük seviyede.`, options: [] };
-
-            switch(state.day) {
-                case 1: ev.speaker = "VAUGHN"; ev.text = "Plazalardan buraya... Şirkette beni ezdiler doktor. Bana o gücü ver. Artık ben ezmek istiyorum."; 
-                    ev.options = [{ text: "Buna değecek.", action: () => { s0.mental -= 5; s0.suspicion -= 10; } }, { text: "Sen sadece materyalsin.", action: () => { s0.suspicion += 20; } }]; break;
-                case 2: ev.speaker = "VESPER"; ev.text = "Et ve kemik... Hatalı donanımlar. Zihnimi bu hapishaneden ne zaman çıkaracaksın Gözlemci?";
-                    ev.options = [{ text: "Gelişim zaman alır.", action: () => { s1.mental += 10; } }, { text: "Sessiz ol ve itaat et.", action: () => { s1.suspicion += 15; } }]; break;
-                case 3: ev.speaker = "THORNE"; ev.text = "Paramı yatırdın mı? Vesper okumalı... O bensiz yapamaz. Ne yapıyorsan yap ama sözünü tut.";
-                    ev.options = [{ text: "Kızın güvende.", action: () => { s2.mental += 15; } }, { text: "Kendi derdine yan.", action: () => { s2.mental -= 20; s2.suspicion += 10; } }]; break;
-                case 5: 
-                    ev.speaker = "VESPER & THORNE"; ev.text = "Vesper: 'Babamın sesini duyuyorum... çok yakın.' / Thorne: 'Vesper? Vesper burada mısın?! Bir cevap ver!'";
-                    ev.options = [
-                        { text: "Bağlantıyı Parazit ile Kes.", action: () => { s1.mental -= 15; s2.mental -= 15; s1.suspicion += 10; s2.suspicion += 10; } },
-                        { text: "Sesleri Birbirine Aktar (Riskli).", action: () => { s1.mental += 30; s2.mental += 30; s1.suspicion -= 20; s2.suspicion -= 20; s1.mutation += 10; s2.mutation += 10; } }
-                    ]; break;
-                case 10: 
-                    ev.speaker = "ÜÇLÜ BAĞLANTI"; ev.text = "Vaughn: 'Besin zinciri değişiyor.' / Thorne: 'Onu benden alamazsınız!' / Vesper: 'Sistem artık benim.'";
-                    ev.options = [
-                        { text: "Vaughn'u Öne Çıkar (Mut+).", action: () => { s0.mutation += 40; s0.mental -= 30; s1.suspicion += 20; s2.suspicion += 20; } },
-                        { text: "Baba-Kız Bağını Güçlendir.", action: () => { s1.mental += 40; s2.mental += 40; s0.suspicion += 30; } }
-                    ]; break;
-                default: 
-                    ev.text = `Gün ${state.day}: Denekler kritik frekanslarda yankılanıyor. Mutasyonları dikkatli yönet.`;
-                    ev.options = [{ text: "Protokolü Onayla.", action: () => {} }]; break;
+            // 1. O güne ait tüm havuz diyaloglarını bul
+            const todaysEvents = DIALOGUE_POOL.filter(e => e.day === state.day);
+            
+            // 2. Rastgele bir olay seç (Tekrarlanabilirliği mükemmel yapar)
+            let ev;
+            if (todaysEvents.length > 0) {
+                const randomIndex = Math.floor(Math.random() * todaysEvents.length);
+                ev = todaysEvents[randomIndex];
+            } else {
+                ev = { speaker: "SİSTEM", text: `GÜN ${state.day}: Gözlemler stabil.`, options: [{ text: "Onayla", effect: {} }] };
             }
+
+            // 3. Olayı ekrana yazdır
+            document.getElementById('story-speaker').innerText = ev.speaker;
+            document.getElementById('story-text').innerText = ev.text;
+            
+            // 4. Dinamik seçenekleri butonlara dök
+            ev.options.forEach(o => {
+                const b = document.createElement('button'); b.className = 'story-opt-btn'; b.innerText = o.text;
+                b.onclick = () => { 
+                    // Eğer seçeneğin istatistiksel bir etkisi varsa, tüm deneklere veya ilgili deneğe uygula
+                    if(o.effect) {
+                        state.subjects.forEach(s => {
+                            if(o.effect.ment) s.mental += o.effect.ment;
+                            if(o.effect.sus) s.suspicion += o.effect.sus;
+                            if(o.effect.mut) s.mutation += o.effect.mut;
+                        });
+                    }
+                    state.eventDone = true; 
+                    optCont.innerHTML = '<i>Eylem Kaydedildi. Günü bitirebilirsiniz.</i>'; 
+                    document.getElementById('btn-next-day').disabled = false; 
+                    updateUI(); checkGameState(); 
+                };
+                optCont.appendChild(b);
+            });
+        }
 
             document.getElementById('story-speaker').innerText = ev.speaker;
             document.getElementById('story-text').innerText = ev.text;
