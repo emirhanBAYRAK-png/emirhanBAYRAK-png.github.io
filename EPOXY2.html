@@ -390,17 +390,16 @@
             return triggerEnding("SON 11: VASAT MEMUR", "Sıradan sonuçlar. Örgüt seni kovdu ve projeyi imha etti.");
         }
 
-        // --- YENİ DİNAMİK HİKAYE VE OLAY MOTORU ---
-        function updateStoryUI() {
+       function updateStoryUI() {
             if (checkGameState()) return;
             const optCont = document.getElementById('story-options');
             optCont.innerHTML = ''; state.eventDone = false;
             document.getElementById('btn-next-day').disabled = true;
 
-            // 1. O güne ait tüm havuz diyaloglarını bul
+            // O güne ait tüm havuz diyaloglarını bul
             const todaysEvents = DIALOGUE_POOL.filter(e => e.day === state.day);
             
-            // 2. Rastgele bir olay seç
+            // Rastgele bir olay seç (Tekrarlanabilirliği mükemmel yapar)
             let ev;
             if (todaysEvents.length > 0) {
                 const randomIndex = Math.floor(Math.random() * todaysEvents.length);
@@ -409,20 +408,33 @@
                 ev = { speaker: "SİSTEM", text: `GÜN ${state.day}: Gözlemler stabil.`, options: [{ text: "Onayla", effect: {} }] };
             }
 
-            // 3. Olayı ekrana yazdır
+            // Olayı ekrana yazdır
             document.getElementById('story-speaker').innerText = ev.speaker;
             document.getElementById('story-text').innerText = ev.text;
             
-            // 4. Dinamik seçenekleri butonlara dök
+            // Dinamik seçenekleri butonlara dök
             ev.options.forEach(o => {
                 const b = document.createElement('button'); b.className = 'story-opt-btn'; b.innerText = o.text;
                 b.onclick = () => { 
+                    // İstatistiksel etkileri ilgili deneğe (veya genel sisteme) uygula
                     if(o.effect) {
-                        state.subjects.forEach(s => {
-                            if(o.effect.ment) s.mental += o.effect.ment;
-                            if(o.effect.sus) s.suspicion += o.effect.sus;
-                            if(o.effect.mut) s.mutation += o.effect.mut;
-                        });
+                        let targetSubject = null;
+                        if(ev.speaker === "VAUGHN") targetSubject = state.subjects[0];
+                        if(ev.speaker === "VESPER") targetSubject = state.subjects[1];
+                        if(ev.speaker === "THORNE") targetSubject = state.subjects[2];
+
+                        if (targetSubject) {
+                            if(o.effect.ment) targetSubject.mental += o.effect.ment;
+                            if(o.effect.sus) targetSubject.suspicion += o.effect.sus;
+                            if(o.effect.mut) targetSubject.mutation += o.effect.mut;
+                        } else {
+                            // Sistem olayı ise herkese uygula
+                            state.subjects.forEach(s => {
+                                if(o.effect.ment) s.mental += o.effect.ment;
+                                if(o.effect.sus) s.suspicion += o.effect.sus;
+                                if(o.effect.mut) s.mutation += o.effect.mut;
+                            });
+                        }
                     }
                     state.eventDone = true; 
                     optCont.innerHTML = '<i>Eylem Kaydedildi. Günü bitirebilirsiniz.</i>'; 
