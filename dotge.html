@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOTGE</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            box-shadow: 0 0 50px rgba(0, 247, 255, 0.1);
+            border: 1px solid #111;
+        }
+
+        #gameContainer.playing {
+            cursor: none;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 100px;
+            margin: 0;
+            letter-spacing: 15px;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
+                         0 0 40px rgba(0, 247, 255, 0.3);
+            font-weight: 900;
+        }
+
+        p {
+            font-size: 24px;
+            color: #888;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: transparent;
+            color: #00f7ff;
+            border: 2px solid #00f7ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #00f7ff;
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 247, 255, 0.6);
+        }
+
+        .chaos-btn {
+            color: #ff0055;
+            border-color: #ff0055;
+        }
+
+        .chaos-btn:hover {
+            background: #ff0055;
+            color: #fff;
+            box-shadow: 0 0 30px rgba(255, 0, 85, 0.6);
+        }
+
+        /* Menüye Dön Butonu Özel Rengi */
+        .menu-btn {
+            color: #aaaaaa;
+            border-color: #aaaaaa;
+        }
+
+        .menu-btn:hover {
+            background: #aaaaaa;
+            color: #000;
+            box-shadow: 0 0 30px rgba(170, 170, 170, 0.6);
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.7);
+            pointer-events: none;
+            text-shadow: 0 0 10px #00f7ff;
+        }
+        
+        #grazeAlert {
+            color: #fff;
+            font-size: 16px;
+            margin-left: 15px;
+            opacity: 0;
+            transition: opacity 0.1s;
+            text-shadow: 0 0 10px #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="ui" style="display:none;">
+            SKOR: <span id="score">0</span>
+            <span id="grazeAlert">YAKIN GEÇİŞ! +PUAN</span>
+        </div>
+        
+        <div id="startMenu" class="overlay">
+            <h1>DOTGE</h1>
+            <p></p>
+            <div class="button-group">
+                <button onclick="startGame(event)">BAŞLA</button>
+                <button class="chaos-btn" onclick="window.location.href='dotgechaoshavoc.html'">CHAOS</button>
+            </div>
+        </div>
+
+        <div id="gameOverScreen" class="overlay" style="display:none;">
+            <h1 style="color: #ff0055; font-size: 60px; text-shadow: 0 0 40px rgba(255, 0, 85, 0.5);">ELENDİN</h1>
+            <p>SKORUN: <span id="finalScore">0</span></p>
+            <div class="button-group">
+                <button onclick="startGame(event)">YENİDEN BAŞLA</button>
+                <button class="menu-btn" onclick="goToMenu()">MENÜYE DÖN</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('gameContainer');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const startMenu = document.getElementById('startMenu');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreElement = document.getElementById('finalScore');
+        const ui = document.getElementById('ui');
+        const grazeAlert = document.getElementById('grazeAlert');
+
+        let animationId;
+        let score = 0;
+        let frames = 0;
+        let gameActive = false;
+
+        let spawnInterval = 60;
+        let spawnTimer = 0;
+
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 10,
+            baseColor: '#00f7ff',
+            grazeColor: '#ffffff',
+            currentColor: '#00f7ff'
+        };
+
+        const GRAZE_RADIUS = 35; 
+
+        let enemies = [];
+        let particles = [];
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameActive) return;
+            const rect = canvas.getBoundingClientRect();
+            player.x = e.clientX - rect.left;
+            player.y = e.clientY - rect.top;
+        });
+
+        class Enemy {
+            constructor(x, y, radius, velocity) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.velocity = velocity;
+                this.color = '#ff0055';
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+            update() {
+                this.draw();
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, radius, color, velocity) {
+                this.x = x; this.y = y; this.radius = radius;
+                this.color = color; this.velocity = velocity;
+                this.alpha = 1;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+            update() {
+                this.draw();
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.alpha -= 0.02; 
+            }
+        }
+
+        function spawnEnemy() {
+            const radius = Math.random() * 15 + 5;
+            let x, y;
+            
+            if (Math.random() < 0.5) {
+                x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius;
+                y = Math.random() * canvas.height;
+            } else {
+                x = Math.random() * canvas.width;
+                y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius;
+            }
+            
+            const angle = Math.atan2(player.y - y, player.x - x);
+            const speed = 2 + (frames / 1000); 
+            const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+            
+            enemies.push(new Enemy(x, y, radius, velocity));
+        }
+
+        function animate() {
+            if (!gameActive) return;
+            animationId = requestAnimationFrame(animate);
+            
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let isGrazingThisFrame = false;
+
+            particles.forEach((p, i) => {
+                if (p.alpha <= 0) particles.splice(i, 1);
+                else p.update();
+            });
+
+            enemies.forEach((enemy, index) => {
+                enemy.update();
+                
+                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                
+                if (dist - enemy.radius - player.radius < 1) {
+                    endGame();
+                }
+                else if (dist - enemy.radius - player.radius < GRAZE_RADIUS) {
+                    isGrazingThisFrame = true;
+                    score += 2; 
+                    
+                    if(Math.random() < 0.3) {
+                        particles.push(new Particle(player.x, player.y, 1, '#ffffff', {
+                            x: (Math.random() - 0.5) * 2, y: (Math.random() - 0.5) * 2
+                        }));
+                    }
+                }
+
+                if (enemy.x + enemy.radius < -150 || enemy.x - enemy.radius > canvas.width + 150 ||
+                    enemy.y + enemy.radius < -150 || enemy.y - enemy.radius > canvas.height + 150) {
+                    enemies.splice(index, 1);
+                }
+            });
+
+            if (isGrazingThisFrame) {
+                player.currentColor = player.grazeColor;
+                grazeAlert.style.opacity = 1;
+            } else {
+                player.currentColor = player.baseColor;
+                grazeAlert.style.opacity = 0;
+            }
+
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.currentColor;
+            ctx.shadowBlur = 20; 
+            ctx.shadowColor = player.currentColor;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            spawnTimer++;
+            if (spawnTimer >= spawnInterval) {
+                spawnEnemy();
+                spawnTimer = 0;
+                if (spawnInterval > 10) {
+                    spawnInterval -= 0.5; 
+                }
+            }
+
+            if (frames % 6 === 0) score += 1;
+            
+            scoreElement.innerText = score;
+            frames++;
+        }
+
+        // event objesini fonksiyon parametresi olarak aldık
+        function startGame(e) {
+            gameActive = true;
+            score = 0;
+            frames = 0;
+            spawnInterval = 60; 
+            spawnTimer = 0;
+            enemies = [];
+            particles = [];
+            
+            // Eğer butona tıklayarak girilmişse farenin o anki konumunu oyuncu konumu yap
+            if (e && e.clientX !== undefined) {
+                const rect = canvas.getBoundingClientRect();
+                player.x = e.clientX - rect.left;
+                player.y = e.clientY - rect.top;
+            } else {
+                player.x = canvas.width / 2;
+                player.y = canvas.height / 2;
+            }
+            
+            scoreElement.innerText = score;
+            startMenu.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            ui.style.display = 'block';
+
+            gameContainer.classList.add('playing');
+            
+            animate();
+        }
+
+        function endGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            
+            gameContainer.classList.remove('playing');
+
+            ui.style.display = 'none';
+            grazeAlert.style.opacity = 0;
+            gameOverScreen.style.display = 'flex';
+            finalScoreElement.innerText = score;
+            
+            for(let i=0; i<30; i++) {
+                particles.push(new Particle(player.x, player.y, Math.random()*4, player.baseColor, {
+                    x: (Math.random()-0.5)*15, y: (Math.random()-0.5)*15
+                }));
+            }
+            
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => p.update());
+        }
+
+        // Ana Menüye Dönme Fonksiyonu
+        function goToMenu() {
+            gameOverScreen.style.display = 'none';
+            startMenu.style.display = 'flex';
+            
+            // Ekrandaki eski oyun izlerini temizleyip simsiyah yapıyoruz
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    </script>
+</body>
+</html>

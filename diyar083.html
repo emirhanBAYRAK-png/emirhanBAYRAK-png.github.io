@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⍀⍀⏃⊑ - SYSTEM.NULL</title>
+    <style>
+        body {
+            margin: 0; padding: 0; background-color: #000; color: #fff;
+            font-family: 'Courier New', Courier, monospace; 
+            overflow: hidden; display: flex; justify-content: center; align-items: center;
+            height: 100vh; width: 100vw; user-select: none; -webkit-user-select: none;
+            flex-direction: column;
+            transition: background-color 2s, filter 2s ease-in-out;
+        }
+
+        /* Arenaya geçildiğinde fareyi gizlemek için sınıf */
+        body.arena-mode {
+            cursor: none !important;
+        }
+
+        /* Anlık Glitch ve Faz 2 Filtreleri */
+        body.glitch-active {
+            filter: invert(100%) hue-rotate(90deg) contrast(200%);
+            transform: translate(15px, -15px) skewX(5deg) scale(1.05);
+        }
+        body.phase2-active {
+            filter: invert(100%) hue-rotate(180deg) contrast(150%);
+            background-color: #002233 !important; 
+        }
+
+        /* Boss Ölüm Parçalanma Efekti */
+        @keyframes screenShatter {
+            0% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); filter: contrast(1); transform: scale(1); }
+            20% { clip-path: polygon(0 10%, 100% 0, 90% 100%, 10% 90%); filter: contrast(3) hue-rotate(90deg); transform: scale(1.05) skew(5deg); }
+            40% { clip-path: polygon(10% 0, 80% 10%, 100% 80%, 20% 100%); filter: invert(1) contrast(5); transform: scale(0.9) skew(-10deg); }
+            60% { clip-path: polygon(20% 20%, 70% 0, 100% 50%, 50% 100%, 0 70%); filter: hue-rotate(180deg); transform: scale(1.1) rotate(5deg); }
+            80% { clip-path: polygon(40% 40%, 60% 40%, 60% 60%, 40% 60%); opacity: 0.5; transform: scale(1.5); }
+            100% { opacity: 0; transform: scale(0); }
+        }
+        body.shatter-active {
+            animation: screenShatter 3s forwards cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+
+        /* --- BAŞLANGIÇ EKRANI --- */
+        #bootScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background-color: #000; z-index: 100;
+        }
+
+        #bootBtn {
+            padding: 15px 40px; font-size: 20px; font-family: 'Courier New', Courier, monospace;
+            background: transparent; color: #ff0055; border: 1px solid #ff0055;
+            cursor: pointer; letter-spacing: 5px; transition: all 0.3s; text-transform: uppercase;
+        }
+        #bootBtn:hover { background: #ff0055; color: #000; box-shadow: 0 0 20px #ff0055; }
+
+        /* --- SİNEMATİK BOSS (Konuşma Kısmındaki Işık Topu) --- */
+        #bossEntity {
+            position: absolute; top: 25%; left: 50%; transform: translateX(-50%);
+            width: 150px; height: 150px;
+            background: radial-gradient(circle, #fff 0%, #ff0055 40%, #330011 80%, transparent 100%);
+            border-radius: 50%; box-shadow: 0 0 50px #ff0055, inset 0 0 20px #fff;
+            animation: pulse 4s infinite, distort 0.1s infinite;
+            opacity: 0; transition: opacity 3s ease-in; z-index: 20;
+        }
+
+        @keyframes pulse {
+            0% { transform: translateX(-50%) scale(0.9); box-shadow: 0 0 30px #ff0055; }
+            50% { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 100px #ff0055; }
+            100% { transform: translateX(-50%) scale(0.9); box-shadow: 0 0 30px #ff0055; }
+        }
+        @keyframes distort {
+            0% { border-radius: 50% 50% 50% 50%; }
+            25% { border-radius: 52% 48% 51% 49%; margin-top: -2px; margin-left: 2px;}
+            50% { border-radius: 49% 51% 48% 52%; margin-top: 2px; margin-left: -2px;}
+            75% { border-radius: 51% 49% 52% 48%; margin-top: -2px; margin-left: -2px;}
+            100% { border-radius: 50% 50% 50% 50%; margin-top: 0; margin-left: 0;}
+        }
+
+        /* --- DİYALOG KUTUSU VE BUTONU --- */
+        #dialogueContainer {
+            position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%);
+            width: 800px; min-height: 150px; border: 1px solid #333;
+            background: rgba(10, 0, 5, 0.8); padding: 30px; box-sizing: border-box;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.1); opacity: 0; transition: opacity 2s ease-in;
+            z-index: 20; display: flex; align-items: center; justify-content: center;
+        }
+
+        #dialogueText { font-size: 24px; line-height: 1.6; color: #ff3366; text-shadow: 0 0 5px #ff0055; letter-spacing: 3px; word-wrap: break-word; text-align: center;}
+        .cursor { display: inline-block; width: 12px; height: 24px; background-color: #ff0055; animation: blink 1s step-end infinite; vertical-align: bottom; margin-left: 5px; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        #fightBtn {
+            display: none; position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
+            padding: 15px 50px; font-size: 24px; font-weight: bold; background: transparent;
+            color: #fff; border: 2px solid #fff; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 8px; transition: all 0.3s; z-index: 20;
+        }
+        #fightBtn:hover { background: #fff; color: #000; box-shadow: 0 0 40px #fff; }
+
+        /* --- ARENA (SAVAŞ ALANI) --- */
+        #arenaContainer {
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh; display: none; 
+            border: none;
+            background: radial-gradient(circle at center, #1a0000 0%, #000 100%);
+        }
+
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        /* --- BOSS UI (CAN BARI) --- */
+        #bossUI {
+            position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+            width: 800px; text-align: center; z-index: 50; display: none; 
+        }
+        
+        .glitch-text {
+            font-size: 50px; color: #fff; letter-spacing: 20px; font-weight: 900;
+            margin-bottom: 15px; position: relative; display: inline-block;
+        }
+        .glitch-text::before, .glitch-text::after { content: attr(data-text); position: absolute; top: 0; left: 0; opacity: 0.8; }
+        .glitch-text::before { color: #ff0055; z-index: -1; transform: translate(-4px, 2px); animation: glitch-anim 0.2s infinite; }
+        .glitch-text::after { color: #00f7ff; z-index: -2; transform: translate(4px, -2px); animation: glitch-anim 0.3s infinite reverse; }
+
+        @keyframes glitch-anim {
+            0% { clip-path: inset(10% 0 80% 0); }
+            20% { clip-path: inset(80% 0 5% 0); transform: translate(-4px, 4px); }
+            40% { clip-path: inset(40% 0 40% 0); }
+            60% { clip-path: inset(10% 0 60% 0); transform: translate(4px, -4px); }
+            80% { clip-path: inset(60% 0 10% 0); }
+            100% { clip-path: inset(30% 0 50% 0); }
+        }
+
+        #bossHealthContainer {
+            width: 100%; height: 25px; border: 2px solid #550011;
+            background: #0a0000; position: relative; box-shadow: 0 0 30px rgba(255, 0, 85, 0.4);
+        }
+        #bossHealthBar {
+            width: 0%; height: 100%; background: #ff0055;
+            box-shadow: 0 0 20px #ff0055; transition: width 0.1s linear;
+        }
+
+        /* --- GERÇEK BOSS (Arenadaki Form) --- */
+        #trueBoss {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 200px; height: 200px;
+            background: #fff; border-radius: 50%;
+            filter: url(#wobbly) drop-shadow(0 0 50px #ff0000);
+            z-index: 2; animation: bossTremble 0.05s infinite alternate;
+            display: none; /* Arenaya geçene kadar gizli */
+            justify-content: center; align-items: flex-end;
+            padding-bottom: 45px; box-sizing: border-box;
+            transition: left 0s, top 0s; 
+        }
+
+        @keyframes bossTremble {
+            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 0.8; }
+            100% { transform: translate(calc(-50% + 5px), calc(-50% - 5px)) scale(1.05) rotate(5deg); opacity: 1; }
+        }
+
+        /* FAZ 2 GÖZLERİ */
+        #bossEyes {
+            position: absolute; top: 40px; left: 0; width: 100%;
+            display: flex; justify-content: space-around; padding: 0 40px; box-sizing: border-box;
+            opacity: 0; transition: opacity 2s;
+        }
+        #bossEyes.active { opacity: 1; }
+        .boss-eye {
+            width: 30px; height: 10px; background: transparent; border-radius: 50%;
+            border-top: 5px solid #ff0055; box-shadow: 0 -10px 15px -5px #ff0000;
+        }
+        .boss-eye:nth-child(1) { transform: rotate(-15deg); }
+        .boss-eye:nth-child(2) { transform: rotate(15deg); }
+
+        /* GÜLÜMSEME */
+        #bossSmile {
+            width: 10px; height: 5px;
+            background: transparent; border-radius: 50%;
+            opacity: 0; transition: all 5s cubic-bezier(0.25, 0.1, 0.25, 1.5);
+            border: 0px solid transparent;
+        }
+        #bossSmile.active {
+            opacity: 1; width: 120px; height: 40px;
+            border-radius: 10px 10px 100px 100px; 
+            background: transparent; box-shadow: 0 15px 15px -15px #ff0000;
+            border-bottom: 7px solid #ff0055; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Şekilsizleştirici SVG Filtresi -->
+    <svg style="position: absolute; width: 0; height: 0;">
+        <defs>
+            <filter id="wobbly">
+                <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="35" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- Başlangıç Ekranı -->
+    <div id="bootScreen">
+        <button id="bootBtn">SİNYALİ KABUL ET</button>
+    </div>
+
+    <!-- Sinematik Aşama Elementleri -->
+    <div id="bossEntity"></div>
+    
+    <div id="dialogueContainer">
+        <div><span id="dialogueText"></span><span class="cursor"></span></div>
+    </div>
+    
+    <button id="fightBtn">MÜDAHALE ET</button>
+
+    <!-- Arena (Oyun) Aşaması -->
+    <div id="arenaContainer">
+        <div id="bossUI">
+            <div class="glitch-text" data-text="⍀⍀⏃⊑">⍀⍀⏃⊑</div>
+            <div id="bossHealthContainer">
+                <div id="bossHealthBar"></div>
+            </div>
+        </div>
+
+        <canvas id="arenaCanvas"></canvas>
+        <div id="trueBoss">
+            <div id="bossEyes">
+                <div class="boss-eye"></div>
+                <div class="boss-eye"></div>
+            </div>
+            <div id="bossSmile"></div>
+        </div>
+    </div>
+
+    <script>
+        const bootScreen = document.getElementById('bootScreen');
+        const bootBtn = document.getElementById('bootBtn');
+        const dialogueContainer = document.getElementById('dialogueContainer');
+        const dialogueTextElement = document.getElementById('dialogueText');
+        const fightBtn = document.getElementById('fightBtn');
+        const bossEntityNormal = document.getElementById('bossEntity');
+        
+        const arenaContainer = document.getElementById('arenaContainer');
+        const canvas = document.getElementById('arenaCanvas');
+        const ctx = canvas.getContext('2d');
+        const trueBossEl = document.getElementById('trueBoss');
+        const bossSmile = document.getElementById('bossSmile');
+        const bossEyes = document.getElementById('bossEyes');
+        
+        const bossUI = document.getElementById('bossUI');
+        const bossHealthBar = document.getElementById('bossHealthBar');
+
+        let audioCtx;
+        let idleSoundInterval;
+        let continuousLaughInterval;
+
+        const alienDialogues = [
+            "⍙⟒ ⊑⏃⎐⟒ ⍙⏃⏁☊⊑⟒⎅ ⊬⍜⎍⍀ ⌇⏁⍀⎍☌☌⌰⟒...",
+            "⏁⊑⟒ ☊⊑⏃⍜⌇ ⍙⏃⌇ ⋏⍜⏁ ⏃ ⏁⟒⌇⏁.",
+            "⌿⍀⟒⌿⏃⍀⟒ ⏁⍜ ⏚⟒ ☊⍜⋏⌇⎍⋈⟒⎅."
+        ];
+
+        let currentLine = 0;
+        let isTyping = false;
+
+        // --- SES MOTORU FONKSİYONLARI ---
+        function playBossSyllable() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            const isLaugh = Math.random() > 0.5;
+            osc.type = isLaugh ? 'sawtooth' : 'triangle';
+            const duration = 0.05 + Math.random() * 0.1;
+            const baseFreq = 80 + Math.random() * 150; 
+            osc.frequency.setValueAtTime(baseFreq, now);
+
+            if (isLaugh) { osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.5, now + duration); } 
+            else { osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.4, now + duration); }
+
+            const lfo = audioCtx.createOscillator();
+            lfo.type = 'sine'; lfo.frequency.value = 8 + Math.random() * 15; 
+            const lfoGain = audioCtx.createGain(); lfoGain.gain.value = baseFreq * 0.3; 
+            lfo.connect(lfoGain); lfoGain.connect(osc.frequency); lfo.start(now); lfo.stop(now + duration);
+
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.08, now + duration * 0.2); 
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+            osc.start(now); osc.stop(now + duration);
+        }
+
+        function playMassiveGlitchDistortion() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(10, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.5);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1);
+            osc.start(now); osc.stop(now + 1);
+        }
+
+        function playManiacalGlitchLaugh() {
+            if (!audioCtx) return;
+            const duration = 15.0; 
+            const now = audioCtx.currentTime;
+
+            for (let i = 0; i < 90; i++) {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                let start = now + Math.random() * duration;
+                let len = 0.1 + Math.random() * 0.5;
+                let freq = 200 + Math.random() * 900; 
+                
+                osc.frequency.setValueAtTime(freq, start);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.8, start + len/2);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.4, start + len);
+
+                let lfo = audioCtx.createOscillator();
+                lfo.type = 'square'; lfo.frequency.value = 25 + Math.random() * 60;
+                let lfoGain = audioCtx.createGain(); lfoGain.gain.value = freq * 0.6;
+                lfo.connect(lfoGain); lfoGain.connect(osc.frequency); lfo.start(start); lfo.stop(start + len);
+
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(0.12, start + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, start + len);
+
+                osc.start(start); osc.stop(start + len);
+            }
+        }
+
+        function playShootSound() {
+            if(!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(1000 + Math.random()*500, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        }
+
+        function playDeflectSound() {
+            if(!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(2000, now + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        }
+
+        function playDamageSound() {
+            if(!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        }
+
+        // --- SİNEMATİK AŞAMA (Başlangıç) ---
+
+        bootBtn.addEventListener('click', () => {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            bootScreen.style.opacity = '0';
+            setTimeout(() => {
+                bootScreen.style.display = 'none';
+                
+                // Sinematik Boss ve Diyalog'u göster
+                bossEntityNormal.style.opacity = '1';
+                dialogueContainer.style.opacity = '1';
+                
+                setTimeout(typeNextLine, 1000); 
+            }, 1000);
+        });
+
+        function typeNextLine() {
+            if (currentLine >= alienDialogues.length) {
+                setTimeout(() => { fightBtn.style.display = 'block'; }, 1000);
+                return;
+            }
+
+            isTyping = true;
+            dialogueTextElement.innerText = "";
+            let textToType = alienDialogues[currentLine];
+            let charIndex = 0;
+
+            function typeChar() {
+                if (charIndex < textToType.length) {
+                    const char = textToType.charAt(charIndex);
+                    dialogueTextElement.innerText += char;
+                    if (char !== " ") playBossSyllable();
+                    
+                    charIndex++;
+                    let typeSpeed = 50 + Math.random() * 100;
+                    if (char === "." || char === "?" || char === "!") typeSpeed += 400;
+                    setTimeout(typeChar, typeSpeed);
+                } else {
+                    isTyping = false;
+                    currentLine++;
+                    setTimeout(typeNextLine, 2000); 
+                }
+            }
+            typeChar();
+        }
+
+        // --- ARENA & BOSS SAVAŞI AŞAMASI ---
+
+        let player = { x: -100, y: -100, hitRadius: 5, grazeRadius: 25, visualRadius: 15 }; 
+        let mouseX = -100, mouseY = -100; 
+
+        let bossData = {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+            radius: 100, 
+            maxHp: 3000,
+            hp: 0, 
+            state: 'idle', 
+            phase: 1, 
+            intimidationTimer: 0,
+            teleportCountdown: 0,
+            shootTimer: 0
+        };
+
+        let arenaActive = false;
+        let playerFrozen = false; 
+        let awakeningTriggered = false;
+        let frames = 0;
+        
+        let glitchProjectiles = [];
+        let whiteDeflectables = []; 
+        let screenTears = []; 
+        let particles = [];
+
+        // P TUŞU İLE TEST KISAYOLU (AŞAMA ATLAMA)
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'p' && arenaActive && bossData.state === 'combat') {
+                if (bossData.phase === 1) {
+                    applyBossDamage(bossData.hp - (bossData.maxHp / 2)); // Canı anında %50'ye çeker
+                } else if (bossData.phase === 2) {
+                    applyBossDamage(bossData.hp); // Bossu öldürür
+                }
+            }
+        });
+
+        // "MÜDAHALE ET" BUTONUNA BASINCA...
+        fightBtn.addEventListener('click', () => {
+            playMassiveGlitchDistortion();
+            document.body.classList.add('glitch-active');
+            
+            setTimeout(() => {
+                document.body.classList.remove('glitch-active');
+                
+                // Sinematik öğeleri kaldır
+                bossEntityNormal.style.display = 'none'; 
+                dialogueContainer.style.display = 'none';
+                fightBtn.style.display = 'none';
+                
+                // Fareyi gizlemek için sınıf ekle
+                document.body.classList.add('arena-mode');
+                document.body.style.backgroundColor = "#050000";
+                
+                startArenaPhase();
+            }, 500);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!arenaActive || playerFrozen) return; 
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function startArenaPhase() {
+            arenaActive = true;
+            arenaContainer.style.display = 'block';
+            trueBossEl.style.display = 'flex'; // Gerçek şekilsiz boss görünür olur
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 150;
+            mouseX = player.x;
+            mouseY = player.y;
+
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+            
+            idleSoundInterval = setInterval(() => {
+                if(Math.random() < 0.4) playBossSyllable();
+            }, 800);
+
+            animateArena();
+        }
+
+        // --- UYANIŞ MEKANİĞİ ---
+        function triggerBossAwakening() {
+            if (awakeningTriggered) return;
+            awakeningTriggered = true;
+            bossData.state = 'awakening';
+            playerFrozen = true; 
+
+            clearInterval(idleSoundInterval);
+            bossSmile.classList.add('active');
+            document.body.style.backgroundColor = "#2a0005";
+            playManiacalGlitchLaugh();
+
+            setTimeout(() => {
+                bossData.state = 'filling_hp';
+                bossUI.style.display = 'block';
+                
+                let fillInterval = setInterval(() => {
+                    bossData.hp += 60;
+                    bossHealthBar.style.width = (bossData.hp / bossData.maxHp * 100) + '%';
+                    
+                    if(bossData.hp >= bossData.maxHp) {
+                        clearInterval(fillInterval);
+                        startBossIntimidation();
+                    }
+                }, 40); 
+                
+            }, 5000); 
+        }
+
+        // --- GÖZDAĞI (Intimidation) EVRESİ - 6 Saniye ---
+        function startBossIntimidation() {
+            bossData.state = 'intimidation';
+            playerFrozen = false; 
+            document.body.style.backgroundColor = "#020000";
+            
+            bossData.intimidationTimer = 360; 
+            bossData.teleportCountdown = 10; 
+        }
+
+        // --- SAVAŞ MEKANİĞİ ---
+        function startBossCombat() {
+            bossData.state = 'combat';
+            bossData.teleportCountdown = 60 + Math.floor(Math.random() * 300); 
+        }
+
+        // --- 2. FAZ GEÇİŞİ ---
+        function triggerPhase2() {
+            if(bossData.phase === 2) return;
+            bossData.phase = 2;
+            bossData.state = 'transitioning';
+            playerFrozen = true; 
+
+            // Boss Merkeze Işınlanır
+            bossData.x = canvas.width / 2;
+            bossData.y = canvas.height / 2;
+            trueBossEl.style.left = bossData.x + 'px';
+            trueBossEl.style.top = bossData.y + 'px';
+
+            // Renkler tersine döner ve gözler çıkar
+            document.body.classList.add('phase2-active');
+            bossEyes.classList.add('active');
+
+            playManiacalGlitchLaugh();
+            
+            continuousLaughInterval = setInterval(() => {
+                playManiacalGlitchLaugh();
+            }, 12000);
+
+            setTimeout(() => {
+                bossData.state = 'combat';
+                playerFrozen = false;
+            }, 3000);
+        }
+
+        function teleportBoss(avoidPlayer = false) {
+            document.body.classList.add('glitch-active');
+            playMassiveGlitchDistortion(); 
+            
+            setTimeout(() => {
+                document.body.classList.remove('glitch-active');
+                
+                let newX, newY;
+                if (avoidPlayer) {
+                    let dist;
+                    do {
+                        newX = 150 + Math.random() * (canvas.width - 300);
+                        newY = 150 + Math.random() * (canvas.height - 300);
+                        dist = Math.hypot(player.x - newX, player.y - newY);
+                    } while (dist < 400); 
+                } else {
+                    newX = 150 + Math.random() * (canvas.width - 300);
+                    newY = 150 + Math.random() * (canvas.height - 300);
+                }
+
+                bossData.x = newX;
+                bossData.y = newY;
+                trueBossEl.style.left = bossData.x + 'px';
+                trueBossEl.style.top = bossData.y + 'px';
+            }, 80);
+        }
+
+        // --- MERMİLER ---
+        class GlitchProjectile {
+            constructor(x, y, tx, ty) {
+                this.x = x; this.y = y;
+                let angle = Math.atan2(ty - y, tx - x) + (Math.random()-0.5)*0.2; 
+                let speed = 7 + Math.random() * 5;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.size = 8 + Math.random() * 10; 
+                this.colors = ['#ff0055', '#00f7ff', '#ffffff'];
+                this.grazed = false; 
+                this.life = 60 + Math.random() * 100; 
+            }
+            update() {
+                this.life--;
+                if(this.life < 30) this.size *= 0.90; 
+
+                this.x += this.vx + (Math.random()-0.5)*5; 
+                this.y += this.vy + (Math.random()-0.5)*5;
+                ctx.fillStyle = this.colors[Math.floor(Math.random()*this.colors.length)];
+                ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+            }
+        }
+
+        function shootGlitchProjectiles() {
+            playShootSound();
+            let count = 1 + Math.floor(Math.random()*2); 
+            for(let i=0; i<count; i++) {
+                glitchProjectiles.push(new GlitchProjectile(bossData.x, bossData.y, player.x, player.y));
+            }
+        }
+
+        // --- 2. FAZ YIRTILMA DUVARLARI (GEÇİLEMEZ ENGELLER) ---
+        class ScreenTear {
+            constructor() {
+                this.isVertical = Math.random() > 0.5;
+                if(this.isVertical) {
+                    this.x = 100 + Math.random() * (canvas.width - 200);
+                    this.y = 0;
+                    this.w = 30 + Math.random() * 20;
+                    this.h = canvas.height;
+                } else {
+                    this.x = 0;
+                    this.y = 100 + Math.random() * (canvas.height - 200);
+                    this.w = canvas.width;
+                    this.h = 30 + Math.random() * 20;
+                }
+                this.timer = 300; // Ekranda 5 saniye kalır
+                this.warningTime = 60; // İlk 1 saniye uyarı şeffaflığı
+            }
+            update() {
+                this.timer--;
+                let isSolid = this.timer < (300 - this.warningTime);
+
+                if(!isSolid) {
+                    // Saydam uyarı
+                    ctx.fillStyle = (Math.floor(this.timer / 4) % 2 === 0) ? 'rgba(255, 0, 85, 0.4)' : 'rgba(0, 247, 255, 0.4)';
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                } else {
+                    // Katı Yırtık Duvarı
+                    ctx.fillStyle = (Math.floor(this.timer / 2) % 2 === 0) ? '#ffffff' : '#000000';
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                    
+                    ctx.fillStyle = (Math.floor(this.timer / 3) % 2 === 0) ? '#ff0055' : '#00f7ff';
+                    ctx.fillRect(this.x + (Math.random()-0.5)*10, this.y + (Math.random()-0.5)*10, this.w, this.h);
+                }
+            }
+        }
+
+        // --- BEYAZ GLITCH (YANSITILABİLİR HASAR MEKANİĞİ) ---
+        class DeflectableGlitch {
+            constructor() {
+                this.x = 100 + Math.random() * (canvas.width - 200);
+                this.y = 100 + Math.random() * (canvas.height - 200);
+                this.size = 18;
+                this.deflected = false;
+                this.vx = (Math.random() - 0.5) * 3; 
+                this.vy = (Math.random() - 0.5) * 3;
+                this.life = 600; 
+            }
+            update() {
+                this.life--;
+                this.x += this.vx; this.y += this.vy;
+                
+                ctx.fillStyle = this.deflected ? '#ff0055' : '#ffffff';
+                ctx.shadowBlur = 20; ctx.shadowColor = ctx.fillStyle;
+                ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+                ctx.shadowBlur = 0;
+
+                if (!this.deflected) {
+                    let distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
+                    if (distToPlayer < player.visualRadius + this.size) {
+                        this.deflected = true;
+                        let angle = Math.atan2(this.y - player.y, this.x - player.x);
+                        this.vx = Math.cos(angle) * 18; 
+                        this.vy = Math.sin(angle) * 18;
+                        playDeflectSound(); 
+                    }
+                } else {
+                    let distToBoss = Math.hypot(bossData.x - this.x, bossData.y - this.y);
+                    if (distToBoss < bossData.radius + this.size) {
+                        applyBossDamage(250);
+                        for(let i=0; i<20; i++){
+                            particles.push({
+                                x: this.x, y: this.y, 
+                                vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
+                                life: 1.0, color: '#ffffff'
+                            });
+                        }
+                        this.life = 0; 
+                    }
+                }
+            }
+        }
+
+        function createExplosion(x, y, color, count=12) {
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x: x, y: y, 
+                    vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
+                    life: 1.0 + Math.random(), color: color
+                });
+            }
+        }
+
+        // --- HASAR VE ÖLÜM YÖNETİMİ ---
+        function applyBossDamage(amount) {
+            if(bossData.state === 'dead' || bossData.state === 'transitioning') return;
+            
+            bossData.hp -= amount;
+            bossHealthBar.style.width = Math.max(0, (bossData.hp / bossData.maxHp * 100)) + '%';
+            playDamageSound();
+
+            if (bossData.hp <= bossData.maxHp / 2 && bossData.phase === 1) {
+                triggerPhase2();
+            }
+
+            if(bossData.hp <= 0 && bossData.state !== 'dead') {
+                triggerBossDeath();
+            }
+        }
+
+        function triggerDeath() {
+            arenaActive = false;
+            document.body.classList.add('glitch-active');
+            playMassiveGlitchDistortion();
+            setTimeout(() => { location.reload(); }, 2000);
+        }
+
+        function triggerBossDeath() {
+            bossData.state = 'dead';
+            arenaActive = false;
+            clearInterval(continuousLaughInterval);
+            clearInterval(idleSoundInterval);
+            
+            trueBossEl.style.animation = 'bossTremble 0.02s infinite alternate';
+            trueBossEl.style.filter = 'url(#wobbly) drop-shadow(0 0 100px #fff)';
+            
+            playManiacalGlitchLaugh(); 
+            document.body.classList.add('shatter-active'); // Ekran Parçalanma Animasyonu
+            
+            setTimeout(() => {
+                trueBossEl.style.display = 'none';
+                createExplosion(bossData.x, bossData.y, '#ffffff', 100);
+                playMassiveGlitchDistortion();
+            }, 2000);
+
+            setTimeout(() => {
+                document.body.innerHTML = "<h1 style='color:white; text-align:center; font-family:Courier; margin-top:40vh;'>SİSTEM TEMİZLENDİ. BAĞLANTI KESİLİYOR...</h1>";
+                setTimeout(() => location.reload(), 4000);
+            }, 3000);
+        }
+
+
+        // --- ANA DÖNGÜ ---
+        function animateArena() {
+            if (!arenaActive) return;
+            requestAnimationFrame(animateArena);
+            frames++;
+
+            // OYUNCU HAREKETİNİ FİZYOLOJİK HESAPLA (Duvar Çarpışmaları İçin)
+            player.x = mouseX;
+            player.y = mouseY;
+
+            // YIRTILMA DUVARLARI (GEÇİŞ ENGELİ) KONTROLÜ
+            for (let tear of screenTears) {
+                if (tear.timer < (300 - tear.warningTime)) { // Uyarı süresi bittiyse duvar katılaşır
+                    let px = player.x;
+                    let py = player.y;
+                    let pr = player.hitRadius + 3; // Çarpışma tamponu
+
+                    // Oyuncuyu dikdörtgene doğru kelepçele (AABB vs Circle collision)
+                    let testX = px;
+                    let testY = py;
+
+                    if (px < tear.x) testX = tear.x;
+                    else if (px > tear.x + tear.w) testX = tear.x + tear.w;
+                    
+                    if (py < tear.y) testY = tear.y;
+                    else if (py > tear.y + tear.h) testY = tear.y + tear.h;
+
+                    let distX = px - testX;
+                    let distY = py - testY;
+                    let distance = Math.sqrt((distX*distX) + (distY*distY));
+
+                    // Eğer duvarın içindeyse geri it
+                    if (distance <= pr) {
+                        if (tear.isVertical) {
+                            if (px < tear.x + tear.w/2) player.x = tear.x - pr;
+                            else player.x = tear.x + tear.w + pr;
+                        } else {
+                            if (py < tear.y + tear.h/2) player.y = tear.y - pr;
+                            else player.y = tear.y + tear.h + pr;
+                        }
+                    }
+                }
+            }
+
+            ctx.fillStyle = bossData.phase === 2 ? 'rgba(0, 5, 10, 0.3)' : 'rgba(5, 0, 2, 0.3)'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 1. UYANIŞ ÇARPIŞMASI
+            if (bossData.state === 'idle' && !awakeningTriggered) {
+                const dist = Math.hypot(player.x - bossData.x, player.y - bossData.y);
+                if (dist < player.hitRadius + bossData.radius) {
+                    triggerBossAwakening();
+                }
+            }
+
+            // 2. GÖZDAĞI (Intimidation) MANTIĞI
+            if (bossData.state === 'intimidation') {
+                bossData.intimidationTimer--;
+                bossData.teleportCountdown--;
+
+                if (bossData.teleportCountdown <= 0) {
+                    teleportBoss(true); 
+                    bossData.teleportCountdown = 30 + Math.floor(Math.random() * 30); 
+                }
+
+                if (bossData.intimidationTimer <= 0) {
+                    startBossCombat();
+                }
+            }
+
+            // 3. BOSS SAVAŞ MANTIĞI
+            if (bossData.state === 'combat') {
+                bossData.teleportCountdown--;
+                bossData.shootTimer++;
+
+                if (bossData.teleportCountdown <= 0) {
+                    teleportBoss(false); 
+                    bossData.teleportCountdown = 60 + Math.floor(Math.random() * 300); 
+                }
+
+                if (bossData.shootTimer > 80) { 
+                    shootGlitchProjectiles();
+                    bossData.shootTimer = 0;
+                }
+
+                if (frames % 120 === 0 && whiteDeflectables.length < 3) { 
+                    whiteDeflectables.push(new DeflectableGlitch());
+                }
+
+                // Faz 2 Duvar Yırtılmaları
+                if (bossData.phase === 2) {
+                    if (frames % 150 === 0) { // 2.5 Saniyede bir duvar çıkar
+                        screenTears.push(new ScreenTear());
+                    }
+                }
+            }
+
+            // 2. FAZ YIRTILMA DUVARLARININ GÖRSEL GÜNCELLEMESİ
+            for (let i = screenTears.length - 1; i >= 0; i--) {
+                screenTears[i].update();
+                if (screenTears[i].timer <= 0) {
+                    screenTears.splice(i, 1);
+                }
+            }
+
+            // YANSITILABİLİR GLITCHLER
+            for (let i = whiteDeflectables.length - 1; i >= 0; i--) {
+                whiteDeflectables[i].update();
+                if (whiteDeflectables[i].life <= 0 || 
+                    whiteDeflectables[i].x < -50 || whiteDeflectables[i].x > canvas.width+50 || 
+                    whiteDeflectables[i].y < -50 || whiteDeflectables[i].y > canvas.height+50) {
+                    whiteDeflectables.splice(i, 1);
+                }
+            }
+
+            // PARTİKÜLLER
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+
+            // MERMİLER
+            for (let i = glitchProjectiles.length - 1; i >= 0; i--) {
+                let p = glitchProjectiles[i];
+                p.update();
+
+                if(p.life <= 0) {
+                    glitchProjectiles.splice(i, 1);
+                    continue;
+                }
+
+                let distToPlayer = Math.hypot(player.x - p.x, player.y - p.y);
+
+                if (distToPlayer < player.hitRadius + p.size/2) {
+                    triggerDeath();
+                    return;
+                }
+
+                if (!p.grazed && distToPlayer < player.grazeRadius + p.size/2) {
+                    p.grazed = true;
+                    ctx.beginPath(); ctx.arc(player.x, player.y, player.grazeRadius, 0, Math.PI*2);
+                    ctx.strokeStyle = '#00f7ff'; ctx.lineWidth = 2; ctx.stroke();
+                    applyBossDamage(20);
+                }
+
+                if (p.x < -100 || p.x > canvas.width+100 || p.y < -100 || p.y > canvas.height+100) {
+                    glitchProjectiles.splice(i, 1);
+                }
+            }
+
+            // OYUNCU ÇİZİMİ
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.grazeRadius, 0, Math.PI * 2);
+            ctx.fillStyle = bossData.phase === 2 ? 'rgba(0, 247, 255, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.hitRadius, 0, Math.PI * 2);
+            ctx.fillStyle = playerFrozen ? '#ff0055' : '#fff'; 
+            ctx.shadowBlur = playerFrozen ? 30 : 15;
+            ctx.shadowColor = playerFrozen ? '#ff0055' : '#fff';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+    </script>
+</body>
+</html>
