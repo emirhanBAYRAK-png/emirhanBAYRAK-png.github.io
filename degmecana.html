@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEĞMECANA</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            color: #ddd;
+            user-select: none;
+            overflow: hidden;
+            background-image: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+        }
+        #oyunKonteyner {
+            position: relative;
+            width: 900px;
+            height: 700px;
+            box-shadow: 0 0 50px rgba(0,0,0,1), 0 0 15px rgba(52, 152, 219, 0.1);
+            border: 4px solid #111;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background-color: #1a2412; 
+            cursor: crosshair;
+        }
+        .arayuz {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 5, 5, 0.85);
+            z-index: 10;
+        }
+        .gizli { display: none !important; }
+        
+        .logo {
+            font-size: 80px;
+            font-weight: 900;
+            color: #2980b9;
+            text-shadow: 3px 3px 0px #000, -1px -1px 0px #85c1e9;
+            margin-bottom: 0px;
+            letter-spacing: 2px;
+        }
+        .alt-baslik {
+            font-size: 20px;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+        }
+        .bilgi {
+            font-size: 16px;
+            text-align: center;
+            line-height: 1.8;
+            margin-bottom: 45px;
+            color: #ccc;
+            background: rgba(20, 20, 20, 0.9);
+            padding: 20px 40px;
+            border-radius: 5px;
+            border-left: 4px solid #2980b9;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        .basla-btn {
+            padding: 15px 50px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            background: #8e44ad;
+            border: 2px solid #fff;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #5b2c6f, 0 10px 20px rgba(0,0,0,0.5);
+            transition: 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .basla-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #5b2c6f, 0 15px 25px rgba(0,0,0,0.6);
+            background: #9b59b6;
+        }
+        .basla-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 #5b2c6f;
+        }
+        #skorTablosu {
+            position: absolute;
+            top: 15px; left: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #f1c40f;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 5;
+        }
+        #canTablosu {
+            position: absolute;
+            top: 55px; left: 20px;
+            font-size: 24px;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="oyunKonteyner">
+        <div id="skorTablosu" class="gizli">SKOR: <span id="oyunSkor">0</span></div>
+        <div id="canTablosu" class="gizli">💧</div>
+
+        <div id="baslangicEkrani" class="arayuz">
+            <h1 class="logo">DEĞMECANA</h1>
+            <div class="alt-baslik">Pompalı Sebil Mücadelesi</div>
+            
+            <div class="bilgi">
+                <strong>[W, A, S, D]</strong> Hareket | <strong>[SOL TIK]</strong> Pompalı<br><br>
+                Ormanın derinliklerinde, suyunu çalmak isteyen insanlar var.<br>
+                Sadece bir damacanasın. <strong>DEĞDİKLERİ AN BİTERSİN.</strong><br>
+                <em>Gerçekçi manevralara, deparlara ve devasa düşmanlara hazırlıklı ol.</em>
+            </div>
+            
+            <button class="basla-btn" onclick="oyunuBaslat()">HAYATTA KAL</button>
+        </div>
+
+        <div id="oyunSonuEkrani" class="arayuz gizli">
+            <h1 class="logo" style="color: #c0392b;">DEĞDİLER!</h1>
+            <div class="alt-baslik">Sebil Devrildi.</div>
+            
+            <div class="bilgi">
+                Kaçınılmaz son geldi.<br>
+                Elde Edilen Skor: <strong id="sonPuan" style="font-size: 28px; color: #f1c40f;">0</strong>
+            </div>
+            
+            <button class="basla-btn" style="background:#c0392b; border-color:#fff;" onclick="oyunuBaslat()">YENİDEN DOLDUR</button>
+        </div>
+
+        <canvas id="oyunAlani" width="900" height="700"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('oyunAlani');
+        const ctx = canvas.getContext('2d');
+        
+        const baslangicEkrani = document.getElementById('baslangicEkrani');
+        const oyunSonuEkrani = document.getElementById('oyunSonuEkrani');
+        const skorTablosu = document.getElementById('skorTablosu');
+        const canTablosu = document.getElementById('canTablosu');
+        const oyunSkorMetni = document.getElementById('oyunSkor');
+        const sonPuanMetni = document.getElementById('sonPuan');
+
+        let oyunDurumu = 'MENÜ'; 
+        let puan = 0;
+        let sonZaman = 0;
+        let firlatmaZamanlayici = 0;
+        let zorlukCarpani = 1;
+
+        const tuslar = { w: false, a: false, s: false, d: false };
+        const fare = { x: 450, y: 350 };
+
+        // --- SES MOTORU (Web Audio API) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let sesContext;
+
+        function sesBaslat() {
+            if (!sesContext) sesContext = new AudioContext();
+            if (sesContext.state === 'suspended') sesContext.resume();
+        }
+
+        function atesSesiPlay() {
+            if (!sesContext) return;
+            // Pompalı patlama sesi (White Noise + Low Frequency sweep)
+            let osc = sesContext.createOscillator();
+            let gain = sesContext.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, sesContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, sesContext.currentTime + 0.15);
+            
+            gain.gain.setValueAtTime(0.6, sesContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, sesContext.currentTime + 0.2);
+            
+            osc.connect(gain);
+            gain.connect(sesContext.destination);
+            osc.start();
+            osc.stop(sesContext.currentTime + 0.2);
+
+            // Gürültü (Noise)
+            let bufferSize = sesContext.sampleRate * 0.25;
+            let buffer = sesContext.createBuffer(1, bufferSize, sesContext.sampleRate);
+            let data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            
+            let noise = sesContext.createBufferSource();
+            noise.buffer = buffer;
+            let noiseGain = sesContext.createGain();
+            noiseGain.gain.setValueAtTime(1, sesContext.currentTime);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, sesContext.currentTime + 0.25);
+            
+            noise.connect(noiseGain);
+            noiseGain.connect(sesContext.destination);
+            noise.start();
+        }
+
+        function vurusSesiPlay() {
+            if (!sesContext) return;
+            // Et parçalanma / Vuruş tok sesi
+            let osc = sesContext.createOscillator();
+            let gain = sesContext.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(100, sesContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, sesContext.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.8, sesContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, sesContext.currentTime + 0.1);
+            
+            osc.connect(gain);
+            gain.connect(sesContext.destination);
+            osc.start();
+            osc.stop(sesContext.currentTime + 0.1);
+        }
+
+        // Renk koyulaştırma/açma fonksiyonu (Gölgelendirme için)
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+            R = (R<255)?R:255;  G = (G<255)?G:255;  B = (B<255)?B:255;
+            R = (R>0)?R:0;      G = (G>0)?G:0;      B = (B>0)?B:0;
+            let RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+            let GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+            let BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+            return "#"+RR+GG+BB;
+        }
+
+        // --- DEĞMECANA ---
+        const oyuncu = {
+            x: 450, y: 350,
+            hiz: 4.8,
+            can: 1, // SİSTEM: Artık tek yiyor
+            maxCan: 1,
+            atesBekleme: 0,
+            yaricap: 18
+        };
+
+        let elemanlar = [];
+        let parcaliklar = []; 
+        let mermiler = [];
+
+        // Doğal Çalı Koordinatları
+        const calilar = [
+            { x: 120, y: 160, parcalar: [{x:0,y:0,r:55}, {x:-25,y:15,r:45}, {x:30,y:20,r:50}] },
+            { x: 780, y: 140, parcalar: [{x:0,y:0,r:60}, {x:-30,y:-10,r:45}, {x:25,y:25,r:50}] },
+            { x: 450, y: 100, parcalar: [{x:0,y:0,r:65}, {x:-40,y:15,r:50}, {x:40,y:-15,r:45}] },
+            { x: 150, y: 580, parcalar: [{x:0,y:0,r:55}, {x:-20,y:-20,r:40}, {x:35,y:10,r:50}] },
+            { x: 750, y: 550, parcalar: [{x:0,y:0,r:70}, {x:-25,y:30,r:55}, {x:35,y:-20,r:45}] }
+        ];
+
+        // Vurulma Parçacıkları (Et ve Kan)
+        class Parcacik {
+            constructor(x, y, renk, hizCarpani = 1, yonAcisi = null) {
+                this.x = x; this.y = y;
+                
+                // Merminin geldiği yöne doğru kan fışkırması
+                let aci;
+                if (yonAcisi !== null) {
+                    aci = yonAcisi + (Math.random() - 0.5) * (Math.PI / 1.5); // Ön koniye dağılır
+                } else {
+                    aci = Math.random() * Math.PI * 2;
+                }
+
+                const hiz = (Math.random() * 8 + 2) * hizCarpani; 
+                this.hizX = Math.cos(aci) * hiz;
+                this.hizY = Math.sin(aci) * hiz;
+                this.omur = 1.0;
+                this.azalmaSpeed = Math.random() * 0.02 + 0.01;
+                this.renk = renk; 
+                this.boyut = Math.random() * 6 + 2; 
+                this.yerdeMi = false;
+            }
+            guncelle() {
+                if(!this.yerdeMi) {
+                    this.x += this.hizX; this.y += this.hizY;
+                    this.hizX *= 0.85; this.hizY *= 0.85; 
+                    if(Math.abs(this.hizX) < 0.1 && Math.abs(this.hizY) < 0.1) {
+                        this.yerdeMi = true; // Kan yere yapışır
+                        this.azalmaSpeed = 0.002; // Yerde çok yavaş silinir
+                    }
+                }
+                this.omur -= this.azalmaSpeed; 
+            }
+            ciz() {
+                if (this.omur <= 0) return;
+                ctx.globalAlpha = Math.max(0, this.omur);
+                ctx.fillStyle = this.renk;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.boyut/2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        class Sacma {
+            constructor(x, y, aci) {
+                this.x = x; this.y = y;
+                this.hiz = 26; 
+                this.hizX = Math.cos(aci) * this.hiz;
+                this.hizY = Math.sin(aci) * this.hiz;
+                this.omur = 15; 
+            }
+            guncelle() {
+                this.x += this.hizX; this.y += this.hizY;
+                this.omur--;
+            }
+            ciz() {
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - this.hizX*0.3, this.y - this.hizY*0.3);
+                ctx.stroke();
+            }
+        }
+
+        // --- GERÇEKÇİ ÇIPLAK İNSAN ANATOMİSİ ---
+        class Eleman {
+            constructor(x, y, isBoss = false) {
+                this.x = x; this.y = y;
+                this.aktif = true;
+                this.animZaman = Math.random() * 100;
+                
+                // BOSS SİSTEMİ
+                this.isBoss = isBoss;
+                this.can = this.isBoss ? 3 : 1;
+                
+                const tenRenkleri = ['#f8d9c8', '#f2c2a1', '#e0ac69', '#c68642', '#8d5524', '#4a3320', '#3b2211'];
+                this.renk = tenRenkleri[Math.floor(Math.random() * tenRenkleri.length)];
+                
+                if (this.isBoss) {
+                    // Bosslar biraz daha kızarık/koyu ve devasa olur
+                    this.renk = shadeColor(this.renk, -20);
+                }
+                this.golgeRenk = shadeColor(this.renk, -30); 
+                
+                const sacRenkleri = ['#111', '#4a3320', '#d4af37', '#8b4513', 'kel', 'kel', 'kel'];
+                this.sacRengi = sacRenkleri[Math.floor(Math.random() * sacRenkleri.length)];
+
+                // Vücut Oranları (Boss ise kalıp x2)
+                let baseKalip = Math.random() * 0.4 + 0.8;
+                this.kalip = this.isBoss ? (baseKalip * 2) : baseKalip;
+                this.omuzGenisligi = (Math.random() * 6 + 14) * this.kalip;
+                
+                this.aiTipi = Math.random() > 0.5 ? 1 : 0;
+                this.hedefAci = 0;
+            }
+
+            ciz() {
+                this.animZaman += this.isBoss ? 0.3 : 0.4; // Bosslar hafif ağır çekim koşar
+                
+                const adim = Math.sin(this.animZaman);
+                const solBacakY = adim * 15 * this.kalip;
+                const sagBacakY = -adim * 15 * this.kalip;
+                const solKolY = -adim * 16 * this.kalip;
+                const sagKolY = adim * 16 * this.kalip;
+                const omuzRotasyonu = Math.sin(this.animZaman) * 0.15;
+                const govdeYalpalama = Math.cos(this.animZaman) * (this.isBoss ? 3 : 2);
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                let bakisAcisi = Math.atan2(oyuncu.y - this.y, oyuncu.x - this.x);
+                ctx.rotate(bakisAcisi + Math.PI/2);
+                
+                ctx.scale(this.kalip, this.kalip);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                // Bacaklar
+                ctx.lineWidth = 10;
+                ctx.strokeStyle = shadeColor(this.renk, -10); 
+                ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-6, solBacakY + 5); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(6, sagBacakY + 5); ctx.stroke();
+
+                ctx.save();
+                ctx.rotate(omuzRotasyonu);
+                ctx.translate(0, govdeYalpalama);
+
+                // Kollar
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = this.renk;
+                ctx.beginPath(); 
+                ctx.moveTo(-this.omuzGenisligi, -2); 
+                ctx.quadraticCurveTo(-this.omuzGenisligi - 5, solKolY/2, -this.omuzGenisligi - 2, solKolY); 
+                ctx.stroke();
+                ctx.beginPath(); 
+                ctx.moveTo(this.omuzGenisligi, -2); 
+                ctx.quadraticCurveTo(this.omuzGenisligi + 5, sagKolY/2, this.omuzGenisligi + 2, sagKolY); 
+                ctx.stroke();
+
+                // Gövde
+                ctx.fillStyle = this.renk;
+                ctx.strokeStyle = this.golgeRenk;
+                ctx.lineWidth = 1.5;
+                
+                ctx.beginPath();
+                ctx.ellipse(0, -2, this.omuzGenisligi + 2, 8, 0, 0, Math.PI*2);
+                ctx.fill(); ctx.stroke();
+
+                ctx.beginPath();
+                ctx.ellipse(0, 4, 9, 6, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(0, -8); ctx.lineTo(0, 6);
+                ctx.stroke();
+                
+                ctx.beginPath(); ctx.arc(-6, -2, 4, 0, Math.PI); ctx.stroke();
+                ctx.beginPath(); ctx.arc(6, -2, 4, 0, Math.PI); ctx.stroke();
+
+                // Kafa
+                ctx.beginPath();
+                ctx.arc(0, -10, 7, 0, Math.PI*2);
+                ctx.fillStyle = this.renk;
+                ctx.fill();
+                ctx.stroke();
+
+                if(this.sacRengi !== 'kel') {
+                    ctx.fillStyle = this.sacRengi;
+                    ctx.beginPath();
+                    ctx.arc(0, -11, 7.5, Math.PI, 0); 
+                    ctx.fill();
+                }
+
+                // Boss Vuruş Hasarı Görseli (Eğer canı azalmışsa üstünde kan lekeleri çiz)
+                if (this.isBoss && this.can < 3) {
+                    ctx.fillStyle = 'rgba(139, 0, 0, 0.7)';
+                    ctx.beginPath(); ctx.arc(3, -4, 4, 0, Math.PI*2); ctx.fill();
+                    if (this.can < 2) {
+                        ctx.beginPath(); ctx.arc(-4, 2, 5, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+
+                ctx.restore(); 
+                ctx.restore(); 
+            }
+
+            guncelle() {
+                let dx = oyuncu.x - this.x;
+                let dy = oyuncu.y - this.y;
+                let dogrudanAci = Math.atan2(dy, dx);
+                
+                if (this.aiTipi === 1) { 
+                    let oyuncuyaMesafe = Math.sqrt(dx*dx + dy*dy);
+                    if(oyuncuyaMesafe > 150) {
+                        this.hedefAci = dogrudanAci + 0.6; 
+                    } else {
+                        this.hedefAci = dogrudanAci;
+                    }
+                } else {
+                    this.hedefAci = dogrudanAci;
+                }
+
+                // Bosslar biraz daha yavaş ama ivmeli gelir
+                let bossHizCarpan = this.isBoss ? 0.75 : 1.0;
+                const hizLimit = (2.4 + (zorlukCarpani * 0.9)) * bossHizCarpan; 
+                
+                this.x += Math.cos(this.hedefAci) * hizLimit;
+                this.y += Math.sin(this.hedefAci) * hizLimit;
+
+                const carpismaMesafe = Math.sqrt(dx * dx + dy * dy);
+                if (carpismaMesafe < oyuncu.yaricap + 14 * this.kalip) {
+                    this.aktif = false;
+                    
+                    oyuncu.can--;
+                    GuncelleUI();
+                    ekranSarsintisi(30); 
+                    
+                    for(let p=0; p<30; p++) {
+                        parcaliklar.push(new Parcacik(oyuncu.x, oyuncu.y, '#3498db', 2.0));
+                    }
+                    
+                    if (oyuncu.can <= 0) oyunBitti();
+                }
+            }
+        }
+
+        // --- GİRDİLER ---
+        window.addEventListener('keydown', (e) => {
+            if(e.key.toLowerCase() === 'w') tuslar.w = true;
+            if(e.key.toLowerCase() === 'a') tuslar.a = true;
+            if(e.key.toLowerCase() === 's') tuslar.s = true;
+            if(e.key.toLowerCase() === 'd') tuslar.d = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if(e.key.toLowerCase() === 'w') tuslar.w = false;
+            if(e.key.toLowerCase() === 'a') tuslar.a = false;
+            if(e.key.toLowerCase() === 's') tuslar.s = false;
+            if(e.key.toLowerCase() === 'd') tuslar.d = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            fare.x = e.clientX - rect.left;
+            fare.y = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            sesBaslat(); // Tıklanınca sesi hazırla
+            if (oyunDurumu !== 'OYUNDA') return;
+            if (oyuncu.atesBekleme <= 0) pompaliAtesle();
+        });
+
+        function pompaliAtesle() {
+            oyuncu.atesBekleme = 40; 
+            atesSesiPlay(); // Silah Sesi
+            
+            const dx = fare.x - oyuncu.x;
+            const dy = fare.y - oyuncu.y;
+            const anaAci = Math.atan2(dy, dx);
+
+            // Geri Tepme Artırıldı
+            const geriTepmeGucu = 18;
+            oyuncu.x -= Math.cos(anaAci) * geriTepmeGucu;
+            oyuncu.y -= Math.sin(anaAci) * geriTepmeGucu;
+
+            for(let i = -4; i <= 4; i += 1) {
+                const yayilimAcisi = anaAci + (i * 0.08); 
+                mermiler.push(new Sacma(
+                    oyuncu.x + Math.cos(anaAci) * 15, 
+                    oyuncu.y + Math.sin(anaAci) * 15, 
+                    yayilimAcisi
+                ));
+            }
+
+            for(let p=0; p<15; p++) {
+                let rnk = Math.random() > 0.5 ? '#e67e22' : '#f1c40f';
+                let ates = new Parcacik(oyuncu.x + Math.cos(anaAci)*25, oyuncu.y + Math.sin(anaAci)*25, rnk, 2.5, anaAci);
+                ates.omur = 0.3; 
+                parcaliklar.push(ates);
+            }
+            
+            ekranSarsintisi(18); 
+        }
+
+        let sarsintiMiktari = 0;
+        function ekranSarsintisi(miktar = 5) {
+            sarsintiMiktari = miktar;
+        }
+
+        // --- UI GÜNCELLEME ---
+        function GuncelleUI() {
+            oyunSkorMetni.innerText = puan;
+            let canString = "";
+            for(let i=0; i<oyuncu.can; i++) canString += "💧";
+            canTablosu.innerText = canString;
+        }
+
+        function oyuncuyuGuncelleVeCiz() {
+            if (tuslar.w && oyuncu.y > oyuncu.yaricap) oyuncu.y -= oyuncu.hiz;
+            if (tuslar.s && oyuncu.y < canvas.height - oyuncu.yaricap) oyuncu.y += oyuncu.hiz;
+            if (tuslar.a && oyuncu.x > oyuncu.yaricap) oyuncu.x -= oyuncu.hiz;
+            if (tuslar.d && oyuncu.x < canvas.width - oyuncu.yaricap) oyuncu.x += oyuncu.hiz;
+
+            if (oyuncu.atesBekleme > 0) oyuncu.atesBekleme--;
+
+            const dx = fare.x - oyuncu.x;
+            const dy = fare.y - oyuncu.y;
+            const aci = Math.atan2(dy, dx);
+
+            ctx.save();
+            ctx.translate(oyuncu.x, oyuncu.y);
+            
+            ctx.fillStyle = 'rgba(41, 128, 185, 0.95)';
+            ctx.beginPath();
+            ctx.arc(0, 0, oyuncu.yaricap, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#111';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.rotate(aci);
+
+            ctx.fillStyle = '#7f8c8d'; 
+            ctx.fillRect(8, -5, 30, 10); 
+            ctx.fillStyle = '#2c3e50'; 
+            ctx.fillRect(15, -6, 12, 12);
+            
+            ctx.fillStyle = '#ecf0f1';
+            ctx.beginPath();
+            ctx.arc(0, 0, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function calilariCiz() {
+            calilar.forEach(cali => {
+                cali.parcalar.forEach(p => {
+                    ctx.fillStyle = '#0f1a0a'; 
+                    ctx.beginPath();
+                    ctx.arc(cali.x + p.x + 3, cali.y + p.y + 4, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#1c2b12'; 
+                    ctx.beginPath();
+                    ctx.arc(cali.x + p.x, cali.y + p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+        }
+
+        function arayuzEkstralariCiz() {
+            if (oyuncu.atesBekleme > 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(oyuncu.x - 20, oyuncu.y + 25, 40, 5);
+                ctx.fillStyle = '#e74c3c'; 
+                const doluluk = 1 - (oyuncu.atesBekleme / 40);
+                ctx.fillRect(oyuncu.x - 20, oyuncu.y + 25, 40 * doluluk, 5);
+            }
+            
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(fare.x, fare.y, 15, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(fare.x-2, fare.y-2, 4, 4);
+        }
+
+        function carpismaKontrolleri() {
+            for (let i = mermiler.length - 1; i >= 0; i--) {
+                const m = mermiler[i];
+                let mermiYokOldu = false;
+                let mermiAcisi = Math.atan2(m.hizY, m.hizX); // Kanın fışkıracağı yön
+
+                for (let j = elemanlar.length - 1; j >= 0; j--) {
+                    const e = elemanlar[j];
+                    const mesafe = Math.sqrt((m.x - e.x)**2 + (m.y - e.y)**2);
+                    
+                    if (mesafe < e.omuzGenisligi + 5) { 
+                        vurusSesiPlay(); // Vuruş sesi oynat
+                        e.can--;
+
+                        // BOSS VEYA NORMAL FARK ETMEZ, KISMEN KAN ÇIKAR
+                        const parcaSayisi = e.can <= 0 ? (e.isBoss ? 80 : 40) : 15; 
+                        for(let p=0; p<parcaSayisi; p++) {
+                            let renk = Math.random() > 0.3 ? '#8b0000' : e.renk;
+                            if(Math.random() > 0.8) renk = '#5c0000'; 
+                            
+                            // Yönlü kan (Merminin itiş gücüyle dağılır)
+                            parcaliklar.push(new Parcacik(e.x, e.y, renk, 1.5, mermiAcisi)); 
+                        }
+
+                        if (e.can <= 0) {
+                            // ÖLDÜ
+                            elemanlar.splice(j, 1); 
+                            puan += e.isBoss ? 50 : 10; // Boss 50 puan
+                            zorlukCarpani = 1 + (puan / 400); 
+                            GuncelleUI();
+                            ekranSarsintisi(e.isBoss ? 12 : 5);
+                        } else {
+                            // BOSS VURULDU AMA ÖLMEDİ (Hafif geri tepme)
+                            e.x += m.hizX * 0.4;
+                            e.y += m.hizY * 0.4;
+                        }
+                        
+                        mermiYokOldu = true;
+                        break; 
+                    }
+                }
+                if (mermiYokOldu) mermiler.splice(i, 1);
+            }
+        }
+
+        function oyunuBaslat() {
+            oyunDurumu = 'OYUNDA';
+            puan = 0;
+            oyuncu.can = oyuncu.maxCan;
+            oyuncu.x = 450; oyuncu.y = 350;
+            zorlukCarpani = 1;
+            elemanlar = [];
+            parcaliklar = [];
+            mermiler = [];
+            
+            baslangicEkrani.classList.add('gizli');
+            oyunSonuEkrani.classList.add('gizli');
+            skorTablosu.classList.remove('gizli');
+            canTablosu.classList.remove('gizli');
+            
+            GuncelleUI();
+            
+            sonZaman = performance.now();
+            requestAnimationFrame(oyunDongusu);
+        }
+
+        function oyunBitti() {
+            oyunDurumu = 'BITTI';
+            sonPuanMetni.innerText = puan;
+            oyunSonuEkrani.classList.remove('gizli');
+            skorTablosu.classList.add('gizli');
+            canTablosu.classList.add('gizli');
+        }
+
+        function oyunDongusu(zaman) {
+            if (oyunDurumu !== 'OYUNDA') return;
+
+            const deltaZaman = zaman - sonZaman;
+            sonZaman = zaman;
+
+            ctx.save();
+            if (sarsintiMiktari > 0) {
+                ctx.translate((Math.random()-0.5)*sarsintiMiktari, (Math.random()-0.5)*sarsintiMiktari);
+                sarsintiMiktari *= 0.8; 
+                if (sarsintiMiktari < 0.1) sarsintiMiktari = 0;
+            }
+
+            ctx.fillStyle = '#1a2412';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            firlatmaZamanlayici += deltaZaman;
+            const cikisAraligi = Math.max(300, 1600 - (zorlukCarpani * 250)); 
+            if (firlatmaZamanlayici > cikisAraligi) {
+                const secilenCali = calilar[Math.floor(Math.random() * calilar.length)];
+                
+                // %4 Şans ile BOSS üretimi
+                let isBoss = Math.random() < 0.04;
+                elemanlar.push(new Eleman(secilenCali.x, secilenCali.y, isBoss));
+                
+                firlatmaZamanlayici = 0;
+            }
+
+            for (let i = parcaliklar.length - 1; i >= 0; i--) {
+                parcaliklar[i].guncelle();
+                parcaliklar[i].ciz();
+                if (parcaliklar[i].omur <= 0) parcaliklar.splice(i, 1);
+            }
+
+            mermiler.forEach(m => { m.guncelle(); m.ciz(); });
+            mermiler = mermiler.filter(m => m.omur > 0 && m.x > 0 && m.x < canvas.width && m.y > 0 && m.y < canvas.height);
+
+            elemanlar.forEach(eleman => { eleman.guncelle(); eleman.ciz(); });
+            
+            carpismaKontrolleri();
+
+            oyuncuyuGuncelleVeCiz();
+            calilariCiz();
+            arayuzEkstralariCiz();
+
+            ctx.restore(); 
+
+            requestAnimationFrame(oyunDongusu);
+        }
+    </script>
+</body>
+</html>
