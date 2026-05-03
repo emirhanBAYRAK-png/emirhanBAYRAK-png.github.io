@@ -17,11 +17,26 @@
             height: 100vh;
             overflow: hidden;
             user-select: none;
-            transition: filter 1.5s ease-in-out, background-color 1.5s;
+            /* Filtre yavaşlığını kaldırdık */
         }
 
-        body.inverted {
-            filter: invert(1) hue-rotate(180deg);
+        /* --- KASMA YAPMAYAN PÜRÜZSÜZ TERS RENK SİSTEMİ --- */
+        #invert-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            mix-blend-mode: difference; /* Altındaki tüm renkleri tersine çevirir */
+            opacity: 0;
+            pointer-events: none; /* Tıklamaları engellememesi için */
+            transition: opacity 1.5s ease-in-out;
+            z-index: 50;
+        }
+
+        body.inverted #invert-overlay {
+            opacity: 1; /* Animasyonla ters renklere geçiş */
         }
 
         /* --- UI VE MENÜ TASARIMLARI --- */
@@ -36,11 +51,11 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 30;
+            z-index: 60; /* Menüler overlay'in üstünde dursun */
         }
 
         #gameOverScreen {
-            display: none; /* Başlangıçta gizli */
+            display: none;
             background-color: rgba(0, 0, 0, 0.85);
         }
 
@@ -107,12 +122,12 @@
             pointer-events: none;
             z-index: 10;
             text-shadow: 0 0 10px #00a8ff;
-            display: none; /* Menüdeyken gizli */
+            display: none;
         }
 
         /* --- OYUN ALANI --- */
         #game-container {
-            display: none; /* Menüdeyken gizli */
+            display: none;
             border: 4px solid #333;
             border-radius: 8px;
             background-color: #1e1e1e;
@@ -134,6 +149,9 @@
     </style>
 </head>
 <body>
+
+    <!-- KASMA YAPMAYAN EFEKT KATMANI -->
+    <div id="invert-overlay"></div>
 
     <!-- ANA MENÜ -->
     <div id="mainMenu">
@@ -178,11 +196,11 @@
         let obstacles = [];
         let targets = [];
 
-        // Hız ve Süre Ayarları (Çok yavaş bir başlangıç)
-        const basePlayerSpeed = 4;
-        const baseObstacleSpeed = 2;
-        const baseObstacleSpawnRate = 260; 
-        const baseTargetSpawnRate = 220;
+        // Hız ve Süre Ayarları (Daha belirgin zorlaşma için ayarlandı)
+        const basePlayerSpeed = 4.5;
+        const baseObstacleSpeed = 2.0;
+        const baseObstacleSpawnRate = 140; 
+        const baseTargetSpawnRate = 100;
         const baseShrinkSpeed = 0.1; 
 
         // Sol taraf oyuncu objesi
@@ -192,7 +210,7 @@
         window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key)) keys[e.key] = true; });
         window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 
-        // --- DURUM YÖNETİMİ (MENÜ / BAŞLA / BİTİR) ---
+        // --- DURUM YÖNETİMİ ---
         function resetGameParams() {
             score = 0;
             frames = 0;
@@ -254,12 +272,11 @@
             score += points;
             document.getElementById('scoreDisplay').innerText = score;
 
-            // Her 200 skorda %2 zorluk artışı formülü
-            // Örnek: 200 skorda 1.02, 400 skorda 1.04, 1000 skorda 1.10
+            // ZORLUK ÇARPANI ARTIRILDI: Her 200 skorda %4'lük daha agresif bir artış
             let speedLevels = Math.floor(score / 200);
-            difficulty = 1 + (speedLevels * 0.02); 
+            difficulty = 1 + (speedLevels * 0.04); 
 
-            // Her 500'de İnvert (Animasyonlu)
+            // Her 500'de Pürüzsüz İnvert
             let currentLevel = Math.floor(score / 500);
             if (currentLevel > invertLevel) {
                 invertLevel = currentLevel;
@@ -269,11 +286,11 @@
 
         // --- SOL BÖLÜM (KAÇINMA) ---
         function handleLeftMechanics() {
-            ctxLeft.fillStyle = 'rgba(13, 13, 20, 0.4)'; // Blur etkisi
+            ctxLeft.fillStyle = 'rgba(13, 13, 20, 0.4)'; 
             ctxLeft.fillRect(0, 0, leftCanvas.width, leftCanvas.height);
 
-            // Oyuncu Hızı (Zorlukla bir miktar artar ki kaçabilsin)
-            let currentSpeed = player.speed * difficulty;
+            // Oyuncu hızı da zorlukla ufak ufak artsın ki engellerden kaçabilsin
+            let currentSpeed = player.speed * (1 + (difficulty - 1) * 0.5);
             if ((keys.a || keys.ArrowLeft) && player.x > 0) player.x -= currentSpeed;
             if ((keys.d || keys.ArrowRight) && player.x + player.size < leftCanvas.width) player.x += currentSpeed;
 
@@ -283,7 +300,8 @@
             ctxLeft.fillRect(player.x, player.y, player.size, player.size);
             ctxLeft.shadowBlur = 0;
 
-            let currentSpawnRate = Math.max(20, Math.floor(baseObstacleSpawnRate / difficulty));
+            // Engel gelme sıklığı zorluk arttıkça keskin şekilde düşer
+            let currentSpawnRate = Math.max(15, Math.floor(baseObstacleSpawnRate / difficulty));
             if (frames % currentSpawnRate === 0) {
                 let w = Math.random() * 80 + 40; 
                 obstacles.push({
@@ -301,7 +319,6 @@
                 obs.y += obs.speed;
                 ctxLeft.fillRect(obs.x, obs.y, obs.width, obs.height);
 
-                // Çarpışma
                 if (player.x < obs.x + obs.width && player.x + player.size > obs.x &&
                     player.y < obs.y + obs.height && player.y + player.size > obs.y) {
                     triggerGameOver();
@@ -337,7 +354,8 @@
             ctxRight.fillStyle = 'rgba(13, 13, 20, 0.4)';
             ctxRight.fillRect(0, 0, rightCanvas.width, rightCanvas.height);
 
-            let currentSpawn = Math.max(30, Math.floor(baseTargetSpawnRate / difficulty));
+            // Hedeflerin çıkma sıklığı zorlukla çok daha hızlı daralır
+            let currentSpawn = Math.max(20, Math.floor(baseTargetSpawnRate / difficulty));
             if (frames % currentSpawn === 0) {
                 targets.push({
                     x: Math.random() * (rightCanvas.width - 80) + 40,
