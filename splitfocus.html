@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Focus</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0d0d14;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            transition: filter 1.5s ease-in-out, background-color 1.5s;
+        }
+
+        body.inverted {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        /* --- UI VE MENÜ TASARIMLARI --- */
+        #mainMenu, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(13, 13, 20, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+
+        #gameOverScreen {
+            display: none; /* Başlangıçta gizli */
+            background-color: rgba(0, 0, 0, 0.85);
+        }
+
+        .title-split {
+            color: #00a8ff;
+            text-shadow: 0 0 20px rgba(0, 168, 255, 0.6);
+        }
+
+        .title-focus {
+            color: #ff0055;
+            text-shadow: 0 0 20px rgba(255, 0, 85, 0.6);
+        }
+
+        h1 {
+            font-size: 80px;
+            margin-bottom: 40px;
+            letter-spacing: 5px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 48px;
+            color: #fff;
+            margin-bottom: 10px;
+            letter-spacing: 5px;
+        }
+
+        .score-text {
+            font-size: 24px;
+            color: #aaa;
+            margin-bottom: 40px;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            background-color: white;
+            color: #0d0d14;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 0 0 10px #00a8ff;
+            display: none; /* Menüdeyken gizli */
+        }
+
+        /* --- OYUN ALANI --- */
+        #game-container {
+            display: none; /* Menüdeyken gizli */
+            border: 4px solid #333;
+            border-radius: 8px;
+            background-color: #1e1e1e;
+            box-shadow: 0 0 30px rgba(0, 168, 255, 0.2);
+            position: relative;
+        }
+
+        .divider {
+            width: 4px;
+            background-color: #fff;
+            box-shadow: 0 0 15px #fff;
+            z-index: 5;
+        }
+
+        canvas { display: block; }
+        #leftCanvas { pointer-events: none; }
+        #rightCanvas { cursor: crosshair; }
+
+    </style>
+</head>
+<body>
+
+    <!-- ANA MENÜ -->
+    <div id="mainMenu">
+        <h1><span class="title-split">SPLIT</span> <span class="title-focus">FOCUS</span></h1>
+        <button onclick="startGame()">BAŞLA</button>
+    </div>
+
+    <!-- OYUN SONU EKRANI -->
+    <div id="gameOverScreen">
+        <h2>SİSTEM ÇÖKTÜ</h2>
+        <div class="score-text">Ulaşılan Skor: <span id="finalScoreDisplay">0</span></div>
+        <div>
+            <button onclick="restartGame()">Tekrar Dene</button>
+            <button onclick="returnToMenu()">Menüye Dön</button>
+        </div>
+    </div>
+
+    <div id="ui-layer">SKOR: <span id="scoreDisplay">0</span></div>
+
+    <div id="game-container">
+        <!-- Sol taraf -->
+        <canvas id="leftCanvas" width="400" height="600"></canvas>
+        <div class="divider"></div>
+        <!-- Sağ taraf -->
+        <canvas id="rightCanvas" width="400" height="600"></canvas>
+    </div>
+
+    <script>
+        // --- TEMEL DEĞİŞKENLER ---
+        const leftCanvas = document.getElementById('leftCanvas');
+        const ctxLeft = leftCanvas.getContext('2d');
+        const rightCanvas = document.getElementById('rightCanvas');
+        const ctxRight = rightCanvas.getContext('2d');
+        
+        let score = 0;
+        let isGameOver = false;
+        let animationId;
+        let frames = 0;
+        let invertLevel = 0; 
+        let difficulty = 1.0; 
+        let particles = [];
+        let obstacles = [];
+        let targets = [];
+
+        // Hız ve Süre Ayarları (Çok yavaş bir başlangıç)
+        const basePlayerSpeed = 4;
+        const baseObstacleSpeed = 1.5;
+        const baseObstacleSpawnRate = 160; 
+        const baseTargetSpawnRate = 120;
+        const baseShrinkSpeed = 0.08; 
+
+        // Sol taraf oyuncu objesi
+        let player = { x: 0, y: 0, size: 30, speed: basePlayerSpeed };
+        const keys = { a: false, d: false, ArrowLeft: false, ArrowRight: false };
+
+        window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+        window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+        // --- DURUM YÖNETİMİ (MENÜ / BAŞLA / BİTİR) ---
+        function resetGameParams() {
+            score = 0;
+            frames = 0;
+            difficulty = 1.0;
+            invertLevel = 0;
+            document.body.classList.remove('inverted');
+            document.getElementById('scoreDisplay').innerText = score;
+            
+            player = {
+                x: leftCanvas.width / 2 - 15,
+                y: leftCanvas.height - 60,
+                size: 30,
+                speed: basePlayerSpeed
+            };
+            
+            obstacles = [];
+            targets = [];
+            particles = [];
+            
+            ctxLeft.clearRect(0, 0, leftCanvas.width, leftCanvas.height);
+            ctxRight.clearRect(0, 0, rightCanvas.width, rightCanvas.height);
+        }
+
+        function startGame() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            document.getElementById('ui-layer').style.display = 'block';
+            
+            resetGameParams();
+            isGameOver = false;
+            gameLoop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            resetGameParams();
+            isGameOver = false;
+            gameLoop();
+        }
+
+        function returnToMenu() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'flex';
+            document.body.classList.remove('inverted');
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            cancelAnimationFrame(animationId);
+            document.getElementById('gameOverScreen').style.display = 'flex';
+            document.getElementById('finalScoreDisplay').innerText = score;
+        }
+
+        // --- MATEMATİK VE ZORLUK ---
+        function addScore(points) {
+            score += points;
+            document.getElementById('scoreDisplay').innerText = score;
+
+            // Her 200 skorda %2 zorluk artışı formülü
+            // Örnek: 200 skorda 1.02, 400 skorda 1.04, 1000 skorda 1.10
+            let speedLevels = Math.floor(score / 200);
+            difficulty = 1 + (speedLevels * 0.02); 
+
+            // Her 500'de İnvert (Animasyonlu)
+            let currentLevel = Math.floor(score / 500);
+            if (currentLevel > invertLevel) {
+                invertLevel = currentLevel;
+                document.body.classList.toggle('inverted');
+            }
+        }
+
+        // --- SOL BÖLÜM (KAÇINMA) ---
+        function handleLeftMechanics() {
+            ctxLeft.fillStyle = 'rgba(13, 13, 20, 0.4)'; // Blur etkisi
+            ctxLeft.fillRect(0, 0, leftCanvas.width, leftCanvas.height);
+
+            // Oyuncu Hızı (Zorlukla bir miktar artar ki kaçabilsin)
+            let currentSpeed = player.speed * difficulty;
+            if ((keys.a || keys.ArrowLeft) && player.x > 0) player.x -= currentSpeed;
+            if ((keys.d || keys.ArrowRight) && player.x + player.size < leftCanvas.width) player.x += currentSpeed;
+
+            ctxLeft.fillStyle = '#00a8ff';
+            ctxLeft.shadowBlur = 20;
+            ctxLeft.shadowColor = '#00a8ff';
+            ctxLeft.fillRect(player.x, player.y, player.size, player.size);
+            ctxLeft.shadowBlur = 0;
+
+            let currentSpawnRate = Math.max(20, Math.floor(baseObstacleSpawnRate / difficulty));
+            if (frames % currentSpawnRate === 0) {
+                let w = Math.random() * 80 + 40; 
+                obstacles.push({
+                    x: Math.random() * (leftCanvas.width - w),
+                    y: -50,
+                    width: w,
+                    height: 30,
+                    speed: baseObstacleSpeed * difficulty 
+                });
+            }
+
+            ctxLeft.fillStyle = '#fff';
+            for (let i = 0; i < obstacles.length; i++) {
+                let obs = obstacles[i];
+                obs.y += obs.speed;
+                ctxLeft.fillRect(obs.x, obs.y, obs.width, obs.height);
+
+                // Çarpışma
+                if (player.x < obs.x + obs.width && player.x + player.size > obs.x &&
+                    player.y < obs.y + obs.height && player.y + player.size > obs.y) {
+                    triggerGameOver();
+                }
+
+                if (obs.y > leftCanvas.height) {
+                    obstacles.splice(i, 1);
+                    i--;
+                    addScore(5); 
+                }
+            }
+        }
+
+        // --- SAĞ BÖLÜM (NİŞAN) ---
+        rightCanvas.addEventListener('mousedown', (e) => {
+            if (isGameOver) return;
+            const rect = rightCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            for (let i = targets.length - 1; i >= 0; i--) {
+                let t = targets[i];
+                if (Math.hypot(mouseX - t.x, mouseY - t.y) <= t.radius) {
+                    createExplosion(t.x, t.y, 'right', '#ff0055');
+                    targets.splice(i, 1);
+                    addScore(20); 
+                    break;
+                }
+            }
+        });
+
+        function handleRightMechanics() {
+            ctxRight.fillStyle = 'rgba(13, 13, 20, 0.4)';
+            ctxRight.fillRect(0, 0, rightCanvas.width, rightCanvas.height);
+
+            let currentSpawn = Math.max(30, Math.floor(baseTargetSpawnRate / difficulty));
+            if (frames % currentSpawn === 0) {
+                targets.push({
+                    x: Math.random() * (rightCanvas.width - 80) + 40,
+                    y: Math.random() * (rightCanvas.height - 80) + 40,
+                    radius: 40 
+                });
+            }
+
+            for (let i = 0; i < targets.length; i++) {
+                let t = targets[i];
+                t.radius -= baseShrinkSpeed * difficulty;
+
+                if (t.radius <= 0) {
+                    triggerGameOver();
+                    return;
+                }
+
+                ctxRight.beginPath();
+                ctxRight.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+                ctxRight.lineWidth = 4;
+                
+                if (t.radius > 20) {
+                    ctxRight.strokeStyle = '#ff0055';
+                    ctxRight.shadowColor = '#ff0055';
+                } else {
+                    ctxRight.strokeStyle = '#fff';
+                    ctxRight.shadowColor = '#fff';
+                }
+                
+                ctxRight.shadowBlur = 15;
+                ctxRight.stroke();
+                ctxRight.closePath();
+                ctxRight.shadowBlur = 0;
+            }
+        }
+
+        function createExplosion(x, y, contextType, color) {
+            for(let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.5) * 15,
+                    life: 1.0, color: color, ctx: contextType
+                });
+            }
+        }
+
+        function handleParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                let ctx = p.ctx === 'left' ? ctxLeft : ctxRight;
+                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+
+                if (p.life <= 0) { particles.splice(i, 1); i--; continue; }
+
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function gameLoop() {
+            if (isGameOver) return;
+            handleLeftMechanics();
+            handleRightMechanics();
+            handleParticles();
+            frames++;
+            animationId = requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
