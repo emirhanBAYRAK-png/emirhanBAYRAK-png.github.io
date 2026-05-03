@@ -277,7 +277,7 @@
             difficulty = 1 + (speedLevels * 0.04); 
 
             // Her 500'de Pürüzsüz İnvert
-            let currentLevel = Math.floor(score / 500);
+            let currentLevel = Math.floor(score / 200);
             if (currentLevel > invertLevel) {
                 invertLevel = currentLevel;
                 document.body.classList.toggle('inverted');
