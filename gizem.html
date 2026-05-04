@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H̵̛̭E̷͔͝C̵̛͓Y̴͚͝D̷̟̕I̷̼͠E̷͇̕D̵̛̰</title>
+    <style>
+        /* --- OPTİMİZE EDİLMİŞ GORE TEMASI --- */
+        :root {
+            --blood: #8b0000;
+            --fresh-blood: #d90000;
+            --dark-flesh: #1a0000;
+            --void: #030000;
+            --text-glitch: #ff0000;
+            --bone: #e0d5c1;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--void);
+            color: var(--blood);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- BAŞLANGIÇ EKRANI (SES İÇİN ZORUNLU TIKLAMA) --- */
+        #audio-unlock-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; z-index: 99999;
+            display: flex; align-items: center; justify-content: center;
+            color: #440000; font-size: 2rem; cursor: pointer;
+            transition: opacity 2s;
+            animation: pulseText 2s infinite alternate;
+        }
+
+        @keyframes pulseText { 0% { color: #440000; text-shadow: 0 0 5px #ff0000; } 100% { color: #8b0000; text-shadow: 0 0 20px #ff0000; } }
+
+        /* --- ARKA PLAN EFEKTLERİ --- */
+        #bg-pulse {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle at center, var(--dark-flesh) 0%, var(--void) 85%);
+            z-index: -2; pointer-events: none;
+            animation: fleshPulse 3s infinite alternate;
+            transform: translateZ(0);
+        }
+
+        #bg-noise {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: repeating-radial-gradient(circle at 17% 32%, rgba(255,0,0,0.03), rgba(0,0,0,0.03) 1px);
+            z-index: -1; pointer-events: none;
+            animation: crtFlicker 0.15s infinite;
+            transform: translateZ(0);
+        }
+
+        #blood-drips {
+            position: fixed; top: 0; left: 0; width: 100%; height: 20px;
+            z-index: 9999; pointer-events: none; display: flex;
+        }
+
+        .drip {
+            width: 6px; background-color: var(--fresh-blood);
+            border-radius: 0 0 10px 10px;
+            animation: dripFall var(--speed) infinite ease-in;
+            margin-left: var(--margin);
+            transform: translateZ(0);
+        }
+
+        h1 {
+            color: var(--fresh-blood); font-size: 3.5rem; margin-top: 20px;
+            text-shadow: 2px 2px 0px #000, 0 0 15px var(--blood);
+            letter-spacing: 8px; animation: textGlitch 2s infinite;
+            border-bottom: 2px solid var(--blood); padding-bottom: 10px;
+            position: relative; z-index: 10;
+        }
+
+        /* --- OYUN EKRANI --- */
+        #game-wrapper {
+            display: flex; flex-direction: column; align-items: center;
+            width: 100%; max-width: 900px; padding: 20px; position: relative; z-index: 10;
+            transform: translateZ(0);
+            opacity: 0; /* Başlangıçta gizli */
+            transition: opacity 2s;
+        }
+
+        #rahm-guide {
+            display: flex; align-items: center;
+            background-color: rgba(10, 0, 0, 0.9);
+            border: 2px solid var(--blood); border-radius: 10px;
+            padding: 15px 25px; margin-top: 10px; margin-bottom: 30px;
+            box-shadow: inset 0 0 20px var(--dark-flesh);
+            width: 90%; position: relative;
+        }
+
+        #rahm-guide::before {
+            content: ''; position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px;
+            border: 1px solid var(--fresh-blood); z-index: -1; animation: glitchReveal 2s infinite;
+        }
+
+        .eye-container {
+            width: 80px; height: 50px; margin-right: 25px; flex-shrink: 0; position: relative;
+        }
+
+        .eye-svg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; overflow: visible; }
+        .pupil-group { transition: transform 0.1s linear; }
+
+        .eye-lid {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--dark-flesh);
+            animation: scaryBlink 5s infinite; transform-origin: top;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+        }
+
+        .bubble {
+            padding: 10px; position: relative; font-size: 1.2rem;
+            color: var(--fresh-blood); text-shadow: 0 0 5px var(--blood); font-weight: bold;
+        }
+
+        #side-eyes-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; }
+
+        .side-eye-wrap {
+            position: absolute; width: 90px; height: 60px;
+            transform: scaleY(0); animation: fleshTearOpen 0.3s forwards; opacity: 0.8;
+        }
+
+        .game-area { width: 100%; }
+        #drop-zone { display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; min-height: 90px; flex-wrap: wrap; }
+
+        .drop-slot {
+            width: 85px; height: 85px; border: 2px dashed var(--dark-flesh);
+            background-color: rgba(20, 0, 0, 0.6); display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease; position: relative;
+        }
+
+        .drop-slot.drag-over {
+            border: 2px solid var(--fresh-blood); background-color: var(--dark-flesh);
+            box-shadow: inset 0 0 20px var(--blood); transform: scale(1.05);
+        }
+
+        #drag-zone {
+            display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;
+            min-height: 100px; padding: 25px;
+            background: linear-gradient(to bottom, transparent, rgba(50,0,0,0.3));
+            border-top: 2px solid var(--dark-flesh);
+        }
+
+        .syllable {
+            width: 80px; height: 80px; background: radial-gradient(circle at 30% 30%, #4a0000, #110000);
+            color: var(--bone); font-size: 1.5rem; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--blood); border-radius: 6px; cursor: grab;
+            box-shadow: 0 4px 0 #0a0000; text-shadow: 1px 1px 3px #000; 
+            transition: transform 0.1s; position: relative; overflow: hidden; transform: translateZ(0);
+        }
+
+        .syllable::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M10,10 Q30,50 90,90 M20,80 Q50,40 80,20 M0,50 Q50,60 100,50" stroke="%23ff0000" stroke-width="0.5" fill="none" opacity="0.3"/%3E%3C/svg%3E');
+            pointer-events: none;
+        }
+
+        .syllable:hover { border-color: var(--fresh-blood); color: #fff; }
+        .syllable:active { cursor: grabbing; transform: translateY(4px); box-shadow: 0 0 0 #0a0000; }
+        .syllable.dragging { opacity: 0.9; border-color: var(--fresh-blood); transform: scale(1.1); z-index: 100; }
+
+        #splatter-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle, transparent 20%, #110000 100%);
+            pointer-events: none; z-index: 9998; opacity: 0; transition: opacity 0.1s;
+        }
+
+        /* --- ANİMASYONLAR --- */
+        @keyframes fleshPulse { 0% { opacity: 0.8; } 100% { opacity: 1; } }
+        @keyframes crtFlicker { 0% { opacity: 0.85; } 50% { opacity: 1; } 100% { opacity: 0.9; } }
+        @keyframes scaryBlink { 0%, 94%, 98%, 100% { transform: scaleY(0); } 95%, 99% { transform: scaleY(1); } }
+        @keyframes fleshTearOpen { 0% { transform: scaleY(0); } 100% { transform: scaleY(1); } }
+        @keyframes dripFall { 0% { transform: scaleY(0); opacity: 1;} 50% { transform: scaleY(5); opacity: 1;} 100% { transform: scaleY(15) translateY(30px); opacity: 0;} }
+        @keyframes textGlitch { 0% { transform: translate(0); } 2% { transform: translate(-2px, 2px); filter: invert(1); } 4% { transform: translate(0); filter: invert(0); } 50% { transform: translate(0); } 52% { transform: translate(2px, -2px); color: #fff;} 54% { transform: translate(0); color: var(--fresh-blood);} 100% { transform: translate(0); } }
+        @keyframes visceralSnap { 0% { transform: scale(1); filter: brightness(1); } 10% { transform: scale(1.1) rotate(-3deg); filter: brightness(1.5); background: #8b0000; } 100% { transform: scale(1) rotate(0deg); background: #3a0000; border: none; color: #555; } }
+        @keyframes screenShakeGore { 0%, 100% { transform: translate3d(0,0,0); } 10% { transform: translate3d(-10px, 10px, 0); } 20% { transform: translate3d(10px, -10px, 0); } 30% { transform: translate3d(-10px, -10px, 0); } 40% { transform: translate3d(10px, 10px, 0); } }
+    </style>
+</head>
+<body>
+
+    <!-- Sesi başlatmak için tıklama ekranı -->
+    <div id="audio-unlock-overlay" onclick="startHorror()">
+        B O Y U N &nbsp; E Ğ &nbsp; V E &nbsp; T I K L A
+    </div>
+
+    <div id="bg-pulse"></div>
+    <div id="bg-noise"></div>
+    <div id="blood-drips"></div>
+    <div id="splatter-overlay"></div>
+    <div id="side-eyes-container"></div>
+
+    <h1>H̵̛̭E̷͔͝C̵̛͓Y̴͚͝</h1>
+
+    <div id="game-wrapper">
+        <div id="rahm-guide">
+            <div class="eye-container">
+                <div class="eye-lid"></div>
+                <svg class="eye-svg" viewBox="0 0 100 60">
+                    <defs>
+                        <radialGradient id="eyeGrad" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#ffebeb" />
+                            <stop offset="80%" stop-color="#b35959" />
+                            <stop offset="100%" stop-color="#660000" />
+                        </radialGradient>
+                        <radialGradient id="irisGrad" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#4a0000" />
+                            <stop offset="60%" stop-color="#1a0000" />
+                            <stop offset="100%" stop-color="#000" />
+                        </radialGradient>
+                        <clipPath id="eyeClip">
+                            <path d="M5,30 Q50,0 95,30 Q50,60 5,30 Z" />
+                        </clipPath>
+                    </defs>
+                    <path d="M5,30 Q50,0 95,30 Q50,60 5,30 Z" fill="url(#eyeGrad)" stroke="#1a0000" stroke-width="2"/>
+                    <g clip-path="url(#eyeClip)">
+                        <path d="M5,30 Q20,15 35,25 M95,30 Q80,45 65,35 M15,20 Q30,40 45,30" stroke="#8b0000" stroke-width="1.5" fill="none" opacity="0.6"/>
+                        <g class="pupil-group">
+                            <circle cx="50" cy="30" r="14" fill="url(#irisGrad)" />
+                            <circle cx="50" cy="30" r="5" fill="#000" />
+                        </g>
+                    </g>
+                </svg>
+            </div>
+            <div class="bubble">
+                <span id="rahm-hint">Bekliyorum...</span>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <div id="drop-zone"></div>
+            <div id="drag-zone"></div>
+        </div>
+    </div>
+
+    <script>
+        /* ========================================================
+           SİSTEM 1: BOĞUK VE KALIN SES MOTORU (Web Audio API)
+           ======================================================== */
+        let audioCtx;
+        let globalFilter;
+
+        function initAudio() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            // Tüm sesleri boğuk/kalın (Muffled/Deep) yapan ana filtre
+            globalFilter = audioCtx.createBiquadFilter();
+            globalFilter.type = 'lowpass';
+            globalFilter.frequency.value = 500; // Frekansı kıs, boğuklaştır
+            globalFilter.connect(audioCtx.destination);
+
+            // Kalp Atışını Başlat
+            setInterval(playHeartbeat, 1600);
+        }
+
+        function createNoiseBuffer() {
+            const bufferSize = audioCtx.sampleRate * 2; // 2 saniyelik gürültü
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1; // Beyaz gürültü (Et ve nefes sesi için)
+            }
+            return buffer;
+        }
+
+        // Kalp Atışı Sesi (Boğuk ve Derin)
+        function playHeartbeat() {
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            
+            function beat(time, freq, dur) {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                
+                osc.frequency.setValueAtTime(freq, time);
+                osc.frequency.exponentialRampToValueAtTime(10, time + dur);
+                
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(1.5, time + 0.05); // Yüksek bas
+                gain.gain.exponentialRampToValueAtTime(0.01, time + dur);
+                
+                osc.connect(gain);
+                gain.connect(globalFilter);
+                osc.start(time);
+                osc.stop(time + dur);
+            }
+            const now = audioCtx.currentTime;
+            beat(now, 50, 0.4);       // İlk atış (Lub)
+            beat(now + 0.25, 45, 0.5); // İkinci atış (Dub)
+        }
+
+        // Et Sürükleme (Drag) Sesi (Islak Yırtılma)
+        function playDragGore() {
+            if(!audioCtx) return;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = createNoiseBuffer();
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            
+            noise.connect(filter).connect(gain).connect(globalFilter);
+            noise.start();
+            noise.stop(audioCtx.currentTime + 0.2);
+        }
+
+        // Etin Yuvaya Oturma (Drop) Sesi (Tok bir et çarpması)
+        function playDropThud() {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.15);
+            
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(2, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            osc.connect(gain);
+            gain.connect(globalFilter);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        // Kelime Tamamlandığında Çıkan Son Nefes Sesi (Uzun, boğuk ve hırıltılı)
+        function playLastBreath() {
+            if(!audioCtx) return;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = createNoiseBuffer();
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(500, audioCtx.currentTime);
+            filter.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 2.5); // Derinleşerek kaybolur
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(1.5, audioCtx.currentTime + 0.3); // Nefes alma başlangıcı
+            gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 2.5); // Yavaşça sönme
+            
+            noise.connect(filter).connect(gain).connect(globalFilter);
+            noise.start();
+            noise.stop(audioCtx.currentTime + 2.5);
+        }
+
+
+        // --- OYUN BAŞLATMA ---
+        function startHorror() {
+            const overlay = document.getElementById('audio-unlock-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => { overlay.style.display = 'none'; }, 2000);
+            
+            initAudio();
+            
+            // Oyun arayüzünü görünür yap
+            document.getElementById('game-wrapper').style.opacity = '1';
+            
+            updateEyesCache();
+            loadLevel();
+        }
+
+        // Kan Damlaları
+        const dripsContainer = document.getElementById('blood-drips');
+        for(let i=0; i<15; i++) {
+            let drip = document.createElement('div');
+            drip.className = 'drip';
+            drip.style.setProperty('--margin', Math.random() * 100 + 'vw');
+            drip.style.setProperty('--speed', (Math.random() * 1.5 + 1) + 's');
+            drip.style.animationDelay = (Math.random() * 3) + 's';
+            drip.style.height = (Math.random() * 15 + 5) + 'px';
+            dripsContainer.appendChild(drip);
+        }
+
+        // --- GÖZ TAKİBİ ---
+        let eyesCache = [];
+        function updateEyesCache() {
+            const pupils = document.querySelectorAll('.pupil-group');
+            eyesCache = Array.from(pupils).map(pupil => {
+                const svgContainer = pupil.closest('svg');
+                const rect = svgContainer.getBoundingClientRect();
+                return { element: pupil, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, maxDist: 8 };
+            });
+        }
+
+        let isTracking = false; let mouseX = window.innerWidth / 2; let mouseY = window.innerHeight / 2;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            if (!isTracking) {
+                requestAnimationFrame(() => {
+                    eyesCache.forEach(eye => {
+                        const dx = mouseX - eye.cx; const dy = mouseY - eye.cy;
+                        const angle = Math.atan2(dy, dx);
+                        const dist = Math.min(eye.maxDist, Math.hypot(dx, dy) / 15);
+                        eye.element.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+                    });
+                    isTracking = false;
+                });
+                isTracking = true;
+            }
+        });
+        window.addEventListener('resize', updateEyesCache);
+
+        // --- YAN GÖZLER ---
+        const sideEyesContainer = document.getElementById('side-eyes-container');
+        const eyeSVGTemplate = `
+            <div class="eye-lid"></div>
+            <svg class="eye-svg" viewBox="0 0 100 60">
+                <defs>
+                    <radialGradient id="eyeGrad2" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffebeb" /><stop offset="80%" stop-color="#b35959" /><stop offset="100%" stop-color="#660000" /></radialGradient>
+                    <radialGradient id="irisGrad2" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4a0000" /><stop offset="60%" stop-color="#1a0000" /><stop offset="100%" stop-color="#000" /></radialGradient>
+                    <clipPath id="eyeClip2"><path d="M5,30 Q50,0 95,30 Q50,60 5,30 Z" /></clipPath>
+                </defs>
+                <path d="M5,30 Q50,0 95,30 Q50,60 5,30 Z" fill="url(#eyeGrad2)" stroke="#1a0000" stroke-width="2"/>
+                <g clip-path="url(#eyeClip2)">
+                    <path d="M5,30 Q20,15 35,25 M95,30 Q80,45 65,35" stroke="#8b0000" stroke-width="1.5" fill="none" opacity="0.6"/>
+                    <g class="pupil-group"><circle cx="50" cy="30" r="14" fill="url(#irisGrad2)" /><circle cx="50" cy="30" r="5" fill="#000" /></g>
+                </g>
+            </svg>
+        `;
+
+        setInterval(() => {
+            if(sideEyesContainer.children.length < 3 && Math.random() > 0.4 && document.getElementById('audio-unlock-overlay').style.display === 'none') {
+                const eyeWrap = document.createElement('div');
+                eyeWrap.className = 'eye-container side-eye-wrap';
+                const isLeft = Math.random() > 0.5;
+                const posX = isLeft ? (Math.random() * 5 + 2) + 'vw' : (Math.random() * 5 + 85) + 'vw';
+                const posY = (Math.random() * 70 + 15) + 'vh';
+                eyeWrap.style.left = posX; eyeWrap.style.top = posY;
+                const rotation = isLeft ? (Math.random() * 45 - 20) : (Math.random() * 45 + 160);
+                eyeWrap.style.transform = `rotate(${rotation}deg)`;
+                eyeWrap.innerHTML = eyeSVGTemplate;
+                sideEyesContainer.appendChild(eyeWrap);
+                updateEyesCache();
+                setTimeout(() => { eyeWrap.remove(); updateEyesCache(); }, 3500);
+            }
+        }, 2500);
+
+        // --- OYUN MEKANİĞİ ---
+        const levels = [
+            { word: "KEMİK", syllables: ["KE", "MİK"], hint: "Bedenini dik tutan o sert kafes... Kırıldığında çıkan o çıtırtıyı duy." },
+            { word: "ÇÜRÜK", syllables: ["ÇÜ", "RÜK"], hint: "Zamanın etinde bıraktığı o tatlı, mor iz... Kokusu geliyor mu?" },
+            { word: "CESET", syllables: ["CE", "SET"], hint: "Ruhun iğrenerek terk ettiği o soğuk et yığını... Sen nesin?" },
+            { word: "DEŞİK", syllables: ["DE", "ŞİK"], hint: "Derinin bütünlüğünü bozan o kanlı delik... İçine bakmam için bana ver." },
+            { word: "İŞKENCE", syllables: ["İŞ", "KEN", "CE"], hint: "Acının bedende icra ettiği o bitmek bilmeyen, zarif sanat." },
+            { word: "KANAYAN", syllables: ["KA", "NA", "YAN"], hint: "Sıcak ve kırmızı sıvıyı durmadan dışarı kusan o açık yara." },
+            { word: "BOĞULMAK", syllables: ["BO", "ĞUL", "MAK"], hint: "Ciğerlerinin yandığı, suyun nefesini kestiği o son çırpınış." },
+            { word: "PARÇALAR", syllables: ["PAR", "ÇA", "LAR"], hint: "Bütünlüğün bozuldu. Etleri etrafa saçıldı. Topla onları." },
+            { word: "KURTULUŞYOK", syllables: ["KUR", "TU", "LUŞ", "YOK"], hint: "Kapılar örülü. Duvarlar daralıyor. Buradan gidiş bileti yok." },
+            { word: "UYANAMAYACAK", syllables: ["U", "YA", "NA", "MA", "YA", "CAK"], hint: "Bu bir kabus değil. Kapattığın o gözler bir daha açılmayacak." }
+        ];
+
+        let currentLevel = 0; let isLevelEnding = false;
+        const rahmHint = document.getElementById('rahm-hint');
+        const dropZone = document.getElementById('drop-zone');
+        const dragZone = document.getElementById('drag-zone');
+        const splatterOverlay = document.getElementById('splatter-overlay');
+        const gameWrapper = document.getElementById('game-wrapper');
+        let typeWriterTimeout;
+
+        function loadLevel() {
+            isLevelEnding = false; dropZone.innerHTML = ''; dragZone.innerHTML = '';
+            const levelData = levels[currentLevel];
+            rahmHint.style.color = "var(--fresh-blood)";
+            typeWriterEffect(rahmHint, levelData.hint, 50);
+
+            levelData.syllables.forEach((_, index) => {
+                const slot = document.createElement('div');
+                slot.classList.add('drop-slot'); slot.setAttribute('data-index', index);
+                slot.addEventListener('dragover', handleDragOver); slot.addEventListener('dragenter', handleDragEnter);
+                slot.addEventListener('dragleave', handleDragLeave); slot.addEventListener('drop', handleDropSlot);
+                dropZone.appendChild(slot);
+            });
+
+            let shuffledSyllables = [...levelData.syllables].sort(() => Math.random() - 0.5);
+            shuffledSyllables.forEach((syllableText, index) => {
+                const syllableBox = document.createElement('div');
+                syllableBox.classList.add('syllable'); syllableBox.innerText = syllableText;
+                syllableBox.setAttribute('draggable', 'true'); syllableBox.id = `syllable-${index}`;
+                syllableBox.addEventListener('dragstart', handleDragStart); syllableBox.addEventListener('dragend', handleDragEnd);
+                dragZone.appendChild(syllableBox);
+            });
+            dragZone.addEventListener('dragover', handleDragOver); dragZone.addEventListener('drop', handleDropPool);
+        }
+
+        function typeWriterEffect(element, text, speed) {
+            clearTimeout(typeWriterTimeout); element.innerHTML = ''; let i = 0;
+            function type() {
+                if (i < text.length) {
+                    if(Math.random() < 0.05) element.innerHTML += "<span style='color:#fff;'>#</span>";
+                    else element.innerHTML += text.charAt(i);
+                    i++; typeWriterTimeout = setTimeout(type, speed + (Math.random() * 50)); 
+                }
+            }
+            type();
+        }
+
+        function handleDragStart(e) {
+            if(isLevelEnding) return;
+            e.dataTransfer.setData('text/plain', e.target.id);
+            setTimeout(() => { e.target.classList.add('dragging'); }, 0);
+            playDragGore(); // Ses Oynat
+        }
+        function handleDragEnd(e) { e.target.classList.remove('dragging'); }
+        function handleDragOver(e) { e.preventDefault(); }
+        function handleDragEnter(e) { e.preventDefault(); if (e.target.classList.contains('drop-slot')) e.target.classList.add('drag-over'); }
+        function handleDragLeave(e) { if (e.target.classList.contains('drop-slot')) e.target.classList.remove('drag-over'); }
+        
+        function handleDropSlot(e) {
+            e.preventDefault(); if(isLevelEnding) return;
+            const targetSlot = e.target.closest('.drop-slot');
+            if (targetSlot) {
+                targetSlot.classList.remove('drag-over'); const id = e.dataTransfer.getData('text/plain');
+                const draggableElement = document.getElementById(id);
+                if (draggableElement) {
+                    targetSlot.appendChild(draggableElement); draggableElement.style.margin = '0';
+                    playDropThud(); // Ses Oynat
+                    checkWinCondition();
+                }
+            }
+        }
+
+        function handleDropPool(e) {
+            e.preventDefault(); if(isLevelEnding) return;
+            if(e.target.id === 'drag-zone') {
+                const id = e.dataTransfer.getData('text/plain'); const draggableElement = document.getElementById(id);
+                if (draggableElement) { dragZone.appendChild(draggableElement); checkWinCondition(); }
+            }
+        }
+
+        function checkWinCondition() {
+            const levelData = levels[currentLevel]; const slots = dropZone.querySelectorAll('.drop-slot');
+            let formedWord = ""; let isFull = true;
+            slots.forEach(slot => { if (slot.children.length > 0) formedWord += slot.children[0].innerText; else isFull = false; });
+
+            if (isFull && formedWord === levelData.word) {
+                isLevelEnding = true; 
+                rahmHint.style.color = "#ff0000";
+                typeWriterEffect(rahmHint, `E T I N I   H I S S E T...`, 30);
+                
+                playLastBreath(); // GORE & NEFES SESİ
+                
+                gameWrapper.style.animation = "screenShakeGore 0.5s ease";
+                splatterOverlay.style.opacity = "1";
+                
+                slots.forEach(slot => {
+                    slot.children[0].style.animation = 'visceralSnap 0.5s forwards';
+                    slot.children[0].setAttribute('draggable', 'false');
+                    slot.style.border = "none";
+                });
+
+                setTimeout(() => {
+                    splatterOverlay.style.opacity = "0";
+                    gameWrapper.style.animation = "none";
+                    currentLevel++;
+                    if (currentLevel < levels.length) loadLevel();
+                    else triggerDeathSequence();
+                }, 2500); 
+            }
+        }
+
+        function triggerDeathSequence() {
+            document.body.innerHTML = ''; document.body.style.backgroundColor = "#000";
+            const fatalMsg = document.createElement('h1');
+            fatalMsg.innerHTML = "S O N U N   G E L D İ";
+            fatalMsg.style.color = "#ff0000"; fatalMsg.style.fontSize = "4rem";
+            fatalMsg.style.position = "absolute"; fatalMsg.style.top = "50%"; fatalMsg.style.left = "50%";
+            fatalMsg.style.transform = "translate(-50%, -50%)"; fatalMsg.style.animation = "textGlitch 0.1s infinite";
+            fatalMsg.style.border = "none";
+            document.body.appendChild(fatalMsg);
+
+            setTimeout(() => { window.location.href = 'son.html'; }, 3000);
+        }
+    </script>
+</body>
+</html>
