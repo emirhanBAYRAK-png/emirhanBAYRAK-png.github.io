@@ -386,7 +386,12 @@
             if(localStorage.getItem('versuV4Save')) { document.getElementById('input-company-name').style.display = 'none'; document.getElementById('btn-start-game').innerText = "Sisteme Geri Dön"; document.getElementById('btn-reset-game').style.display = 'block'; }
         };
 
-        function resetSave() { if(confirm("Tüm şirket verileriniz silinecek. Emin misiniz?")) { localStorage.removeItem('versuV4Save'); location.reload(); } }
+        function resetSave() {
+    if(confirm("Tüm şirket verileriniz silinecek. Emin misiniz?")) {
+        localStorage.removeItem('versuV4Save');
+        window.location.href = window.location.pathname; // URL'yi temizleyerek en baştan yükler
+    }
+}
 
         function saveGame() {
             localStorage.setItem('versuV4Save', JSON.stringify({ 
