@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versu</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root { --panel-border: #27272a; --panel-bg: #18181b; --header-glow: none; --accent: #10b981; --money-bg: #047857; --money-color: #fff; --title-color: #fff; --title-font: 'Inter', sans-serif;}
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f8fafc; padding: 0; margin: 0; overflow: hidden; transition: background 0.5s ease; }
+        
+        /* --- DİNAMİK ARKA PLANLAR --- */
+        body.bg-grid { background-image: linear-gradient(rgba(16, 185, 129, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 0.15) 1px, transparent 1px); background-size: 30px 30px; background-color: #022c22; }
+        body.bg-nebula { background: radial-gradient(circle at 50% 50%, #3b0764 0%, #000000 100%); }
+        body.bg-uzay { background: radial-gradient(circle at 10% 10%, #172554 0%, #020617 100%); }
+        body.bg-matrix { background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9)), repeating-linear-gradient(0deg, transparent, transparent 2px, #059669 3px, #059669 3px); background-size: 100% 4px; animation: matrix-scroll 10s linear infinite; }
+        body.bg-kuantum { background: linear-gradient(45deg, #09090b, #1e1b4b, #0f172a, #09090b); background-size: 400% 400%; animation: gradient-shift 15s ease infinite; }
+        @keyframes matrix-scroll { 0% { background-position: 0 0; } 100% { background-position: 0 1000px; } }
+        @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        /* --- DİNAMİK YAN IŞIKLAR --- */
+        body.isik-rgb::before { content: ""; position: fixed; top: 0; left: 0; width: 6px; height: 100vh; background: linear-gradient(to bottom, #ff0000, #00ff00, #0000ff, #ff0000); background-size: 100% 200%; animation: rgb-scroll 2s linear infinite, rgb-glow 2s ease-in-out infinite alternate; z-index: 1000; pointer-events: none;}
+        body.isik-mavi::before { content: ""; position: fixed; top: 0; left: 0; width: 6px; height: 100vh; background: #38bdf8; box-shadow: 0 0 15px #38bdf8; z-index: 1000; pointer-events: none;}
+        body.isik-matrix::before { content: ""; position: fixed; top: 0; left: 0; width: 6px; height: 100vh; background: #22c55e; box-shadow: 0 0 20px #22c55e; z-index: 1000; pointer-events: none;}
+        body.isik-altin::before { content: ""; position: fixed; top: 0; left: 0; width: 6px; height: 100vh; background: #fbbf24; box-shadow: 0 0 20px #fbbf24; z-index: 1000; pointer-events: none;}
+        body.isik-mor::before { content: ""; position: fixed; top: 0; left: 0; width: 6px; height: 100vh; background: #a855f7; box-shadow: 0 0 25px #a855f7; z-index: 1000; pointer-events: none;}
+        body.isik-kizil::before { content: ""; position: fixed; top: 0; left: 0; width: 6px; height: 100vh; background: #ef4444; box-shadow: 0 0 30px #ef4444; z-index: 1000; pointer-events: none;}
+        @keyframes rgb-scroll { 0% { background-position: 0% 0%; } 100% { background-position: 0% 100%; } }
+        @keyframes rgb-glow { 0% { box-shadow: 0 0 10px #ff0000; } 50% { box-shadow: 0 0 20px #00ff00; } 100% { box-shadow: 0 0 10px #0000ff; } }
+
+        /* --- YENİ EFEKTLER (Ekran Filtreleri) --- */
+        body.efekt-crt::after { content: ""; position: fixed; top:0; left:0; width: 100vw; height: 100vh; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 9998; }
+        body.efekt-parazit::after { content: ""; position: fixed; top:0; left:0; width: 100vw; height: 100vh; background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E'); opacity: 0.05; pointer-events: none; z-index: 9998;}
+        body.efekt-glitch::after { content: ""; position: fixed; top:0; left:0; width: 100vw; height: 100vh; box-shadow: inset 0 0 100px rgba(244, 63, 94, 0.3); pointer-events: none; z-index: 9998; animation: pulse-shadow 2s infinite alternate;}
+        @keyframes pulse-shadow { 0% { box-shadow: inset 0 0 50px rgba(244, 63, 94, 0.2); } 100% { box-shadow: inset 0 0 150px rgba(244, 63, 94, 0.5); } }
+
+        /* --- ŞİRKET İSMİ STİLLERİ --- */
+        .brand-title { color: var(--title-color); font-family: var(--title-font); text-shadow: var(--header-glow); transition: all 0.3s ease; }
+        .text-glitch { animation: glitch 1s linear infinite; }
+        .text-pulse { animation: siber-pulse 1.5s ease-in-out infinite alternate; }
+        .text-terminal { font-family: monospace; letter-spacing: 2px; }
+        @keyframes glitch { 2%, 64% { transform: translate(2px,0) skew(0deg); } 4%, 60% { transform: translate(-2px,0) skew(0deg); } 62% { transform: translate(0,0) skew(5deg); } }
+        @keyframes siber-pulse { 0% { opacity: 0.8; text-shadow: 0 0 5px var(--title-color); } 100% { opacity: 1; text-shadow: 0 0 20px var(--title-color), 0 0 30px var(--title-color); } }
+
+        /* YÜZEN ANİMASYON */
+        .float-text { position: fixed; font-weight: 900; pointer-events: none; animation: floatUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; z-index: 10000; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-80px) scale(1.5); } }
+        .pop-anim { animation: pop 0.2s ease-out; }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* ANA MENÜ */
+        #main-menu { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: radial-gradient(circle at center, #18181b 0%, #09090b 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
+        .game-title { font-size: 6rem; font-weight: 900; color: #fff; text-shadow: 0 0 30px rgba(16, 185, 129, 0.4); letter-spacing: 10px; margin-bottom: 5px; animation: siber-pulse 2s infinite alternate;}
+        .game-subtitle { font-size: 14px; color: #94a3b8; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 50px; }
+        .company-input { background: rgba(0,0,0,0.5); border: 2px solid #3f3f46; color: #fff; padding: 18px 25px; font-size: 20px; border-radius: 8px; margin-bottom: 25px; width: 350px; text-align: center; font-family: 'Inter', sans-serif; font-weight: 600; outline: none; }
+        .company-input:focus { border-color: var(--accent); }
+        .btn-start { background: var(--accent); color: #fff; padding: 18px 50px; font-size: 22px; font-weight: 800; border-radius: 8px; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 4px 15px rgba(16,185,129,0.3);}
+        .btn-start:active { transform: scale(0.95); }
+        .btn-reset { background: transparent; color: #ef4444; border: none; margin-top: 20px; font-size: 12px; cursor: pointer; text-decoration: underline; display: none; }
+
+        /* OYUN ARAYÜZÜ */
+        #game-wrapper { display: none; opacity: 0; transition: opacity 0.5s ease; }
+        .tab-nav { display: flex; background: #000; border-bottom: 2px solid #27272a; padding: 0 20px; overflow-x: auto; }
+        .tab-btn { background: transparent; color: #94a3b8; border: none; padding: 15px 20px; font-size: 12px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; border-bottom: 3px solid transparent; transition: color 0.3s;}
+        .tab-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); text-shadow: 0 0 10px rgba(16,185,129,0.5);}
+
+        .main-container { height: calc(100vh - 55px); overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+
+        .panel { background: var(--panel-bg); padding: 20px; border-radius: 10px; border: 1px solid var(--panel-border); transition: all 0.4s ease; max-height: 85vh; overflow-y: auto; backdrop-filter: var(--blur-fx, none);}
+        .panel::-webkit-scrollbar { width: 6px; } .panel::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        h2 { margin-top: 0; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--panel-border); padding-bottom: 15px; margin-bottom: 20px; }
+        
+        .money-box { background: var(--money-bg); padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05);}
+        .money { font-size: 32px; font-weight: 800; color: var(--money-color); transition: all 0.3s ease;}
+        
+        button { cursor: pointer; border-radius: 4px; font-weight: 600; font-family: 'Inter', sans-serif; border: none; transition: 0.1s; }
+        button:active:not(:disabled) { transform: scale(0.95); }
+        button:disabled { background: #27272a !important; color: #52525b !important; cursor: not-allowed; opacity: 0.8;}
+
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 6px; margin-bottom: 6px; font-size: 13px; font-weight: 600;}
+        .badge { background: #3f3f46; padding: 2px 6px; border-radius: 4px; font-size: 11px; color: #e2e8f0; }
+
+        .btn-group { display: flex; gap: 4px; }
+        .btn-group button { padding: 6px 10px; font-size: 11px; }
+        .btn-green { background: #10b981; color: white; } .btn-green:hover { background: #059669; }
+        .btn-red { background: #ef4444; color: white; } .btn-red:hover { background: #dc2626; }
+        .btn-blue { background: #3b82f6; color: white; } .btn-blue:hover { background: #2563eb; }
+        .btn-purp { background: #a855f7; color: white; } .btn-purp:hover { background: #7e22ce; }
+
+        .machine-card { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border-left: 4px solid #52525b; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s;}
+        .machine-card:hover { transform: translateY(-2px); background: rgba(0,0,0,0.5);}
+        .machine-card.active { border-left-color: #10b981; } .machine-card.waiting { border-left-color: #ef4444; opacity: 0.7; }
+        .machine-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-weight: 800; font-size: 14px;}
+        
+        .dyn-calc { font-size: 11px; color: #fbbf24; margin-bottom: 5px; font-weight:bold; }
+        .req-list { font-size: 11px; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; color: #94a3b8; margin-bottom: 10px; flex-grow: 1; }
+        .out-item { color: #10b981; font-weight: bold; }
+        .progress-bg { width: 100%; height: 6px; background: rgba(0,0,0,0.5); margin-bottom: 10px; border-radius: 3px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: #10b981; transition: width 0.05s linear; }
+
+        .contract-box { background: linear-gradient(135deg, #1e1b4b, #312e81); border: 1px solid #4f46e5; padding: 20px; border-radius: 8px; text-align: center; }
+        .contract-timer { font-family: monospace; font-size: 24px; color: #f87171; font-weight: bold; margin: 10px 0; }
+        .tech-card { background: rgba(0,0,0,0.3); border: 1px solid #3f3f46; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .tech-card.bought { border-color: #10b981; opacity: 0.7; }
+
+        .casino-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #3f3f46; }
+        .input-bet { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid #3f3f46; color: #fff; border-radius: 6px; margin-bottom: 10px; font-size: 16px; font-family: 'Inter'; box-sizing: border-box;}
+        .lootbox { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 6px; border: 1px solid #3f3f46; margin-bottom: 10px; }
+        
+        .stock-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #64748b;}
+        .stock-price { font-family: monospace; font-size: 16px; font-weight: bold; width: 90px; text-align: right; }
+        .stock-price.up { color: #10b981; } .stock-price.down { color: #ef4444; }
+
+        /* Yeni: Danışman Kartları */
+        .consultant-card { background: rgba(0,0,0,0.3); border-left: 4px solid #3b82f6; padding: 15px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .consultant-card.hired { border-left-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .salary-alert { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #f87171; padding: 15px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 14px;}
+
+        .slots-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .slot { border: 2px dashed #3f3f46; background: rgba(0,0,0,0.3); padding: 12px 5px; text-align: center; border-radius: 8px; font-size: 11px; color: #52525b; min-height: 45px; display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; transition: 0.2s;}
+        .slot.filled { border-style: solid; color: #fff; cursor: pointer; }
+        .cosmetic-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #f8fafc; border-left: 3px solid; margin-bottom: 8px;}
+
+        #save-notify { position: fixed; bottom: 20px; right: 20px; background: #10b981; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 12px; opacity: 0; transition: opacity 0.5s; z-index: 10000; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);}
+        .rare-yaygin { color: #94a3b8; } .rare-nadir { color: #38bdf8; } .rare-destansi { color: #c084fc; text-shadow: 0 0 5px rgba(192,132,252,0.3); } .rare-efsanevi { color: #fbbf24; text-shadow: 0 0 8px rgba(251,191,36,0.6); animation: siber-pulse 2s infinite alternate;}
+    </style>
+</head>
+<body>
+
+    <div id="save-notify">💾 Sistem Kaydedildi [OK]</div>
+
+    <div id="main-menu">
+        <div class="game-title">VERSU</div>
+        <div class="game-subtitle">Endüstri & Şirket Yönetimi v1.0</div>
+        <input type="text" id="input-company-name" class="company-input" placeholder="Şirket İsminizi Girin..." autocomplete="off">
+        <button class="btn-start" id="btn-start-game" onclick="startGame()">Sistemi Başlat</button>
+        <button class="btn-reset" id="btn-reset-game" onclick="resetSave()">Tüm Kaydı Sil ve Sıfırla</button>
+    </div>
+
+    <div id="game-wrapper">
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="openTab('tab-merkez')">1. Merkez & Kozmetik</button>
+            <button class="tab-btn" onclick="openTab('tab-hammadde')">2. Maden & Külçe</button>
+            <button class="tab-btn" onclick="openTab('tab-bilesen')">3. Bileşen & Devre</button>
+            <button class="tab-btn" onclick="openTab('tab-donanim')" style="color: #f43f5e;">4. Kuantum & YZ</button>
+            <button class="tab-btn" onclick="openTab('tab-sirket')" style="color: #38bdf8;">5. Şirket & Danışman</button>
+            <button class="tab-btn" onclick="openTab('tab-arge')" style="color: #c084fc;">6. Ar-Ge & Kontrat</button>
+            <button class="tab-btn" onclick="openTab('tab-borsa')" style="color: #fbbf24;">7. Borsa & Rulet</button>
+        </div>
+
+        <div class="main-container">
+            <div id="tab-merkez" class="tab-content active">
+                <div class="grid-2">
+                    <div class="panel">
+                        <h2 id="ui-brand-depo" class="brand-title">Sistem Deposu</h2>
+                        <div class="grid-2">
+                            <div class="money-box">
+                                <div style="font-size: 11px; opacity: 0.8; color: var(--money-color);">Sistem Bakiyesi</div>
+                                <div class="money"><span id="money">0</span> Cr</div>
+                            </div>
+                            <div class="money-box" style="background: rgba(107, 33, 168, 0.5); border: 1px solid #a855f7;">
+                                <div style="font-size: 11px; opacity: 0.8; color:#fff;">Araştırma Verisi (AP)</div>
+                                <div class="money" id="ap-display" style="color:#fff;">0</div>
+                            </div>
+                        </div>
+                        <button style="width:100%; padding:15px; background:#2563eb; color:#fff; font-size:16px; border-radius:6px; font-weight:bold; margin-bottom:20px;" onclick="manualMine(event)">[Manuel Tarama] +<span id="click-power">1</span> Maden</button>
+                        <div style="height: 35vh; overflow-y: auto; padding-right: 5px;" id="inventory-container"></div>
+                    </div>
+                    <div class="panel">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                            <h2 class="brand-title" style="border:none; margin:0; padding:0;">Donanım Slotları</h2>
+                            <span style="font-size: 11px; color: #a1a1aa; margin-bottom: 2px;" id="slot-counter">0/5 Dolu</span>
+                        </div>
+                        <div style="font-size: 11px; color: #64748b; margin-bottom: 15px;">Her kategoriden 1 adet takılabilir.</div>
+                        <div class="slots-container" id="slots-container" style="grid-template-columns: 1fr 1fr 1fr;"></div>
+                        <h3 style="font-size: 13px; color: #94a3b8; text-transform: uppercase;">Kozmetik Envanteri</h3>
+                        <div id="cosmetic-container" style="max-height: 30vh; overflow-y: auto; padding-right: 5px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-hammadde" class="tab-content">
+                <h2 style="color: #94a3b8;" class="brand-title">Tier 1: Ağır Madencilik</h2><div class="grid-3" id="tier1-container"></div>
+                <h2 style="color: #fbbf24; margin-top: 30px;" class="brand-title">Tier 2: Rafineri ve Döküm</h2><div class="grid-3" id="tier2-container"></div>
+            </div>
+
+            <div id="tab-bilesen" class="tab-content">
+                <h2 style="color: #38bdf8;" class="brand-title">Tier 3: Elektronik Bileşenler</h2><div class="grid-3" id="tier3-container"></div>
+                <h2 style="color: #c084fc; margin-top: 30px;" class="brand-title">Tier 4: Gelişmiş İşlemciler</h2><div class="grid-3" id="tier4-container"></div>
+            </div>
+
+            <div id="tab-donanim" class="tab-content">
+                <h2 style="color: #ef4444;" class="brand-title">Tier 5: Sunucu ve Kuantum Mimarisi</h2><div class="grid-3" id="tier5-container"></div>
+                <h2 style="color: #f43f5e; margin-top: 30px;" id="ui-brand-uretim" class="brand-title">Tier 6: Nihai Yapay Zeka Ağları</h2><div class="grid-3" id="tier6-container"></div>
+            </div>
+
+            <div id="tab-sirket" class="tab-content">
+                <div class="grid-2">
+                    <div class="panel">
+                        <h2 style="color: #38bdf8;" class="brand-title">İnsan Kaynakları & Danışmanlar</h2>
+                        <p style="font-size: 11px; color: #94a3b8; margin-bottom: 15px;">Danışmanlar her 30 saniyede bir bakiyenizin bir kısmıyla ticaret yapar. Kazandırabilir veya kaybettirebilirler.</p>
+                        <div id="consultants-container"></div>
+                    </div>
+                    <div class="panel">
+                        <h2 style="color: #ef4444;" class="brand-title">Muhasebe Departmanı</h2>
+                        <div class="salary-alert">
+                            <div>Danışman Maaş Kesintisine Kalan Süre</div>
+                            <div style="font-size: 36px; color: #ef4444; font-weight: 900; margin: 10px 0;" id="salary-timer-ui">6600</div>
+                            <div style="color: #f87171;">Ödenecek Toplam Maaş: <span id="total-salary-ui">0</span> Cr</div>
+                            <div style="font-size: 10px; color: #fca5a5; margin-top: 5px;">Maaş ödenmezse bakiye eksiye düşer!</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-arge" class="tab-content">
+                <div class="grid-2">
+                    <div class="panel">
+                        <h2 style="color: #818cf8;" id="ui-brand-kontrat" class="brand-title">Kurumsal Kontratlar</h2>
+                        <div class="contract-box" id="contract-ui">
+                            <div style="font-size: 12px; color: #a5b4fc; text-transform: uppercase;">Aktif Talep</div>
+                            <div style="font-size: 20px; font-weight: 800; color: #fff; margin-top: 5px;" id="contract-desc">Bekleniyor...</div>
+                            <div class="contract-timer" id="contract-timer">00:00</div>
+                            <div style="font-size: 14px; color: #34d399; font-weight: bold; margin-bottom: 15px;" id="contract-reward">Ödül: Bekleniyor</div>
+                            <button style="background: #10b981; color: white; padding: 12px 20px; width: 100%; font-size: 16px; border-radius:6px; font-weight:bold;" id="btn-complete-contract" onclick="completeContract(event)">Siparişi Teslim Et</button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <h2 style="color: #c084fc;" class="brand-title">Sistem Çekirdeği (Yetenekler)</h2>
+                        <div id="tech-container" style="max-height: 55vh; overflow-y:auto; padding-right:5px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-borsa" class="tab-content">
+                <div class="grid-2">
+                    <div class="panel">
+                        <h2 class="brand-title">Küresel Ağ Piyasası</h2>
+                        <div id="market-container"></div>
+                    </div>
+                    <div class="panel">
+                        <h2 style="color: #f87171;" class="brand-title">Karaborsa Bölgesi</h2>
+                        <div class="casino-box">
+                            <h3 style="margin-top:0; font-size: 14px; color: #f87171; text-transform:uppercase;">Siber Rulet (Çarpan Çarkı)</h3>
+                            <input type="number" id="bet-amount" class="input-bet" placeholder="Bahis miktarını gir (Cr)...">
+                            <button style="width: 100%; padding: 15px; background: linear-gradient(135deg, #dc2626, #991b1b); color: white; font-size: 16px; font-weight: 800; border-radius:6px;" id="btn-spin-roulette">Kaderi Döndür (Spin)</button>
+                            <div id="roulette-msg" style="text-align: center; margin-top: 15px; font-weight: 800; min-height: 24px; color: #a1a1aa; font-size: 18px;">Bahis bekleniyor...</div>
+                        </div>
+                        <div class="casino-box">
+                            <h3 style="margin-top:0; font-size: 14px; color: #a78bfa; text-transform:uppercase;">Kozmetik Kasaları</h3>
+                            <div id="lootbox-msg" style="text-align: center; margin-bottom: 10px; font-weight: 800; min-height: 20px; color: #a1a1aa;">Sistem Kasaları Bekliyor...</div>
+                            <div class="lootbox"><div><div style="font-weight: 800; font-size: 13px; color: #94a3b8;">Standart Kasa</div><div style="font-size: 10px; color: #64748b; margin-top:4px;">%1 Efsanevi İhtimal</div></div><button class="btn-blue" style="padding:8px 15px; border-radius:4px; font-weight:bold; border:none;" onclick="openCosmeticBox('standart', 15000, event)">15,000 Cr</button></div>
+                            <div class="lootbox" style="border-color: #38bdf8; background: rgba(56,189,248,0.1);"><div><div style="font-weight: 800; font-size: 13px; color: #38bdf8;">Premium Kasa</div><div style="font-size: 10px; color: #64748b; margin-top:4px;">%10 Efsanevi İhtimal</div></div><button class="btn-purp" style="padding:8px 15px; border-radius:4px; font-weight:bold; border:none;" onclick="openCosmeticBox('premium', 75000, event)">75,000 Cr</button></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let playerName = ""; let money = 100; let ap = 0;
+        let globalTech = { speedMult: 1, priceMult: 1, contractMult: 1, clickPower: 1, boxDiscount: 1 };
+        let gameLoopsInitialized = false; const maxSlots = 5; let equippedCount = 0;
+
+        // YENİ: Şirket Değişkenleri
+        let salaryTimer = 6600;
+        const consultants = [
+            { id: 'c1', name: 'Stajyer Borsa Analisti', risk: 'Düşük Risk', desc: '%2 Bütçe ile işlem yapar.', cost: 50000, salary: 15000, hired: false, multMin: 0.8, multMax: 1.4 },
+            { id: 'c2', name: 'Kıdemli Fon Yöneticisi', risk: 'Orta Risk', desc: '%5 Bütçe ile işlem yapar.', cost: 500000, salary: 150000, hired: false, multMin: 0.5, multMax: 1.8 },
+            { id: 'c3', name: 'Kuantum Trade Botu', risk: 'Yüksek Risk', desc: '%15 Bütçe ile işlem yapar.', cost: 5000000, salary: 2500000, hired: false, multMin: 0.1, multMax: 2.8 }
+        ];
+
+        // EŞYALAR
+        const items = {
+            silikon: { name: 'Ham Silikon', count: 0, price: 2 }, demir: { name: 'Demir Cevheri', count: 0, price: 3 }, bakir: { name: 'Bakır Cevheri', count: 0, price: 4 }, aluminyum: { name: 'Alüminyum', count: 0, price: 5 }, karbon: { name: 'Ham Karbon', count: 0, price: 6 }, lityum: { name: 'Lityum', count: 0, price: 8 },
+            islenmis_silikon: { name: 'İşlenmiş Silikon', count: 0, price: 10 }, demir_kulce: { name: 'Demir Külçe', count: 0, price: 15 }, bakir_tel: { name: 'Bakır Tel', count: 0, price: 20 }, aluminyum_levha: { name: 'Alüminyum Levha', count: 0, price: 25 }, karbon_fiber: { name: 'Karbon Fiber', count: 0, price: 30 }, lityum_iyon: { name: 'Lityum İyon', count: 0, price: 40 },
+            direnc: { name: 'Direnç', count: 0, price: 50 }, transistor: { name: 'Transistör', count: 0, price: 70 }, kondansator: { name: 'Kondansatör', count: 0, price: 85 }, pcb_karti: { name: 'Boş PCB Kartı', count: 0, price: 110 }, bakir_bobin: { name: 'Bakır Bobin', count: 0, price: 90 },
+            mikrocip: { name: 'Mikroçip', count: 0, price: 300 }, sensor: { name: 'Optik Sensör', count: 0, price: 450 }, batarya: { name: 'Batarya Bloğu', count: 0, price: 600 }, islemci: { name: 'İşlemci (CPU)', count: 0, price: 1500 }, ram: { name: 'Bellek (RAM)', count: 0, price: 1200 },
+            ekran_karti: { name: 'Görüntü İşleyici (GPU)', count: 0, price: 3500 }, anakart: { name: 'Sunucu Anakartı', count: 0, price: 5000 }, ag_karti: { name: 'Fiber Ağ Kartı', count: 0, price: 2800 }, kuantum_cipi: { name: 'Kuantum Çipi', count: 0, price: 12000 },
+            yz_cekirdegi: { name: 'Yapay Zeka Çekirdeği', count: 0, price: 45000 }, noral_ag: { name: 'Nöral Ağ Modülü', count: 0, price: 80000 }, sunucu_unitesi: { name: 'Veri Sunucusu', count: 0, price: 150000 }, kuantum_bilgisayar: { name: 'Kuantum Mainframe', count: 0, price: 1000000 },
+            arastirma_verisi: { name: 'Araştırma Verisi (AP)', count: 0, price: 0 } 
+        };
+
+        // MAKİNELER (Fiyatlar ve Çarpanlar Düzenlendi)
+        // Hammadde (T1/T2) mult: 1.05 (Ucuzlar ama çok alınabilir), İleri Seviye (T4-6) mult: 1.4 (Pahalılaşır)
+        const machines = [
+            { id: 'm1', tier: 1, name: 'Silikon Kazıcı', inputs: [], out: 'silikon', qty: 12, cycle: 2000, cost: 200, mult: 1.05, count: 0, prog: 0 },
+            { id: 'm2', tier: 1, name: 'Demir Madeni', inputs: [], out: 'demir', qty: 12, cycle: 2000, cost: 250, mult: 1.05, count: 0, prog: 0 },
+            { id: 'm3', tier: 1, name: 'Bakır Matkabı', inputs: [], out: 'bakir', qty: 10, cycle: 2000, cost: 300, mult: 1.05, count: 0, prog: 0 },
+            { id: 'm4', tier: 1, name: 'Alüminyum Çıkarıcı', inputs: [], out: 'aluminyum', qty: 8, cycle: 2500, cost: 400, mult: 1.05, count: 0, prog: 0 },
+            { id: 'm5', tier: 1, name: 'Karbon Sentezi', inputs: [], out: 'karbon', qty: 6, cycle: 3000, cost: 600, mult: 1.05, count: 0, prog: 0 },
+            { id: 'm6', tier: 1, name: 'Lityum Pompası', inputs: [], out: 'lityum', qty: 5, cycle: 4000, cost: 900, mult: 1.05, count: 0, prog: 0 },
+            
+            { id: 'm7', tier: 2, name: 'Silikon Fırını', inputs: [{id:'silikon', q:3}], out: 'islenmis_silikon', qty: 2, cycle: 3000, cost: 1500, mult: 1.08, count: 0, prog: 0 },
+            { id: 'm8', tier: 2, name: 'Demir Döküm', inputs: [{id:'demir', q:3}], out: 'demir_kulce', qty: 2, cycle: 3000, cost: 1800, mult: 1.08, count: 0, prog: 0 },
+            { id: 'm9', tier: 2, name: 'Tel Ekstrüderi', inputs: [{id:'bakir', q:4}], out: 'bakir_tel', qty: 2, cycle: 3000, cost: 2200, mult: 1.08, count: 0, prog: 0 },
+            { id: 'm10', tier: 2, name: 'Alüminyum Presi', inputs: [{id:'aluminyum', q:4}], out: 'aluminyum_levha', qty: 2, cycle: 4000, cost: 3000, mult: 1.08, count: 0, prog: 0 },
+            { id: 'm11', tier: 2, name: 'Karbon İşleyici', inputs: [{id:'karbon', q:4}], out: 'karbon_fiber', qty: 2, cycle: 4000, cost: 3500, mult: 1.08, count: 0, prog: 0 },
+            { id: 'm12', tier: 2, name: 'İyon Ayrıştırıcı', inputs: [{id:'lityum', q:5}], out: 'lityum_iyon', qty: 2, cycle: 5000, cost: 5000, mult: 1.08, count: 0, prog: 0 },
+            
+            { id: 'm13', tier: 3, name: 'Direnç Makinesi', inputs: [{id:'bakir_tel', q:2}, {id:'karbon_fiber', q:1}], out: 'direnc', qty: 3, cycle: 4000, cost: 8000, mult: 1.15, count: 0, prog: 0 },
+            { id: 'm14', tier: 3, name: 'Transistör Bandı', inputs: [{id:'islenmis_silikon', q:3}, {id:'bakir_tel', q:2}], out: 'transistor', qty: 2, cycle: 4000, cost: 10000, mult: 1.15, count: 0, prog: 0 },
+            { id: 'm15', tier: 3, name: 'Kondansatör Üretici', inputs: [{id:'aluminyum_levha', q:2}, {id:'karbon_fiber', q:2}], out: 'kondansator', qty: 2, cycle: 5000, cost: 12000, mult: 1.15, count: 0, prog: 0 },
+            { id: 'm16', tier: 3, name: 'PCB Baskı Robotu', inputs: [{id:'bakir_tel', q:3}, {id:'karbon_fiber', q:2}], out: 'pcb_karti', qty: 1, cycle: 6000, cost: 18000, mult: 1.15, count: 0, prog: 0 },
+            { id: 'm17', tier: 3, name: 'Bobin Sarıcı', inputs: [{id:'bakir_tel', q:4}, {id:'demir_kulce', q:2}], out: 'bakir_bobin', qty: 2, cycle: 5000, cost: 15000, mult: 1.15, count: 0, prog: 0 },
+            { id: 'm_ap', tier: 3, name: 'Veri Analiz (AP)', inputs: [{id:'islenmis_silikon', q:5}], out: 'arastirma_verisi', qty: 1, cycle: 10000, cost: 25000, mult: 1.2, count: 0, prog: 0 },
+            
+            { id: 'm18', tier: 4, name: 'Çip Litografi', inputs: [{id:'transistor', q:5}, {id:'islenmis_silikon', q:3}], out: 'mikrocip', qty: 1, cycle: 7000, cost: 30000, mult: 1.3, count: 0, prog: 0 },
+            { id: 'm19', tier: 4, name: 'Sensör Montajı', inputs: [{id:'islenmis_silikon', q:4}, {id:'bakir_bobin', q:3}], out: 'sensor', qty: 1, cycle: 8000, cost: 40000, mult: 1.3, count: 0, prog: 0 },
+            { id: 'm20', tier: 4, name: 'Batarya Fabrikası', inputs: [{id:'lityum_iyon', q:5}, {id:'aluminyum_levha', q:3}], out: 'batarya', qty: 1, cycle: 9000, cost: 50000, mult: 1.3, count: 0, prog: 0 },
+            { id: 'm21', tier: 4, name: 'CPU Dizgisi', inputs: [{id:'mikrocip', q:4}, {id:'pcb_karti', q:2}], out: 'islemci', qty: 1, cycle: 10000, cost: 80000, mult: 1.3, count: 0, prog: 0 },
+            { id: 'm22', tier: 4, name: 'RAM Lehimleme', inputs: [{id:'mikrocip', q:3}, {id:'kondansator', q:5}], out: 'ram', qty: 1, cycle: 10000, cost: 70000, mult: 1.3, count: 0, prog: 0 },
+            
+            { id: 'm23', tier: 5, name: 'GPU Üretimi', inputs: [{id:'islemci', q:2}, {id:'pcb_karti', q:3}], out: 'ekran_karti', qty: 1, cycle: 15000, cost: 250000, mult: 1.4, count: 0, prog: 0 },
+            { id: 'm24', tier: 5, name: 'Anakart Robotu', inputs: [{id:'pcb_karti', q:3}, {id:'transistor', q:15}, {id:'direnc', q:10}], out: 'anakart', qty: 1, cycle: 18000, cost: 350000, mult: 1.4, count: 0, prog: 0 },
+            { id: 'm25', tier: 5, name: 'Fiber Ağ Kartı', inputs: [{id:'mikrocip', q:5}, {id:'bakir_bobin', q:8}], out: 'ag_karti', qty: 1, cycle: 15000, cost: 200000, mult: 1.4, count: 0, prog: 0 },
+            { id: 'm26', tier: 5, name: 'Kuantum Laboratuvarı', inputs: [{id:'islemci', q:5}, {id:'sensor', q:15}], out: 'kuantum_cipi', qty: 1, cycle: 25000, cost: 800000, mult: 1.4, count: 0, prog: 0 },
+            
+            { id: 'm27', tier: 6, name: 'Yapay Zeka Sentezi', inputs: [{id:'kuantum_cipi', q:3}, {id:'ekran_karti', q:5}], out: 'yz_cekirdegi', qty: 1, cycle: 35000, cost: 3000000, mult: 1.5, count: 0, prog: 0 },
+            { id: 'm28', tier: 6, name: 'Nöral Ağ Dizgisi', inputs: [{id:'yz_cekirdegi', q:2}, {id:'ag_karti', q:8}], out: 'noral_ag', qty: 1, cycle: 45000, cost: 6000000, mult: 1.5, count: 0, prog: 0 },
+            { id: 'm29', tier: 6, name: 'Sunucu Montajı', inputs: [{id:'anakart', q:5}, {id:'islemci', q:15}, {id:'ram', q:30}], out: 'sunucu_unitesi', qty: 1, cycle: 50000, cost: 15000000, mult: 1.5, count: 0, prog: 0 },
+            { id: 'm30', tier: 6, name: 'Mainframe İnşası', inputs: [{id:'yz_cekirdegi', q:8}, {id:'sunucu_unitesi', q:3}, {id:'noral_ag', q:3}], out: 'kuantum_bilgisayar', qty: 1, cycle: 90000, cost: 50000000, mult: 1.5, count: 0, prog: 0 }
+        ];
+
+        const techTree = [
+            { id: 't1', icon: '⚡', name: 'Lojistik Ağ v1.0', desc: 'Makineler %20 hızlı çalışır.', cost: 50, bought: false, apply: () => globalTech.speedMult *= 1.2 },
+            { id: 't2', icon: '📈', name: 'Pazarlama Uzmanı', desc: 'Satış fiyatları %50 artar.', cost: 150, bought: false, apply: () => globalTech.priceMult *= 1.5 },
+            { id: 't3', icon: '🚀', name: 'Kuantum İşlemciler', desc: 'Makineler %50 daha hızlı çalışır.', cost: 800, bought: false, apply: () => globalTech.speedMult *= 1.5 },
+            { id: 't4', icon: '🤝', name: 'Kurumsal Anlaşmalar', desc: 'Kontrat ödülleri 2 katına çıkar.', cost: 1500, bought: false, apply: () => globalTech.contractMult *= 2 },
+            { id: 't5', icon: '⛏️', name: 'Veri Madenciliği', desc: 'Manuel tıklama gücü 5 katına çıkar.', cost: 3000, bought: false, apply: () => { globalTech.clickPower = 5; document.getElementById('click-power').innerText = 5; } },
+            { id: 't6', icon: '🔓', name: 'Kasa Şifre Kırıcı', desc: 'Kasa/Lootbox fiyatları yarıya düşer.', cost: 8000, bought: false, apply: () => globalTech.boxDiscount = 0.5 },
+            { id: 't7', icon: '💎', name: 'Derin Teknoloji', desc: 'Satış fiyatları ek 2 kat artar.', cost: 20000, bought: false, apply: () => globalTech.priceMult *= 2 }
+        ];
+
+        let market = { 
+            altin: { name: "Saf Altın (Gr)", owned: 0, price: 1000, volatility: 0.02, history: "up" }, 
+            platin: { name: "Platin Külçe", owned: 0, price: 4000, volatility: 0.05, history: "up" },
+            tech_etf: { name: "Siber-Teknoloji Fonu", owned: 0, price: 8500, volatility: 0.09, history: "up" },
+            cybercoin: { name: "CyberCoin", owned: 0, price: 1200, volatility: 0.18, history: "up" } 
+        };
+
+        const cosmetics = {
+            isik_mavi: { name: "Neon Mavi", type: "Yan Işık", rarity: "Yaygın", count: 0, color: "#38bdf8", equipped: false },
+            isik_mor: { name: "Mor Alev", type: "Yan Işık", rarity: "Nadir", count: 0, color: "#a855f7", equipped: false },
+            isik_kizil: { name: "Kızılötesi", type: "Yan Işık", rarity: "Destansı", count: 0, color: "#ef4444", equipped: false },
+            isik_matrix: { name: "Matrix Yeşili", type: "Yan Işık", rarity: "Efsanevi", count: 0, color: "#22c55e", equipped: false },
+
+            plaka_karbon: { name: "Karbon Fiber", type: "Plaka", rarity: "Yaygın", count: 0, color: "#475569", equipped: false },
+            plaka_karanlik: { name: "Obsidyen Siyahı", type: "Plaka", rarity: "Nadir", count: 0, color: "#000000", equipped: false },
+            plaka_cam: { name: "Holografik Cam", type: "Plaka", rarity: "Destansı", count: 0, color: "#22d3ee", equipped: false },
+            plaka_altin: { name: "24K Altın Varak", type: "Plaka", rarity: "Efsanevi", count: 0, color: "#fbbf24", equipped: false },
+
+            bg_karanlik: { name: "Siber Karanlık", type: "Arka Plan", rarity: "Yaygın", count: 0, color: "#09090b", equipped: false },
+            bg_uzay: { name: "Derin Uzay", type: "Arka Plan", rarity: "Nadir", count: 0, color: "#172554", equipped: false },
+            bg_kuantum: { name: "Kuantum Dalgaları", type: "Arka Plan", rarity: "Destansı", count: 0, color: "#1e1b4b", equipped: false },
+            bg_matrix: { name: "Matrix Veri Akışı", type: "Arka Plan", rarity: "Efsanevi", count: 0, color: "#059669", equipped: false },
+
+            stil_standart: { name: "Çelik Klasik", type: "Şirket Stili", rarity: "Yaygın", count: 0, color: "#94a3b8", equipped: false },
+            stil_terminal: { name: "Terminal Green", type: "Şirket Stili", rarity: "Nadir", count: 0, color: "#22c55e", equipped: false },
+            stil_pulse: { name: "Siber Titreşim", type: "Şirket Stili", rarity: "Destansı", count: 0, color: "#38bdf8", equipped: false },
+            stil_glitch: { name: "Kırmızı Glitch", type: "Şirket Stili", rarity: "Efsanevi", count: 0, color: "#f43f5e", equipped: false },
+
+            // Yeni 5. Kategori: Ekran Efekti
+            efekt_parazit: { name: "Statik Parazit", type: "Ekran Efekti", rarity: "Nadir", count: 0, color: "#9ca3af", equipped: false },
+            efekt_crt: { name: "Nostaljik CRT", type: "Ekran Efekti", rarity: "Destansı", count: 0, color: "#6ee7b7", equipped: false },
+            efekt_glitch: { name: "Kırmızı Alarm (Glitch)", type: "Ekran Efekti", rarity: "Efsanevi", count: 0, color: "#f43f5e", equipped: false }
+        };
+
+        let activeContract = { active: false, reqItem: '', reqQty: 0, rewardCr: 0, rewardAP: 0, timeLeft: 0 };
+        const contractTargets = ['islenmis_silikon', 'bakir_tel', 'transistor', 'mikrocip', 'sensor', 'islemci', 'ram', 'ag_karti', 'kuantum_cipi'];
+
+        function spawnFloatingText(x, y, text, color = "#10b981") {
+            const el = document.createElement('div'); el.className = 'float-text'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.color = color; el.innerText = text;
+            document.body.appendChild(el); setTimeout(() => el.remove(), 1200);
+        }
+
+        window.onload = () => {
+            if(localStorage.getItem('versuV4Save')) { document.getElementById('input-company-name').style.display = 'none'; document.getElementById('btn-start-game').innerText = "Sisteme Geri Dön"; document.getElementById('btn-reset-game').style.display = 'block'; }
+        };
+
+        function resetSave() { if(confirm("Tüm şirket verileriniz silinecek. Emin misiniz?")) { localStorage.removeItem('versuV4Save'); location.reload(); } }
+
+        function saveGame() {
+            localStorage.setItem('versuV4Save', JSON.stringify({ 
+                playerName, money, ap, globalTech, items, market, activeContract, cosmetics, salaryTimer,
+                machines: machines.map(m => ({ id: m.id, count: m.count, prog: m.prog, cost: m.cost })), 
+                techTree: techTree.map(t => ({ id: t.id, bought: t.bought })),
+                consultants: consultants.map(c => ({ id: c.id, hired: c.hired }))
+            }));
+            const notify = document.getElementById('save-notify'); notify.style.opacity = '1'; setTimeout(() => notify.style.opacity = '0', 2000);
+        }
+
+        function loadGame() {
+            const str = localStorage.getItem('versuV4Save');
+            if (str) {
+                const data = JSON.parse(str);
+                playerName = data.playerName || "Anonim"; money = data.money; ap = data.ap; globalTech = data.globalTech;
+                if(data.salaryTimer !== undefined) salaryTimer = data.salaryTimer;
+                if(data.items) { for(let key in data.items) { if(items[key]) items[key].count = data.items[key].count; } }
+                if(data.cosmetics) { for(let key in data.cosmetics) { if(cosmetics[key]) { cosmetics[key].count = data.cosmetics[key].count; cosmetics[key].equipped = data.cosmetics[key].equipped; } } }
+                if(data.machines) { data.machines.forEach(sM => { let m = machines.find(x => x.id === sM.id); if(m) { m.count = sM.count; m.prog = sM.prog; m.cost = sM.cost; } }); }
+                if(data.techTree) { data.techTree.forEach(sT => { let t = techTree.find(x => x.id === sT.id); if(t && sT.bought) { t.bought = true; } }); document.getElementById('click-power').innerText = globalTech.clickPower; }
+                if(data.consultants) { data.consultants.forEach(sC => { let c = consultants.find(x => x.id === sC.id); if(c) { c.hired = sC.hired; }}); }
+                if(data.market) market = data.market; if(data.activeContract) activeContract = data.activeContract;
+                return true;
+            }
+            return false;
+        }
+
+        function startGame() {
+            if (!loadGame()) {
+                const inputVal = document.getElementById('input-company-name').value.trim(); playerName = inputVal !== "" ? inputVal : "Anonim";
+                market['player_corp'] = { name: `${playerName} Corp.`, owned: 0, price: 2500, volatility: 0.08, history: "up" }; saveGame(); 
+            }
+            document.getElementById('ui-brand-depo').innerText = `${playerName} Deposu`; document.getElementById('ui-brand-uretim').innerText = `${playerName} Ağır Sanayi`; document.getElementById('ui-brand-kontrat').innerText = `${playerName} Kurumsal`;
+            const menu = document.getElementById('main-menu'); const gameUi = document.getElementById('game-wrapper');
+            menu.style.opacity = '0'; setTimeout(() => { menu.style.display = 'none'; gameUi.style.display = 'block'; setTimeout(() => gameUi.style.opacity = '1', 50); startEngines(); }, 500);
+        }
+
+        function startEngines() {
+            if (gameLoopsInitialized) return; gameLoopsInitialized = true;
+            // 1. Üretim Motoru
+            setInterval(() => {
+                let uiNeedsUpdate = false;
+                machines.forEach(m => {
+                    if (m.count > 0) {
+                        const card = document.getElementById(`card-${m.id}`);
+                        let canProduce = m.inputs.length === 0 || m.inputs.every(req => items[req.id].count >= (req.q * m.count));
+                        if (canProduce) {
+                            card.classList.add('active'); card.classList.remove('waiting');
+                            m.prog += 50; let currentCycle = m.cycle / globalTech.speedMult;
+                            if (m.prog >= currentCycle) { 
+                                m.inputs.forEach(req => items[req.id].count -= (req.q * m.count)); 
+                                if (m.out === 'arastirma_verisi') ap += (m.qty * m.count); else items[m.out].count += (m.qty * m.count);
+                                m.prog = 0; uiNeedsUpdate = true; 
+                            }
+                        } else { card.classList.add('waiting'); card.classList.remove('active'); m.prog = 0; }
+                        const bar = document.getElementById(`prog-${m.id}`); if(bar) bar.style.width = (m.prog / (m.cycle / globalTech.speedMult) * 100) + '%';
+                    }
+                });
+                if (uiNeedsUpdate) updateUI();
+            }, 50);
+
+            // 2. Kontrat ve Maaş Motoru
+            setInterval(() => {
+                if (activeContract.active) { activeContract.timeLeft--; if (activeContract.timeLeft <= 0) { activeContract.active = false; document.getElementById('contract-desc').innerHTML = "<span style='color:#ef4444;'>Görev Başarısız.</span>"; setTimeout(generateContract, 5000); } updateContractUI(); } 
+                else if(Math.random() < 0.2) generateContract();
+
+                // Maaş Geri Sayımı
+                if(salaryTimer > 0) salaryTimer--;
+                if(salaryTimer <= 0) {
+                    let totalSal = consultants.filter(c => c.hired).reduce((sum, c) => sum + c.salary, 0);
+                    if(totalSal > 0) { money -= totalSal; spawnFloatingText(window.innerWidth/2, window.innerHeight/2, `MAAŞ ÖDENDİ: -${totalSal.toLocaleString()} Cr`, "#ef4444"); updateUI(); }
+                    salaryTimer = 6600;
+                }
+                document.getElementById('salary-timer-ui').innerText = salaryTimer;
+            }, 1000);
+
+            // 3. Borsa Motoru (Minimum Hareket ve Balina Eklendi)
+            setInterval(() => {
+                for (let key in market) { 
+                    let m = market[key]; let old = m.price; 
+                    let swingPercent = (Math.random() * m.volatility * 2) - m.volatility;
+                    let diff = Math.round(m.price * swingPercent);
+                    if (diff === 0) diff = swingPercent > 0 ? Math.floor(Math.random() * 3) + 1 : -(Math.floor(Math.random() * 3) + 1);
+                    m.price += diff;
+                    if (m.price <= 15) m.price = 20 + Math.floor(Math.random() * 15); // Pazar Müdahalesi (Balina)
+                    m.history = m.price >= old ? "up" : "down"; 
+                }
+                renderMarket();
+            }, 4000);
+
+            // 4. Danışman Ticaret Motoru (Her 30 saniyede bir)
+            setInterval(() => {
+                let tradeHappen = false;
+                consultants.forEach(c => {
+                    if(c.hired && money > 1000) {
+                        let budget = 0;
+                        if(c.risk === 'Düşük Risk') budget = money * 0.02;
+                        if(c.risk === 'Orta Risk') budget = money * 0.05;
+                        if(c.risk === 'Yüksek Risk') budget = money * 0.15;
+                        
+                        money -= budget;
+                        let mult = c.multMin + Math.random() * (c.multMax - c.multMin);
+                        let returns = budget * mult;
+                        money += returns;
+                        
+                        let color = returns >= budget ? '#10b981' : '#ef4444';
+                        let prefix = returns >= budget ? '+' : '';
+                        spawnFloatingText(window.innerWidth/2 + (Math.random()*100-50), window.innerHeight/2 + (Math.random()*100-50), `${c.name}: ${prefix}${Math.floor(returns - budget).toLocaleString()} Cr`, color);
+                        tradeHappen = true;
+                    }
+                });
+                if(tradeHappen) updateUI();
+            }, 30000);
+
+            setInterval(saveGame, 10000);
+            renderAllMachines(); renderTechTree(); renderCosmetics(); renderConsultants(); if(!activeContract.active) generateContract(); updateUI();
+        }
+
+        function openTab(tabId) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(tabId).classList.add('active'); event.currentTarget.classList.add('active'); }
+        function manualMine(e) { items.silikon.count += globalTech.clickPower; items.demir.count += globalTech.clickPower; items.bakir.count += globalTech.clickPower; spawnFloatingText(e.clientX, e.clientY - 20, `+${globalTech.clickPower}`); updateUI(); }
+        
+        function renderInventory() {
+            const invContainer = document.getElementById('inventory-container'); invContainer.innerHTML = '';
+            for (let key in items) {
+                if(key === 'arastirma_verisi') continue; 
+                let currentPrice = Math.floor(items[key].price * globalTech.priceMult);
+                invContainer.innerHTML += `<div class="list-item"><span style="font-size:12px;">${items[key].name} <span class="badge">${items[key].count}</span></span><div class="btn-group"><button class="btn-blue" onclick="sellItem('${key}', 1, ${currentPrice}, event)">1 Sat</button><button class="btn-blue" onclick="sellItem('${key}', 'half', ${currentPrice}, event)">%50</button><button class="btn-red" onclick="sellItem('${key}', 'all', ${currentPrice}, event)">Max</button></div></div>`;
+            }
+        }
+
+        function sellItem(key, type, price, e) {
+            let count = items[key].count; if (count <= 0) return; let sellQty = 0;
+            if (type === 1) sellQty = 1; else if (type === 'half') sellQty = Math.max(1, Math.floor(count / 2)); else if (type === 'all') sellQty = count;
+            items[key].count -= sellQty; let gain = sellQty * price; money += gain;
+            spawnFloatingText(e.clientX - 20, e.clientY - 20, `+${gain.toLocaleString()} Cr`, "#10b981"); updateUI();
+        }
+        
+        function renderAllMachines() {
+            [1, 2, 3, 4, 5, 6].forEach(t => { const el = document.getElementById(`tier${t}-container`); if(el) el.innerHTML = ''; });
+            machines.forEach((m, index) => {
+                let isOwned = m.count > 0;
+                let reqHtml = m.inputs.length === 0 ? `<span style="color:#64748b;">(Girdi Yok)</span>` : m.inputs.map(req => `<span style="color:#ef4444">-${isOwned ? req.q * m.count : req.q} ${items[req.id].name}</span>`).join(' | ');
+                let totalOut = isOwned ? m.qty * m.count : m.qty;
+                let dynText = isOwned ? "Güncel Döngü Kapasitesi" : "Temel Kapasite";
+                let actualCycle = (m.cycle / globalTech.speedMult) / 1000;
+                
+                const container = document.getElementById(`tier${m.tier}-container`);
+                if(container) {
+                    container.innerHTML += `
+                        <div class="machine-card" id="card-${m.id}">
+                            <div class="machine-header"><span>${m.name} <span class="badge" id="mcount-${m.id}">x${m.count}</span></span><span style="font-size:11px; color:#64748b;" id="time-${m.id}">${actualCycle.toFixed(1)}s</span></div>
+                            <div class="dyn-calc">${dynText}</div>
+                            <div class="req-list">Harcar: ${reqHtml} <br><br> Üretir: <span class="out-item">+${totalOut} ${items[m.out].name}</span></div>
+                            <div class="progress-bg"><div class="progress-bar" id="prog-${m.id}"></div></div>
+                            <button class="btn-buy" id="buy-${m.id}" onclick="buyMachine(${index}, event)">Al (${Math.floor(m.cost).toLocaleString()} Cr)</button>
+                        </div>`;
+                }
+            });
+        }
+        
+        // --- ŞİRKET VE DANIŞMANLAR ---
+        function renderConsultants() {
+            const cont = document.getElementById('consultants-container'); cont.innerHTML = '';
+            let totalSal = 0;
+            consultants.forEach((c, index) => {
+                if(c.hired) totalSal += c.salary;
+                let btnHtml = c.hired ? `<button class="btn-red" style="padding:8px; border-radius:4px;" onclick="fireConsultant(${index}, event)">Kov</button>` : `<button class="btn-green" style="padding:8px; border-radius:4px;" onclick="hireConsultant(${index}, event)">İşe Al (${c.cost.toLocaleString()} Cr)</button>`;
+                cont.innerHTML += `
+                    <div class="consultant-card ${c.hired ? 'hired' : ''}">
+                        <div>
+                            <div style="font-weight:bold; font-size:14px; color:#fff;">${c.name} <span style="font-size:10px; color:#fbbf24;">(${c.risk})</span></div>
+                            <div style="font-size:11px; color:#94a3b8; margin: 4px 0;">${c.desc}</div>
+                            <div style="font-size:11px; color:#f87171;">Maaş: ${c.salary.toLocaleString()} Cr</div>
+                        </div>
+                        ${btnHtml}
+                    </div>`;
+            });
+            document.getElementById('total-salary-ui').innerText = totalSal.toLocaleString();
+        }
+        function hireConsultant(index, e) {
+            let c = consultants[index];
+            if(money >= c.cost) { money -= c.cost; c.hired = true; spawnFloatingText(e.clientX, e.clientY-20, "İşe Alındı", "#10b981"); renderConsultants(); updateUI(); saveGame();} else alert("Yetersiz Bakiye!");
+        }
+        function fireConsultant(index, e) {
+            consultants[index].hired = false; spawnFloatingText(e.clientX, e.clientY-20, "Kovuldu", "#ef4444"); renderConsultants(); saveGame();
+        }
+
+        function renderTechTree() {
+            const tc = document.getElementById('tech-container'); tc.innerHTML = '';
+            techTree.forEach((t, index) => {
+                let btnHtml = t.bought ? `<button disabled style="background:transparent; color:#10b981; border:1px solid #10b981; padding:8px 15px;">Aktif</button>` : `<button class="btn-purp" style="padding:8px 15px; border-radius:4px; font-weight:bold; border:none;" onclick="buyTech(${index})" ${ap < t.cost ? 'disabled' : ''}>Al (${t.cost} AP)</button>`;
+                tc.innerHTML += `<div class="tech-card ${t.bought ? 'bought' : ''}"> <div style="display:flex; align-items:center;"> <div class="tech-icon">${t.icon}</div> <div> <div style="font-weight:bold; color:#f8fafc;">${t.name}</div> <div style="font-size:11px; color:#94a3b8;">${t.desc}</div> </div> </div> ${btnHtml} </div>`;
+            });
+        }
+        
+        function renderMarket() {
+            const mc = document.getElementById('market-container'); mc.innerHTML = '';
+            for (let key in market) {
+                let m = market[key];
+                mc.innerHTML += `<div class="stock-item"><div><div style="font-weight: 800; font-size:13px;">${m.name}</div><div style="font-size: 11px; color:#94a3b8;">Sahip: ${m.owned}</div></div><div class="stock-price ${m.history}">${m.history==='up'?'▲':'▼'} ${m.price.toLocaleString()}</div><div class="btn-group" style="flex-direction:column;"><div style="display:flex; gap:4px;"><button class="btn-green" onclick="tradeStock('${key}','buy',1, event)">1 Al</button><button class="btn-green" onclick="tradeStock('${key}','buy','max', event)">Max</button></div><div style="display:flex; gap:4px;"><button class="btn-red" onclick="tradeStock('${key}','sell',1, event)">1 Sat</button><button class="btn-red" onclick="tradeStock('${key}','sell','all', event)">Max</button></div></div></div>`;
+            }
+        }
+        
+        function tradeStock(key, action, type, e) {
+            let m = market[key];
+            if (action === 'buy') {
+                if (type === 1 && money >= m.price) { money -= m.price; m.owned++; spawnFloatingText(e.clientX, e.clientY-20, "-"+m.price.toLocaleString(), "#ef4444");}
+                else if (type === 'max') { let maxQty = Math.floor(money / m.price); if (maxQty > 0) { money -= maxQty * m.price; m.owned += maxQty; spawnFloatingText(e.clientX, e.clientY-20, "-"+(maxQty*m.price).toLocaleString(), "#ef4444"); } }
+            } else if (action === 'sell') {
+                if (type === 1 && m.owned > 0) { money += m.price; m.owned--; spawnFloatingText(e.clientX, e.clientY-20, "+"+m.price.toLocaleString(), "#10b981");}
+                else if (type === 'all' && m.owned > 0) { let gain = m.owned * m.price; money += gain; m.owned = 0; spawnFloatingText(e.clientX, e.clientY-20, "+"+gain.toLocaleString(), "#10b981");}
+            }
+            updateUI();
+        }
+
+        function renderCosmetics() {
+            const cCont = document.getElementById('cosmetic-container'); const sCont = document.getElementById('slots-container');
+            cCont.innerHTML = ''; sCont.innerHTML = ''; equippedCount = 0; let hasCosmetic = false;
+
+            for (let key in cosmetics) {
+                const item = cosmetics[key];
+                let rarityClass = "rare-yaygin"; if(item.rarity === "Nadir") rarityClass = "rare-nadir"; if(item.rarity === "Destansı") rarityClass = "rare-destansi"; if(item.rarity === "Efsanevi") rarityClass = "rare-efsanevi";
+
+                if (item.equipped) {
+                    equippedCount++; sCont.innerHTML += `<div class="slot filled" style="border-color: ${item.color};" onclick="unequipItem('${key}')"><span style="font-size:10px; color:#a1a1aa;">${item.type}</span><strong class="${rarityClass}">${item.name}</strong></div>`;
+                } else if (item.count > 0) {
+                    hasCosmetic = true; cCont.innerHTML += `<div class="cosmetic-item" style="border-left-color: ${item.color};"><div><strong class="${rarityClass}">${item.name}</strong> <span style="color:#94a3b8; font-size:10px;">(x${item.count})</span><div style="font-size: 10px; color:#52525b;">${item.type}</div></div><button class="btn-blue" style="padding:6px 12px; border-radius:4px; border:none;" onclick="equipItem('${key}')">Kuşan</button></div>`;
+                }
+            }
+            for (let i = equippedCount; i < maxSlots; i++) sCont.innerHTML += `<div class="slot">Boş Slot</div>`;
+            document.getElementById('slot-counter').innerText = `${equippedCount}/${maxSlots} Dolu`; applyThemes();
+        }
+
+        function equipItem(key) { const itemToEquip = cosmetics[key]; for (let k in cosmetics) { if (cosmetics[k].equipped && cosmetics[k].type === itemToEquip.type) { cosmetics[k].equipped = false; equippedCount--; } } if (equippedCount < maxSlots) { itemToEquip.equipped = true; renderCosmetics(); saveGame(); } else alert("Slotlar dolu!"); }
+        function unequipItem(key) { cosmetics[key].equipped = false; renderCosmetics(); saveGame(); }
+
+        function applyThemes() {
+            document.body.className = ''; document.documentElement.style.setProperty('--panel-border', '#27272a'); document.documentElement.style.setProperty('--panel-bg', 'rgba(24, 24, 27, 0.9)'); document.documentElement.style.setProperty('--blur-fx', 'none'); document.documentElement.style.setProperty('--header-glow', 'none'); document.documentElement.style.setProperty('--title-color', '#fff'); document.documentElement.style.setProperty('--title-font', "'Inter', sans-serif");
+            const titles = document.querySelectorAll('.brand-title'); titles.forEach(t => { t.classList.remove('text-glitch'); t.classList.remove('text-pulse'); t.classList.remove('text-terminal');});
+
+            for (let key in cosmetics) {
+                if(cosmetics[key].equipped) {
+                    if(key === 'isik_mavi') document.body.classList.add('isik-mavi'); if(key === 'isik_matrix') document.body.classList.add('isik-matrix'); if(key === 'isik_altin') document.body.classList.add('isik-altin'); if(key === 'isik_rgb') document.body.classList.add('isik-rgb'); if(key === 'isik_mor') document.body.classList.add('isik-mor'); if(key === 'isik_kizil') document.body.classList.add('isik-kizil');
+                    if(key === 'bg_karanlik') document.body.style.background = '#09090b'; if(key === 'bg_uzay') document.body.classList.add('bg-uzay'); if(key === 'bg_grid') document.body.classList.add('bg-grid'); if(key === 'bg_matrix') document.body.classList.add('bg-matrix'); if(key === 'bg_kuantum') document.body.classList.add('bg-kuantum');
+                    if(key === 'plaka_karbon') { document.documentElement.style.setProperty('--panel-border', '#475569'); document.documentElement.style.setProperty('--panel-bg', 'rgba(15, 23, 42, 0.9)'); }
+                    if(key === 'plaka_karanlik') { document.documentElement.style.setProperty('--panel-border', '#000'); document.documentElement.style.setProperty('--panel-bg', 'rgba(0, 0, 0, 0.9)'); }
+                    if(key === 'plaka_cam') { document.documentElement.style.setProperty('--panel-border', 'rgba(255,255,255,0.2)'); document.documentElement.style.setProperty('--panel-bg', 'rgba(255,255,255,0.05)'); document.documentElement.style.setProperty('--blur-fx', 'blur(10px)');}
+                    if(key === 'plaka_altin') { document.documentElement.style.setProperty('--panel-border', '#fbbf24'); document.documentElement.style.setProperty('--panel-bg', 'rgba(69, 26, 3, 0.9)'); }
+                    if(key === 'stil_standart') { document.documentElement.style.setProperty('--title-color', '#94a3b8'); }
+                    if(key === 'stil_terminal') { document.documentElement.style.setProperty('--title-color', '#22c55e'); document.documentElement.style.setProperty('--title-font', "monospace"); titles.forEach(t => t.classList.add('text-terminal')); }
+                    if(key === 'stil_neon') { document.documentElement.style.setProperty('--header-glow', '0 0 10px #c084fc, 0 0 20px #c084fc'); document.documentElement.style.setProperty('--title-color', '#c084fc'); }
+                    if(key === 'stil_pulse') { document.documentElement.style.setProperty('--title-color', '#38bdf8'); titles.forEach(t => t.classList.add('text-pulse')); }
+                    if(key === 'stil_glitch') { document.documentElement.style.setProperty('--title-color', '#f43f5e'); titles.forEach(t => t.classList.add('text-glitch')); }
+                    
+                    // Efektler
+                    if(key === 'efekt_parazit') document.body.classList.add('efekt-parazit');
+                    if(key === 'efekt_crt') document.body.classList.add('efekt-crt');
+                    if(key === 'efekt_glitch') document.body.classList.add('efekt-glitch');
+                }
+            }
+            if(!cosmetics.bg_karanlik.equipped && !cosmetics.bg_uzay.equipped && !cosmetics.bg_grid.equipped && !cosmetics.bg_matrix.equipped && !cosmetics.bg_kuantum.equipped) document.body.style.background = '#09090b'; 
+        }
+
+        document.getElementById('btn-spin-roulette').addEventListener('click', (e) => {
+            let bet = parseInt(document.getElementById('bet-amount').value); if (isNaN(bet) || bet <= 0 || bet > money) return;
+            money -= bet; updateUI(); spawnFloatingText(e.clientX, e.clientY-20, "-"+bet, "#ef4444");
+            
+            const btn = document.getElementById('btn-spin-roulette'); const msg = document.getElementById('roulette-msg');
+            btn.disabled = true; msg.style.animation = "siber-pulse 0.2s infinite alternate";
+            const outcomes = [ { mult: 0, weight: 40, text: "SİSTEM ÇÖKTÜ (0x)", color: "#ef4444" }, { mult: 0.5, weight: 15, text: "VERİ KAYBI (0.5x)", color: "#f97316" }, { mult: 1.2, weight: 20, text: "KÜÇÜK KAZANÇ (1.2x)", color: "#10b981" }, { mult: 2.0, weight: 15, text: "İKİYE KATLADIN (2.0x)", color: "#38bdf8" }, { mult: 5.0, weight: 8, text: "BÜYÜK VURGUN (5.0x)", color: "#a855f7" }, { mult: 10.0, weight: 2, text: "MEGA JACKPOT (10.0x)", color: "#fbbf24" } ];
+            let ticks = 0;
+            let spinInterval = setInterval(() => {
+                msg.innerText = outcomes[Math.floor(Math.random() * outcomes.length)].text; ticks++;
+                if(ticks > 15) {
+                    clearInterval(spinInterval); msg.style.animation = "none"; btn.disabled = false;
+                    let totalWeight = outcomes.reduce((s, i) => s + i.weight, 0); let random = Math.random() * totalWeight; let result = null;
+                    for (let i = 0; i < outcomes.length; i++) { if (random < outcomes[i].weight) { result = outcomes[i]; break; } random -= outcomes[i].weight; }
+                    let winAmount = Math.floor(bet * result.mult); money += winAmount;
+                    msg.innerHTML = `<span style="color:${result.color}">${result.text} -> ${winAmount.toLocaleString()} Cr</span>`;
+                    if(winAmount > 0) spawnFloatingText(e.clientX, e.clientY-20, "+"+winAmount.toLocaleString(), "#10b981");
+                    updateUI(); saveGame();
+                }
+            }, 80);
+        });
+
+        function openCosmeticBox(tier, baseCost, e) {
+            let cost = baseCost * globalTech.boxDiscount;
+            if (money < cost) { alert("Yetersiz bakiye!"); return; }
+            money -= cost; spawnFloatingText(e.clientX, e.clientY-20, "-"+cost.toLocaleString(), "#ef4444");
+
+            let rarityWeights = {};
+            if(tier === 'standart') rarityWeights = { "Yaygın": 70, "Nadir": 25, "Destansı": 4, "Efsanevi": 1 };
+            if(tier === 'premium') rarityWeights = { "Yaygın": 20, "Nadir": 50, "Destansı": 20, "Efsanevi": 10 };
+
+            let pool = []; let totalWeight = 0;
+            for (let key in cosmetics) { let r = cosmetics[key].rarity; if(rarityWeights[r]) { pool.push({ key: key, name: cosmetics[key].name, rarity: r, weight: rarityWeights[r] }); totalWeight += rarityWeights[r]; } }
+            let random = Math.random() * totalWeight; let droppedItem = null; let droppedKey = "";
+            for (let i = 0; i < pool.length; i++) { if (random < pool[i].weight) { droppedKey = pool[i].key; droppedItem = pool[i]; break; } random -= pool[i].weight; }
+
+            cosmetics[droppedKey].count++;
+            let color = "#fff"; if(droppedItem.rarity === "Yaygın") color = "#94a3b8"; if(droppedItem.rarity === "Nadir") color = "#38bdf8"; if(droppedItem.rarity === "Destansı") color = "#c084fc"; if(droppedItem.rarity === "Efsanevi") color = "#fbbf24";
+            document.getElementById('lootbox-msg').innerHTML = `<span style="color:${color}; font-size: 16px; animation: pop 0.3s ease-out;">Kozmetik Çıktı: ${droppedItem.name}</span>`;
+            updateUI(); renderCosmetics(); saveGame();
+        }
+
+        function buyTech(index) { let t = techTree[index]; if (ap >= t.cost && !t.bought) { ap -= t.cost; t.bought = true; t.apply(); renderAllMachines(); updateUI(); saveGame(); } }
+        function generateContract() {
+            let targetKey = contractTargets[Math.floor(Math.random() * contractTargets.length)];
+            let baseReq = Math.floor(Math.random() * 50) + 10;
+            if(targetKey === 'islemci' || targetKey === 'ekran_karti') baseReq = Math.floor(Math.random() * 5) + 2;
+            if(targetKey === 'kuantum_cipi') baseReq = 1;
+            activeContract = { active: true, reqItem: targetKey, reqQty: baseReq, rewardCr: Math.floor(items[targetKey].price * baseReq * 3 * globalTech.contractMult), rewardAP: Math.floor(Math.random() * 20) + 10, timeLeft: 180 };
+            updateContractUI();
+        }
+        function completeContract(e) {
+            if (activeContract.active && items[activeContract.reqItem].count >= activeContract.reqQty) {
+                items[activeContract.reqItem].count -= activeContract.reqQty; money += activeContract.rewardCr; ap += activeContract.rewardAP;
+                spawnFloatingText(e.clientX, e.clientY-20, `+${activeContract.rewardCr.toLocaleString()} Cr`, "#10b981");
+                activeContract.active = false; document.getElementById('contract-desc').innerHTML = "<span style='color:#10b981;'>Teslimat Başarılı!</span>";
+                document.getElementById('btn-complete-contract').disabled = true; updateUI(); saveGame();
+            }
+        }
+        function updateContractUI() {
+            if(activeContract.active) {
+                document.getElementById('contract-desc').innerText = `${activeContract.reqQty}x ${items[activeContract.reqItem].name}`;
+                let m = Math.floor(activeContract.timeLeft / 60).toString().padStart(2, '0'); let s = (activeContract.timeLeft % 60).toString().padStart(2, '0');
+                document.getElementById('contract-timer').innerText = `${m}:${s}`;
+                document.getElementById('contract-reward').innerText = `Ödül: ${activeContract.rewardCr.toLocaleString()} Cr & ${activeContract.rewardAP} AP`;
+                document.getElementById('btn-complete-contract').disabled = items[activeContract.reqItem].count < activeContract.reqQty;
+            } else { document.getElementById('contract-timer').innerText = "--:--"; }
+        }
+        
+        function buyMachine(index, e) { 
+            const m = machines[index]; 
+            if (money >= Math.floor(m.cost)) { 
+                money -= Math.floor(m.cost); m.count++; m.cost *= m.mult; 
+                spawnFloatingText(e.clientX, e.clientY-20, "Kuruldu", "#38bdf8");
+                renderAllMachines(); updateUI(); 
+            } 
+        }
+
+        function updateUI() {
+            document.getElementById('money').innerText = Math.floor(money).toLocaleString(); document.getElementById('ap-display').innerText = Math.floor(ap);
+            renderInventory(); renderTechTree(); updateContractUI(); renderMarket();
+            machines.forEach(m => { const btn = document.getElementById(`buy-${m.id}`); if(btn) btn.disabled = money < Math.floor(m.cost); });
+        }
+    </script>
+</body>
+</html>
