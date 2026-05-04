@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COAD</title>
+    <style>
+        :root {
+            --bg-dark: #090a0f;
+            --panel-bg: #151821;
+            --primary: #8a2be2;
+            --primary-hover: #9b59b6;
+            --text-main: #f1faee;
+            --text-muted: #8d99ae;
+            --damage-color: #e63946;
+            --tank-color: #457b9d;
+            --support-color: #2a9d8f;
+            --enemy-color: #d63031;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            background-color: var(--bg-dark); color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden;
+        }
+
+        #game-container {
+            width: 1000px; height: 700px;
+            background-color: var(--panel-bg);
+            border-radius: 12px; box-shadow: 0 15px 50px rgba(0,0,0,0.9);
+            position: relative; overflow: hidden;
+        }
+
+        .screen {
+            display: none; width: 100%; height: 100%;
+            flex-direction: column; justify-content: flex-start; align-items: center;
+            position: absolute; top: 0; left: 0; padding: 30px;
+        }
+        .screen.active { display: flex; }
+
+        #screen-start { justify-content: center; }
+        h1.title {
+            font-size: 4rem; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 5px;
+            background: linear-gradient(45deg, var(--primary), #e63946);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.4);
+        }
+
+        button.btn {
+            background-color: var(--primary); color: white; border: none;
+            padding: 15px 40px; font-size: 1.2rem; font-weight: bold;
+            border-radius: 8px; cursor: pointer; transition: all 0.3s ease;
+            text-transform: uppercase; box-shadow: 0 5px 15px rgba(138, 43, 226, 0.4); margin-top: 20px;
+        }
+        button.btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
+        button.btn:disabled { background-color: #333; color: #777; cursor: not-allowed; transform: none; box-shadow: none;}
+
+        .header-title { font-size: 2rem; margin-bottom: 10px; color: var(--text-main); }
+        .selection-info { margin-bottom: 20px; font-size: 1.1rem; color: var(--text-muted); display: flex; gap: 20px; }
+        .selection-info span { padding: 5px 10px; border-radius: 5px; background: rgba(255,255,255,0.05); }
+        
+        .roster-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
+            width: 100%; max-height: 450px; overflow-y: auto; padding-right: 10px;
+        }
+
+        .char-card {
+            background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 8px; padding: 15px; cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .char-card:hover { border-color: rgba(255,255,255,0.4); }
+        .char-card.selected { background: rgba(138, 43, 226, 0.1); border-color: var(--primary); }
+        
+        .char-role { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .role-damage { color: var(--damage-color); }
+        .role-tank { color: var(--tank-color); }
+        .role-support { color: var(--support-color); }
+        .char-name { font-size: 1.4rem; margin-bottom: 10px; font-weight: bold; }
+        .char-stats { font-size: 0.85rem; color: #ccc; line-height: 1.4; }
+
+        .tactics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; }
+        .tactic-box { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .tactic-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,0.2); padding: 10px; margin-top: 8px;
+            border-radius: 5px; cursor: pointer; transition: 0.2s; font-size: 0.9rem;
+        }
+        .tactic-btn:hover { border-color: rgba(255,255,255,0.5); color: #fff; }
+        .tactic-btn.active { background: rgba(138, 43, 226, 0.2); border-color: var(--primary); color: #fff; }
+
+        #battle-ui {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 15px;
+            display: flex; justify-content: space-between; z-index: 10; pointer-events: none;
+        }
+        .wave-counter {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            font-size: 1.5rem; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8);
+            padding: 5px 20px; border-radius: 20px; border: 2px solid var(--primary);
+            text-align: center; box-shadow: 0 0 15px var(--primary);
+        }
+        .wave-notice {
+            font-size: 0.9rem; color: #f1c40f; margin-top: 5px; font-weight: bold; text-transform: uppercase;
+        }
+
+        .team-container { display: flex; flex-direction: column; gap: 8px; width: 220px; }
+        .hp-box { background: rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 4px; padding: 5px; position: relative;}
+        .hp-box.ally-border { border-left: 4px solid var(--primary); }
+        .hp-box.enemy-border { border-right: 4px solid var(--enemy-color); text-align: right; }
+        
+        .hp-name { font-size: 0.8rem; margin-bottom: 3px; font-weight: bold; text-shadow: 1px 1px 2px #000; display:flex; justify-content:space-between; }
+        .hp-bar { height: 12px; width: 100%; background: #222; border-radius: 2px; overflow: hidden; position: relative; }
+        .hp-fill { height: 100%; transition: width 0.2s ease-out; }
+        .shield-fill { height: 100%; background: #00b4d8; position: absolute; top:0; left:0; opacity: 0.6; transition: width 0.2s ease-out;}
+
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        #end-text { font-size: 3.5rem; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; text-shadow: 0 0 20px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="screen-start" class="screen active">
+        <h1 class="title">COAD:AI ARENA</h1>
+        <p style="color: var(--text-muted); font-size: 1.2rem;">Gelişmiş AI Taktik Motoru</p>
+        <button class="btn" onclick="goToSelection()">Sisteme Giriş Yap</button>
+    </div>
+
+    <div id="screen-select" class="screen">
+        <h2 class="header-title">Takımını Kur</h2>
+        <div class="selection-info">
+            <span id="count-dmg">Hasar (0/2)</span>
+            <span id="count-tank">Tank (0/1)</span>
+            <span id="count-sup">Destek (0/1)</span>
+        </div>
+        <div class="roster-grid" id="roster-grid"></div>
+        <button class="btn" id="btn-to-tactics" disabled onclick="goToTactics()">Taktik Ekranına Geç</button>
+    </div>
+
+    <div id="screen-tactics" class="screen">
+        <h2 class="header-title">Yapay Zeka Kararları</h2>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Karakterlerinin arenadaki hedeflerini belirle.</p>
+        <div class="tactics-grid" id="tactics-grid"></div>
+        <button class="btn" onclick="startBattle()">Arenaya İnelim</button>
+    </div>
+
+    <div id="screen-battle" class="screen" style="padding:0;">
+        <div id="battle-ui">
+            <div class="team-container" id="allies-ui"></div>
+            <div class="wave-counter" id="wave-display-container">
+                <div id="wave-display">Dalga: 1/30</div>
+                <div id="wave-notice" class="wave-notice"></div>
+            </div>
+            <div class="team-container" id="enemies-ui"></div>
+        </div>
+        <canvas id="battle-canvas" width="1000" height="700"></canvas>
+    </div>
+
+    <div id="screen-end" class="screen" style="justify-content: center;">
+        <div id="end-text"></div>
+        <button class="btn" onclick="location.reload()">Ana Menüye Dön</button>
+    </div>
+</div>
+
+<script>
+    // --- VERİ TABANI ---
+    const allCharacters = [
+        { id: 'elvey', name: 'Elvey (Okçu)', role: 'damage', range: 5, aspd: 4, power: 2.5, hp: 3, color: '#2ecc71', tactics: [
+            { id: 't1', name: 'Güvenli Atış', desc: 'Maksimum menzilde kalarak yakındakine vurur.' },
+            { id: 't2', name: 'Zayıfı Avla', desc: 'Canı en az olan düşmana mermi yağdırır.' }
+        ]},
+        { id: 'retaid', name: 'Retaid (Cüce)', role: 'damage', range: 1, aspd: 1, power: 5, hp: 4.5, color: '#e67e22', tactics: [
+            { id: 't1', name: 'Deviren', desc: 'En yüksek canlı düşman tankına odaklanır.' },
+            { id: 't2', name: 'Korumacı', desc: 'Dost destek biriminin yanından ayrılmaz.' }
+        ]},
+        { id: 'yang', name: 'Yang (Kılıç)', role: 'damage', range: 1.5, aspd: 5, power: 3.5, hp: 3, color: '#e74c3c', tactics: [
+            { id: 't1', name: 'Gölge Adımı', desc: 'Hızla düşman arka safına (okçu/destek) atılır.' },
+            { id: 't2', name: 'Dans Eden Kılıç', desc: 'Sürekli hareket edip en yakındakini biçer.' }
+        ]},
+        { id: 'dirayed', name: 'Dirayed (Yarma)', role: 'tank', range: 1, aspd: 2, power: 2, hp: 6, color: '#34495e', tactics: [
+            { id: 't1', name: 'Kaya Gibi', desc: 'Ön safta durup hasarı emer.' },
+            { id: 't2', name: 'İleri Atıl', desc: 'Düşman hattını yararak içeri dalar.' }
+        ]},
+        { id: 'dianor', name: 'Dianor (Balta)', role: 'tank', range: 2, aspd: 2, power: 3, hp: 5, color: '#9b59b6', tactics: [
+            { id: 't1', name: 'Alan Tutucu', desc: 'Ortada durup herkese menzilinden vurur.' },
+            { id: 't2', name: 'Muhafız', desc: 'Takımının merkezinden ayrılmaz.' }
+        ]},
+        { id: 'serd', name: 'Serd (Dev Kılıç)', role: 'tank', range: 1.5, aspd: 1, power: 4.5, hp: 5.5, color: '#7f8c8d', tactics: [
+            { id: 't1', name: 'Biçer Döver', desc: 'Yavaşça ilerleyip önüne geleni ezer.' },
+            { id: 't2', name: 'Korkusuz', desc: 'En kalabalık düşman grubunun içine dalar.' }
+        ]},
+        { id: 'lumia', name: 'Lumia (Şifacı)', role: 'support', range: 5, aspd: 3, power: 2.5, hp: 2.5, color: '#f1c40f', tactics: [
+            { id: 't1', name: 'Acil Müdahale', desc: 'Canı en az olana can basar.' },
+            { id: 't2', name: 'Tank Bakımı', desc: 'Sürekli kendi tankına odaklanır.' }
+        ]},
+        { id: 'aegis', name: 'Aegis (Kalkan)', role: 'support', range: 4, aspd: 2, power: 3, hp: 3.5, color: '#3498db', tactics: [
+            { id: 't1', name: 'Ön Saf Kalkanı', desc: 'Hasar alan dostlara sırayla kalkan verir.' },
+            { id: 't2', name: 'Kendini Koru', desc: 'Önce kendini sağlama alır, sonra dostlara atar.' }
+        ]},
+        { id: 'zileo', name: 'Zileo (Zaman)', role: 'support', range: 4, aspd: 4, power: 2, hp: 3, color: '#1abc9c', tactics: [
+            { id: 't1', name: 'Zaman Bükücü', desc: 'Dostların saldırı hızını artırır.' },
+            { id: 't2', name: 'Felç Edici', desc: 'Düşmanların hareket ve saldırı hızını yavaşlatır.' }
+        ]}
+    ];
+
+    // Düşman Sınıfları ve Kendi Yapay Zekaları
+    const enemyClasses = [
+        { id: 'e_grunt', name: 'Çelik Piyon', role: 'tank', range: 1, aspd: 1, power: 1.5, hp: 6, color: '#636e72', tactic: 'front' },
+        { id: 'e_archer', name: 'Gölge Yay', role: 'damage', range: 5, aspd: 3, power: 2.5, hp: 2.5, color: '#00cec9', tactic: 'kite' },
+        { id: 'e_assassin', name: 'Hiçlik Bıçağı', role: 'damage', range: 1, aspd: 5, power: 3.5, hp: 2, color: '#ff7675', tactic: 'dive' },
+        { id: 'e_priest', name: 'Karanlık Rahip', role: 'support', range: 4, aspd: 2, power: 2, hp: 2.5, color: '#a29bfe', tactic: 'heal' },
+        { id: 'e_paladin', name: 'Kanlı Şövalye', role: 'support', range: 2, aspd: 2, power: 1.5, hp: 4.5, color: '#fdcb6e', tactic: 'shield' }
+    ];
+
+    let selectedParty = [];
+    let characterTactics = {};
+    let currentWave = 1;
+    const maxWaves = 30;
+    let entities = [];
+    let projectiles = [];
+    let floatingTexts = [];
+    let battleLoopId;
+    let waveState = 'fighting';
+    let transitionTimer = 0;
+    let waveFormationName = '';
+
+    const canvas = document.getElementById('battle-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- ARAYÜZ ---
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function goToSelection() {
+        showScreen('screen-select');
+        const grid = document.getElementById('roster-grid');
+        grid.innerHTML = '';
+        allCharacters.forEach(char => {
+            const div = document.createElement('div');
+            div.className = `char-card`;
+            div.id = `card-${char.id}`;
+            div.onclick = () => toggleSelection(char);
+            const rClass = char.role === 'damage' ? 'role-damage' : (char.role === 'tank' ? 'role-tank' : 'role-support');
+            const rName = char.role === 'damage' ? 'Hasar' : (char.role === 'tank' ? 'Tank' : 'Destek');
+            div.innerHTML = `
+                <div class="char-role ${rClass}">${rName}</div>
+                <div class="char-name" style="color: ${char.color}">${char.name}</div>
+                <div class="char-stats">Menzil:${char.range} | Hız:${char.aspd} | Güç:${char.power} | Can:${char.hp}</div>
+            `;
+            grid.appendChild(div);
+        });
+    }
+
+    function toggleSelection(char) {
+        const idx = selectedParty.findIndex(c => c.id === char.id);
+        if (idx > -1) {
+            selectedParty.splice(idx, 1);
+            document.getElementById(`card-${char.id}`).classList.remove('selected');
+        } else {
+            const dmg = selectedParty.filter(c => c.role === 'damage').length;
+            const tank = selectedParty.filter(c => c.role === 'tank').length;
+            const sup = selectedParty.filter(c => c.role === 'support').length;
+            if (char.role === 'damage' && dmg >= 2) return;
+            if (char.role === 'tank' && tank >= 1) return;
+            if (char.role === 'support' && sup >= 1) return;
+            selectedParty.push(char);
+            document.getElementById(`card-${char.id}`).classList.add('selected');
+        }
+        updateCounters();
+    }
+
+    function updateCounters() {
+        const d = selectedParty.filter(c => c.role === 'damage').length;
+        const t = selectedParty.filter(c => c.role === 'tank').length;
+        const s = selectedParty.filter(c => c.role === 'support').length;
+        document.getElementById('count-dmg').innerText = `Hasar (${d}/2)`;
+        document.getElementById('count-tank').innerText = `Tank (${t}/1)`;
+        document.getElementById('count-sup').innerText = `Destek (${s}/1)`;
+        document.getElementById('btn-to-tactics').disabled = !(d === 2 && t === 1 && s === 1);
+    }
+
+    function goToTactics() {
+        showScreen('screen-tactics');
+        const grid = document.getElementById('tactics-grid');
+        grid.innerHTML = '';
+        selectedParty.forEach(char => {
+            characterTactics[char.id] = char.tactics[0].id;
+            let html = `<div class="tactic-box"><h3 style="color:${char.color};margin-bottom:10px;">${char.name}</h3>`;
+            char.tactics.forEach(tac => {
+                const act = characterTactics[char.id] === tac.id ? 'active' : '';
+                html += `<button class="tactic-btn ${act}" id="btn-${char.id}-${tac.id}" onclick="selectTactic('${char.id}', '${tac.id}')">
+                            <strong>${tac.name}</strong><br><span style="font-size:0.75rem; color:#ccc;">${tac.desc}</span>
+                         </button>`;
+            });
+            html += `</div>`;
+            grid.innerHTML += html;
+        });
+    }
+
+    function selectTactic(charId, tacticId) {
+        characterTactics[charId] = tacticId;
+        const char = selectedParty.find(c => c.id === charId);
+        char.tactics.forEach(t => document.getElementById(`btn-${charId}-${t.id}`).classList.remove('active'));
+        document.getElementById(`btn-${charId}-${tacticId}`).classList.add('active');
+    }
+
+    // --- NESNE SINIFLARI ---
+    class Entity {
+        constructor(data, isAlly, startX, startY, scale = 1) {
+            this.id = data.id + '_' + Math.random().toString(36).substr(2, 5);
+            this.name = data.name;
+            this.role = data.role;
+            this.isAlly = isAlly;
+            
+            this.maxHp = data.hp * 100 * scale; 
+            this.hp = this.maxHp;
+            this.shield = 0;
+            this.baseDamage = data.power * 15 * scale;
+            this.range = data.range * 55; 
+            this.isRanged = data.range > 1.5;
+            
+            // Saldırı Hızı Çarpanı
+            this.baseAttackCooldown = 90 - (data.aspd * 12); 
+            this.attackCooldownMax = this.baseAttackCooldown;
+            this.attackCooldown = 0;
+            
+            // Hareket Hızı
+            this.baseMoveSpeed = 1.0 + (data.aspd * 0.3);
+            this.moveSpeed = this.baseMoveSpeed;
+            this.color = data.color;
+            
+            this.startX = startX; this.startY = startY;
+            this.x = startX; this.y = startY;
+            this.radius = data.role === 'tank' ? 20 : (data.role === 'boss' ? 45 : 15);
+            
+            this.tactic = isAlly ? characterTactics[data.id] : data.tactic;
+            this.originalData = data;
+            
+            this.dashX = 0; this.dashY = 0; 
+        }
+
+        takeDamage(amount) {
+            if(this.shield > 0) {
+                if(this.shield >= amount) { this.shield -= amount; floatingTexts.push(new FloatingText(this.x, this.y, 'Blok', '#00b4d8')); return; } 
+                else { amount -= this.shield; this.shield = 0; }
+            }
+            this.hp -= amount;
+            floatingTexts.push(new FloatingText(this.x, this.y, Math.floor(amount), '#fff'));
+            if(this.hp < 0) this.hp = 0;
+        }
+
+        heal(amount) {
+            this.hp += amount;
+            if(this.hp > this.maxHp) this.hp = this.maxHp;
+            floatingTexts.push(new FloatingText(this.x, this.y, `+${Math.floor(amount)}`, '#2ecc71'));
+        }
+
+        draw(ctx) {
+            if (this.hp <= 0) return;
+            
+            // Gölge
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y + this.radius, this.radius, this.radius * 0.4, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fill();
+
+            // Karakter Çizimi
+            const drawX = this.x + this.dashX;
+            const drawY = this.y + this.dashY;
+
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = this.isAlly ? '#fff' : '#222';
+            ctx.stroke();
+
+            // Kalkan
+            if(this.shield > 0) {
+                ctx.beginPath();
+                ctx.arc(drawX, drawY, this.radius + 6, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(0, 180, 216, 0.7)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            // Dash yaylanma
+            this.dashX *= 0.7; this.dashY *= 0.7;
+        }
+    }
+
+    class Projectile {
+        constructor(x, y, target, damage, color, type, speed = 12) {
+            this.x = x; this.y = y;
+            this.target = target;
+            this.damage = damage;
+            this.color = color;
+            this.type = type; 
+            this.speed = speed;
+            this.active = true;
+            this.history = []; 
+        }
+        update() {
+            if(!this.active || (this.target.hp <= 0 && this.type === 'damage')) { this.active = false; return; }
+            
+            this.history.push({x: this.x, y: this.y});
+            if(this.history.length > 5) this.history.shift();
+
+            const dx = this.target.x - this.x;
+            const dy = this.target.y - this.y;
+            const dist = Math.hypot(dx, dy);
+            
+            if(dist < this.speed + this.target.radius) {
+                if(this.type === 'heal') { this.target.heal(this.damage); }
+                else if (this.type === 'shield') { this.target.shield += this.damage; floatingTexts.push(new FloatingText(this.target.x, this.target.y, '+Kalkan', '#00b4d8'));}
+                else if (this.type === 'buff') { this.target.attackCooldownMax = Math.max(10, this.target.baseAttackCooldown - 20); floatingTexts.push(new FloatingText(this.target.x, this.target.y, 'Hız!', '#f1c40f')); }
+                else if (this.type === 'debuff') { this.target.moveSpeed = Math.max(0.5, this.target.baseMoveSpeed - 0.8); floatingTexts.push(new FloatingText(this.target.x, this.target.y, 'Yavaş!', '#e74c3c')); }
+                else { this.target.takeDamage(this.damage); }
+                this.active = false;
+            } else {
+                this.x += (dx / dist) * this.speed;
+                this.y += (dy / dist) * this.speed;
+            }
+        }
+        draw(ctx) {
+            if(!this.active) return;
+            
+            if(this.history.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(this.history[0].x, this.history[0].y);
+                for(let i=1; i<this.history.length; i++) ctx.lineTo(this.history[i].x, this.history[i].y);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.globalAlpha = 0.5;
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+        }
+    }
+
+    class FloatingText {
+        constructor(x, y, text, color) {
+            this.x = x + (Math.random()*30-15); this.y = y - 25;
+            this.text = text; this.color = color; this.life = 40;
+        }
+        update() { this.y -= 1.5; this.life--; }
+        draw(ctx) {
+            ctx.globalAlpha = this.life / 40;
+            ctx.fillStyle = this.color; ctx.font = 'bold 18px Arial';
+            ctx.textAlign = 'center'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+            ctx.strokeText(this.text, this.x, this.y); ctx.fillText(this.text, this.x, this.y);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+
+    // --- OYUN MOTORU VE DALGALAR ---
+    function startBattle() {
+        showScreen('screen-battle');
+        currentWave = 1;
+        entities = []; projectiles = []; floatingTexts = [];
+        initAllies();
+        spawnWave();
+        waveState = 'fighting';
+        gameLoop();
+    }
+
+    function initAllies() {
+        const posMap = { tank: {x: 350, y: 350}, dmg1: {x: 200, y: 250}, dmg2: {x: 200, y: 450}, sup: {x: 100, y: 350} };
+        let dCount = 1;
+        selectedParty.forEach(char => {
+            let pos = char.role === 'tank' ? posMap.tank : (char.role === 'support' ? posMap.sup : posMap[`dmg${dCount++}`]);
+            entities.push(new Entity(char, true, pos.x, pos.y));
+        });
+    }
+
+    function spawnWave() {
+        const scale = 1 + (currentWave * 0.18); 
+        waveFormationName = '';
+
+        if(currentWave % 10 === 0) {
+            waveFormationName = "BOSS ALARMI";
+            entities.push(new Entity({ id: 'boss', name: `Mega Lord Mk.${currentWave/10}`, role: 'boss', hp: 20, power: 4, range: 1.5, aspd: 2, color: '#d63031', tactic: 'front' }, false, 800, 350, scale));
+            entities.push(new Entity(enemyClasses[0], false, 700, 250, scale));
+            entities.push(new Entity(enemyClasses[3], false, 850, 450, scale));
+        } else {
+            const formations = ['Standart Dizi', 'Kuşatma Hattı', 'Suikast Baskını', 'Kutsal Savunma'];
+            const formIdx = currentWave % 4;
+            waveFormationName = formations[formIdx];
+            
+            const count = Math.min(3 + Math.floor(currentWave/3), 8); 
+
+            if(formIdx === 0) { 
+                entities.push(new Entity(enemyClasses[0], false, 700, 250, scale));
+                entities.push(new Entity(enemyClasses[0], false, 700, 450, scale));
+                for(let i=2; i<count; i++) entities.push(new Entity(enemyClasses[i%2===0?1:3], false, 850, 150 + (i*80), scale));
+            } 
+            else if (formIdx === 1) { 
+                entities.push(new Entity(enemyClasses[0], false, 650, 350, scale*1.2)); 
+                for(let i=1; i<count; i++) entities.push(new Entity(enemyClasses[1], false, 900, 100 + (i*90), scale));
+            }
+            else if (formIdx === 2) { 
+                entities.push(new Entity(enemyClasses[0], false, 750, 350, scale));
+                for(let i=1; i<count; i++) entities.push(new Entity(enemyClasses[2], false, 400 + Math.random()*100, 100 + Math.random()*500, scale));
+            }
+            else if (formIdx === 3) { 
+                for(let i=0; i<Math.ceil(count/2); i++) entities.push(new Entity(enemyClasses[4], false, 700, 200 + (i*100), scale));
+                for(let i=Math.ceil(count/2); i<count; i++) entities.push(new Entity(enemyClasses[1], false, 850, 200 + (i*100), scale));
+            }
+        }
+
+        document.getElementById('wave-display').innerText = `Dalga: ${currentWave}/${maxWaves}`;
+        document.getElementById('wave-notice').innerText = waveFormationName;
+    }
+
+    function getAlive(isAlly) { return entities.filter(e => e.hp > 0 && e.isAlly === isAlly); }
+    function dist(e1, e2) { return Math.hypot(e1.x - e2.x, e1.y - e2.y); }
+    
+    function moveTowards(entity, tx, ty) {
+        const d = Math.hypot(tx - entity.x, ty - entity.y);
+        if(d > 0) {
+            entity.x += (tx - entity.x) / d * entity.moveSpeed;
+            entity.y += (ty - entity.y) / d * entity.moveSpeed;
+            entity.x = Math.max(50, Math.min(950, entity.x));
+            entity.y = Math.max(50, Math.min(650, entity.y));
+        }
+    }
+
+    function moveAway(entity, tx, ty) {
+        const d = Math.hypot(tx - entity.x, ty - entity.y);
+        if(d > 0) {
+            entity.x -= (tx - entity.x) / d * entity.moveSpeed;
+            entity.y -= (ty - entity.y) / d * entity.moveSpeed;
+            entity.x = Math.max(50, Math.min(950, entity.x));
+            entity.y = Math.max(50, Math.min(650, entity.y));
+        }
+    }
+
+    // --- GELİŞMİŞ YAPAY ZEKA ---
+    function processAI(entity) {
+        if(entity.hp <= 0) return;
+        if(entity.attackCooldown > 0) entity.attackCooldown--;
+
+        const friends = getAlive(entity.isAlly);
+        const foes = getAlive(!entity.isAlly);
+        if(foes.length === 0) return;
+
+        let target = null;
+        let action = 'attack';
+
+        // Rol ve Taktik Seçimi
+        if (entity.role === 'support') {
+            if (entity.tactic === 'heal' || entity.tactic === 't1' && entity.originalData.id === 'lumia') {
+                target = friends.reduce((m, f) => f.hp < m.hp ? f : m, friends[0]); action = 'heal';
+            } else if (entity.tactic === 'shield' || entity.tactic === 't1' && entity.originalData.id === 'aegis') {
+                target = friends.find(f => f.role === 'tank') || friends[0]; action = 'shield';
+            } else if (entity.tactic === 't2' && entity.originalData.id === 'lumia') {
+                target = friends.find(f => f.role === 'tank') || friends[0]; action = 'heal';
+            } else if (entity.originalData.id === 'zileo') {
+                if(entity.tactic === 't1') { target = friends.find(f => f.role === 'damage') || friends[0]; action = 'buff'; }
+                else { target = foes.reduce((m, f) => f.hp > m.hp ? f : m, foes[0]); action = 'debuff'; }
+            } else {
+                target = friends.reduce((m, f) => f.hp < m.hp ? f : m, friends[0]); action = 'heal';
+            }
+        } else {
+            // Hasar ve Tank Mantığı
+            if (entity.tactic === 'dive' || entity.tactic === 't1' && entity.originalData.id === 'yang') { // Suikast
+                target = foes.find(f => f.role === 'support' || f.isRanged) || foes[0];
+            } else if (entity.tactic === 'kite' || entity.tactic === 't1' && entity.originalData.id === 'elvey') {
+                target = foes.reduce((min, f) => dist(entity, f) < dist(entity, min) ? f : min, foes[0]);
+            } else if (entity.tactic === 't2' && entity.originalData.id === 'elvey') {
+                target = foes.reduce((m, f) => f.hp < m.hp ? f : m, foes[0]);
+            } else if (entity.tactic === 't1' && entity.originalData.id === 'retaid') {
+                target = foes.reduce((m, f) => f.hp > m.hp ? f : m, foes[0]);
+            } else {
+                target = foes.reduce((min, f) => dist(entity, f) < dist(entity, min) ? f : min, foes[0]); // Default En Yakın
+            }
+        }
+
+        if (target) executeAction(entity, target, action, foes, friends);
+    }
+
+    function executeAction(entity, target, action, foes, friends) {
+        const d = dist(entity, target);
+        const reach = entity.range + target.radius;
+
+        if (d <= reach) {
+            if (entity.attackCooldown === 0) {
+                const amount = entity.baseDamage * (0.8 + Math.random() * 0.4);
+                
+                if (action === 'heal') projectiles.push(new Projectile(entity.x, entity.y, target, amount*1.5, '#2ecc71', 'heal'));
+                else if (action === 'shield') projectiles.push(new Projectile(entity.x, entity.y, target, amount*2, '#3498db', 'shield'));
+                else if (action === 'buff') projectiles.push(new Projectile(entity.x, entity.y, target, 0, '#f1c40f', 'buff'));
+                else if (action === 'debuff') projectiles.push(new Projectile(entity.x, entity.y, target, 0, '#e74c3c', 'debuff'));
+                else {
+                    // Saldırı
+                    if (entity.isRanged) {
+                        projectiles.push(new Projectile(entity.x, entity.y, target, amount, entity.color, 'damage'));
+                    } else {
+                        target.takeDamage(amount);
+                        entity.dashX = (target.x - entity.x) * 0.3;
+                        entity.dashY = (target.y - entity.y) * 0.3;
+                    }
+                }
+                entity.attackCooldown = entity.attackCooldownMax;
+            }
+
+            if (entity.isRanged && action === 'attack') {
+                const closest = foes.reduce((min, f) => dist(entity, f) < dist(entity, min) ? f : min, foes[0]);
+                if (dist(entity, closest) < reach * 0.5) moveAway(entity, closest.x, closest.y);
+            }
+        } else {
+            if (entity.role === 'support' && action !== 'debuff') {
+                if(d > reach * 0.8) moveTowards(entity, target.x, target.y);
+            } else {
+                moveTowards(entity, target.x, target.y);
+            }
+        }
+    }
+
+    // --- ÇİZİM VE DÖNGÜ ---
+    function renderUI() {
+        const alliesUI = document.getElementById('allies-ui');
+        const enemiesUI = document.getElementById('enemies-ui');
+        alliesUI.innerHTML = ''; enemiesUI.innerHTML = '';
+
+        getAlive(true).forEach(a => {
+            const pct = (a.hp / a.maxHp) * 100;
+            const sPct = Math.min(100, (a.shield / a.maxHp) * 100);
+            alliesUI.innerHTML += `
+                <div class="hp-box ally-border">
+                    <div class="hp-name" style="color:${a.color}"><span>${a.name}</span> <span>${Math.floor(a.hp)}</span></div>
+                    <div class="hp-bar"><div class="hp-fill" style="width:${pct}%; background:${a.color}"></div>
+                        ${a.shield > 0 ? `<div class="shield-fill" style="width:${sPct}%"></div>` : ''}
+                    </div>
+                </div>`;
+        });
+
+        getAlive(false).forEach(e => {
+            if(e.role !== 'boss' && currentWave % 10 !== 0 && enemiesUI.children.length > 4) return; 
+            const pct = (e.hp / e.maxHp) * 100;
+            const sPct = Math.min(100, (e.shield / e.maxHp) * 100);
+            enemiesUI.innerHTML += `
+                <div class="hp-box enemy-border" style="${e.role==='boss'?'width:300px;':''}">
+                    <div class="hp-name" style="color:${e.color}"><span>${Math.floor(e.hp)}</span> <span>${e.name}</span></div>
+                    <div class="hp-bar"><div class="hp-fill" style="width:${pct}%; background:${e.color}"></div>
+                        ${e.shield > 0 ? `<div class="shield-fill" style="width:${sPct}%"></div>` : ''}
+                    </div>
+                </div>`;
+        });
+    }
+
+    function drawBackground() {
+        ctx.fillStyle = '#0f111a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#1a1d2d'; ctx.lineWidth = 2;
+        for(let i=0; i<canvas.width; i+=100) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+        for(let i=0; i<canvas.height; i+=100) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+        
+        ctx.beginPath(); ctx.arc(500, 350, 250, 0, Math.PI*2); ctx.strokeStyle = 'rgba(138, 43, 226, 0.1)'; ctx.lineWidth = 5; ctx.stroke();
+    }
+
+    function gameLoop() {
+        if(!document.getElementById('screen-battle').classList.contains('active')) return;
+
+        if (waveState === 'transition') {
+            ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            document.getElementById('wave-notice').innerText = "SAHA SIFIRLANIYOR...";
+            
+            // Yürümeyi kaldırdık, sadece sabit pozisyonlarda çiziliyorlar.
+            entities.forEach(e => e.draw(ctx));
+            
+            transitionTimer--;
+            if (transitionTimer <= 0) { waveState = 'fighting'; spawnWave(); }
+            renderUI();
+            battleLoopId = requestAnimationFrame(gameLoop);
+            return;
+        }
+
+        const alliesAlive = getAlive(true);
+        const enemiesAlive = getAlive(false);
+
+        if(alliesAlive.length === 0) { endGame(false); return; }
+
+        if(enemiesAlive.length === 0) {
+            if(currentWave >= maxWaves) { endGame(true); return; } 
+            else {
+                currentWave++;
+                projectiles = [];
+                
+                // --- INSTANT TELEPORT VE %50 HEAL ---
+                alliesAlive.forEach(a => { 
+                    a.heal(a.maxHp * 0.5); // %50 iyileştirme
+                    a.shield = 0; 
+                    a.attackCooldownMax = a.baseAttackCooldown; 
+                    a.moveSpeed = a.baseMoveSpeed; 
+                    
+                    // Başlangıç pozisyonlarına anında ışınlanma
+                    a.x = a.startX;
+                    a.y = a.startY;
+                    a.dashX = 0;
+                    a.dashY = 0;
+                }); 
+                
+                waveState = 'transition';
+                transitionTimer = 45; // Bekleme süresini de ışınlandıkları için biraz kısalttım (0.75 saniye)
+            }
+        }
+
+        entities.forEach(e => processAI(e));
+        projectiles.forEach(p => p.update());
+        projectiles = projectiles.filter(p => p.active);
+        floatingTexts.forEach(ft => ft.update());
+        floatingTexts = floatingTexts.filter(ft => ft.life > 0);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        
+        entities.sort((a,b) => a.y - b.y).forEach(e => e.draw(ctx));
+        projectiles.forEach(p => p.draw(ctx));
+        floatingTexts.forEach(ft => ft.draw(ctx));
+
+        renderUI();
+        battleLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    function endGame(isWin) {
+        cancelAnimationFrame(battleLoopId);
+        setTimeout(() => {
+            showScreen('screen-end');
+            const t = document.getElementById('end-text');
+            if(isWin) { t.innerText = "YAPAY ZEKA FETHEDİLDİ!"; t.style.color = "#2ecc71"; } 
+            else { t.innerText = `SİSTEM ÇÖKTÜ (Dalga: ${currentWave})`; t.style.color = "#e63946"; }
+        }, 1500);
+    }
+</script>
+</body>
+</html>
