@@ -383,53 +383,36 @@
         }
 
         window.onload = () => {
-            if(localStorage.getItem('versuV4Save')) { document.getElementById('input-company-name').style.display = 'none'; document.getElementById('btn-start-game').innerText = "Sisteme Geri Dön"; document.getElementById('btn-reset-game').style.display = 'block'; }
+            // Eski tarayıcı önbelleklerini zorla temizler
+            localStorage.removeItem('versuV4Save'); 
         };
 
-        function resetSave() {
-    if(confirm("Tüm şirket verileriniz silinecek. Emin misiniz?")) {
-        localStorage.removeItem('versuV4Save');
-        window.location.href = window.location.pathname; // URL'yi temizleyerek en baştan yükler
-    }
-}
-
-        function saveGame() {
-            localStorage.setItem('versuV4Save', JSON.stringify({ 
-                playerName, money, ap, globalTech, items, market, activeContract, cosmetics, salaryTimer,
-                machines: machines.map(m => ({ id: m.id, count: m.count, prog: m.prog, cost: m.cost })), 
-                techTree: techTree.map(t => ({ id: t.id, bought: t.bought })),
-                consultants: consultants.map(c => ({ id: c.id, hired: c.hired }))
-            }));
-            const notify = document.getElementById('save-notify'); notify.style.opacity = '1'; setTimeout(() => notify.style.opacity = '0', 2000);
-        }
-
-        function loadGame() {
-            const str = localStorage.getItem('versuV4Save');
-            if (str) {
-                const data = JSON.parse(str);
-                playerName = data.playerName || "Anonim"; money = data.money; ap = data.ap; globalTech = data.globalTech;
-                if(data.salaryTimer !== undefined) salaryTimer = data.salaryTimer;
-                if(data.items) { for(let key in data.items) { if(items[key]) items[key].count = data.items[key].count; } }
-                if(data.cosmetics) { for(let key in data.cosmetics) { if(cosmetics[key]) { cosmetics[key].count = data.cosmetics[key].count; cosmetics[key].equipped = data.cosmetics[key].equipped; } } }
-                if(data.machines) { data.machines.forEach(sM => { let m = machines.find(x => x.id === sM.id); if(m) { m.count = sM.count; m.prog = sM.prog; m.cost = sM.cost; } }); }
-                if(data.techTree) { data.techTree.forEach(sT => { let t = techTree.find(x => x.id === sT.id); if(t && sT.bought) { t.bought = true; } }); document.getElementById('click-power').innerText = globalTech.clickPower; }
-                if(data.consultants) { data.consultants.forEach(sC => { let c = consultants.find(x => x.id === sC.id); if(c) { c.hired = sC.hired; }}); }
-                if(data.market) market = data.market; if(data.activeContract) activeContract = data.activeContract;
-                return true;
-            }
-            return false;
-        }
+        // Oyunun başka yerlerinde kayıt çağrıldığında hata vermemesi için içleri boş
+        function resetSave() {}
+        function saveGame() {}
+        function loadGame() { return false; }
 
         function startGame() {
-            if (!loadGame()) {
-                const inputVal = document.getElementById('input-company-name').value.trim(); playerName = inputVal !== "" ? inputVal : "Anonim";
-                market['player_corp'] = { name: `${playerName} Corp.`, owned: 0, price: 2500, volatility: 0.08, history: "up" }; saveGame(); 
-            }
-            document.getElementById('ui-brand-depo').innerText = `${playerName} Deposu`; document.getElementById('ui-brand-uretim').innerText = `${playerName} Ağır Sanayi`; document.getElementById('ui-brand-kontrat').innerText = `${playerName} Kurumsal`;
-            const menu = document.getElementById('main-menu'); const gameUi = document.getElementById('game-wrapper');
-            menu.style.opacity = '0'; setTimeout(() => { menu.style.display = 'none'; gameUi.style.display = 'block'; setTimeout(() => gameUi.style.opacity = '1', 50); startEngines(); }, 500);
+            // Oyunu her seferinde kayıtsız başlat
+            const inputVal = document.getElementById('input-company-name').value.trim(); 
+            playerName = inputVal !== "" ? inputVal : "Anonim";
+            market['player_corp'] = { name: `${playerName} Corp.`, owned: 0, price: 2500, volatility: 0.08, history: "up" }; 
+            
+            document.getElementById('ui-brand-depo').innerText = `${playerName} Deposu`; 
+            document.getElementById('ui-brand-uretim').innerText = `${playerName} Ağır Sanayi`; 
+            document.getElementById('ui-brand-kontrat').innerText = `${playerName} Kurumsal`;
+            
+            const menu = document.getElementById('main-menu'); 
+            const gameUi = document.getElementById('game-wrapper');
+            menu.style.opacity = '0'; 
+            setTimeout(() => { 
+                menu.style.display = 'none'; 
+                gameUi.style.display = 'block'; 
+                setTimeout(() => gameUi.style.opacity = '1', 50); 
+                startEngines(); 
+            }, 500);
         }
-
+        
         function startEngines() {
             if (gameLoopsInitialized) return; gameLoopsInitialized = true;
             // 1. Üretim Motoru
