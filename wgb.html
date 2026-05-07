@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WE GONNA BYTE - System Terminal</title>
+    <style>
+        :root {
+            --bg-color: #030303;
+            --text-color: #00ff41;
+            --border-color: #008f11;
+            --hover-color: #003b00;
+            --alert-color: #ff003c;
+            --alert-hover: #8a0020;
+            --shield-color: #00bfff;
+            --hardware-color: #ff9d00;
+            --game-color: #b000ff;
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #050505; border-left: 1px solid var(--border-color); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; box-shadow: 0 0 10px var(--text-color); }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0; padding: 0; display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden; position: relative;
+        }
+
+        /* --- CRT VE GLITCH EFEKTLERİ --- */
+        body::after {
+            content: ""; display: block; position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 999; background-size: 100% 4px, 3px 100%; pointer-events: none; opacity: 0.8;
+        }
+
+        .glitch-text { position: relative; font-weight: bold; text-shadow: 0 0 10px currentColor; }
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.8;
+        }
+        .glitch-text::before { color: #0ff; z-index: -1; animation: glitch-anim-1 2s infinite linear alternate-reverse; }
+        .glitch-text::after { color: #f0f; z-index: -2; animation: glitch-anim-2 3s infinite linear alternate-reverse; }
+        
+        @keyframes glitch-anim-1 {
+            0% { clip-path: inset(20% 0 80% 0); transform: translate(-2px, 1px); }
+            20% { clip-path: inset(60% 0 10% 0); transform: translate(2px, -1px); }
+            40% { clip-path: inset(40% 0 50% 0); transform: translate(-2px, 2px); }
+            60% { clip-path: inset(80% 0 5% 0); transform: translate(2px, -2px); }
+            80% { clip-path: inset(10% 0 70% 0); transform: translate(-1px, 1px); }
+            100% { clip-path: inset(30% 0 50% 0); transform: translate(1px, -1px); }
+        }
+        @keyframes glitch-anim-2 {
+            0% { clip-path: inset(10% 0 60% 0); transform: translate(2px, 1px); }
+            20% { clip-path: inset(30% 0 20% 0); transform: translate(-2px, -1px); }
+            40% { clip-path: inset(70% 0 10% 0); transform: translate(2px, 2px); }
+            60% { clip-path: inset(20% 0 50% 0); transform: translate(-2px, -2px); }
+            80% { clip-path: inset(50% 0 30% 0); transform: translate(1px, 1px); }
+            100% { clip-path: inset(5% 0 80% 0); transform: translate(-1px, -1px); }
+        }
+
+        /* --- BAŞLAT MENÜSÜ --- */
+        #start-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #050505; z-index: 2000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; transition: opacity 0.5s;
+        }
+        .start-title { font-size: 6rem; color: var(--text-color); margin-bottom: 40px; text-shadow: 0 0 30px var(--text-color); letter-spacing: 5px; }
+        .start-btn {
+            background: transparent; color: var(--text-color); border: 3px solid var(--text-color);
+            padding: 25px 60px; font-size: 2.5rem; font-family: inherit; font-weight: bold; cursor: pointer;
+            transition: 0.3s; box-shadow: 0 0 20px var(--border-color), inset 0 0 10px rgba(0,255,65,0.2); text-transform: uppercase;
+        }
+        .start-btn:hover { background: var(--text-color); color: #000; box-shadow: 0 0 50px var(--text-color); transform: scale(1.1); }
+        .boot-log { margin-top: 40px; height: 120px; color: var(--border-color); text-align: center; font-size: 1.5rem; display: none; }
+
+        /* --- ANA OYUN UI --- */
+        #main-app { display: none; flex-direction: column; height: 100vh; opacity: 0; animation: fadeIn 1s forwards; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        #header-panel {
+            background-color: rgba(10,10,10,0.9); border-bottom: 2px solid var(--border-color);
+            padding: 15px; display: flex; justify-content: space-around; align-items: center;
+            text-align: center; box-shadow: 0 0 30px rgba(0, 255, 65, 0.2); z-index: 10;
+        }
+        .stat-box h2 { margin: 0 0 5px 0; font-size: 0.9rem; color: #008f11; text-transform: uppercase; letter-spacing: 2px; }
+        .stat-value { font-size: 2rem; font-weight: bold; text-shadow: 0 0 15px var(--text-color); }
+        .defense-stat { color: var(--shield-color); text-shadow: 0 0 15px var(--shield-color); }
+        .hard-stat { color: var(--hardware-color); text-shadow: 0 0 15px var(--hardware-color); }
+
+        #nav-tabs { display: flex; background-color: #050505; border-bottom: 1px solid var(--border-color); }
+        .tab-btn {
+            flex: 1; background: transparent; color: var(--border-color); border: none;
+            border-right: 1px solid var(--border-color); padding: 15px; font-size: 1.2rem;
+            font-family: inherit; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden;
+        }
+        .tab-btn::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 0; height: 3px; background-color: var(--text-color); transition: 0.3s ease; }
+        .tab-btn:hover { background-color: rgba(0, 255, 65, 0.15); color: var(--text-color); text-shadow: 0 0 10px currentColor; }
+        .tab-btn.active { color: #000 !important; background-color: var(--border-color) !important; font-weight: bold; box-shadow: 0 0 20px inset rgba(0,0,0,0.5); }
+        .tab-btn.active::after { width: 100%; }
+
+        .tab-content { display: none; flex: 1; padding: 20px; gap: 20px; overflow: hidden; animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        .tab-content.active { display: flex; }
+        @keyframes slideUp { 0% { opacity: 0; transform: translateY(30px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* Tıklama Alanı */
+        #click-area {
+            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border: 1px dashed var(--border-color); position: relative;
+            background: radial-gradient(circle, rgba(0,255,65,0.08) 0%, rgba(5,5,5,1) 80%);
+        }
+        #hack-btn {
+            background: transparent; color: var(--text-color); border: 2px solid var(--text-color);
+            padding: 40px 80px; font-size: 3.5rem; font-family: inherit; font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 20px var(--border-color), inset 0 0 20px rgba(0,255,65,0.2);
+            outline: none; text-shadow: 0 0 10px var(--text-color); animation: pulseBtn 2s infinite; transition: 0.1s;
+        }
+        @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 15px var(--border-color); } 50% { box-shadow: 0 0 40px var(--text-color); } }
+        #hack-btn:active { transform: scale(0.92); background: var(--text-color); color: #000; box-shadow: 0 0 60px var(--text-color); }
+
+        /* Market */
+        .market-area { width: 480px; border: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; background: rgba(5,5,5,0.9); overflow-y: auto; height: 100%; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
+        .market-area h2 { text-align: center; border-bottom: 1px dashed inherit; padding-bottom: 15px; margin-top: 0; text-shadow: 0 0 10px inherit; font-size: 1.5rem; }
+        .market-item { border: 1px solid inherit; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; transition: 0.2s; background: rgba(0,0,0,0.6); position: relative; overflow: hidden; }
+        .market-item:hover { transform: translateX(-5px); box-shadow: 5px 0 15px rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); }
+        .item-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2rem; }
+        .buy-btn { background: transparent; border: 1px solid inherit; padding: 10px; font-family: inherit; cursor: pointer; font-weight: bold; transition: 0.2s; color: inherit; font-size: 1rem; }
+        .buy-btn:hover:not(:disabled) { background: inherit; color: #000; box-shadow: 0 0 15px inherit; }
+        .buy-btn:disabled { border-color: #333 !important; color: #444 !important; cursor: not-allowed; text-shadow: none; box-shadow: none; }
+
+        /* Temalar */
+        .defense-theme { border-color: var(--shield-color) !important; color: var(--shield-color) !important; }
+        .hardware-theme { border-color: var(--hardware-color) !important; color: var(--hardware-color) !important; }
+        .game-theme { border-color: var(--game-color) !important; color: var(--game-color) !important; }
+        .tab-btn.defense-theme.active { background-color: var(--shield-color) !important; }
+        .tab-btn.hardware-theme.active { background-color: var(--hardware-color) !important; }
+        .tab-btn.game-theme.active { background-color: var(--game-color) !important; }
+
+        #shield-bar-container { width: 100%; height: 12px; background: #111; margin-top: 8px; border: 1px solid var(--shield-color); position: relative; box-shadow: 0 0 10px rgba(0, 191, 255, 0.3); }
+        #shield-bar-fill { height: 100%; background: var(--shield-color); width: 100%; transition: width 0.3s; box-shadow: 0 0 15px var(--shield-color); }
+
+        /* --- SİBER OYUNLAR (SLIDER) --- */
+        #custom-slider-container { width: 100%; height: 100%; position: relative; overflow: hidden; border: 2px solid var(--game-color); background: #080808; display: flex; flex-direction: column; box-shadow: inset 0 0 50px rgba(176, 0, 255, 0.1); }
+        .slider-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(176, 0, 255, 0.15); border-bottom: 2px solid var(--game-color); }
+        .slider-title { font-size: 1.8rem; color: var(--game-color); text-shadow: 0 0 15px var(--game-color); font-weight: bold; }
+        .slider-btn { background: transparent; color: var(--game-color); border: 2px solid var(--game-color); padding: 10px 20px; font-size: 1.2rem; cursor: pointer; transition: 0.2s; font-family: inherit; font-weight: bold; }
+        .slider-btn:hover { background: var(--game-color); color: #000; box-shadow: 0 0 20px var(--game-color); transform: scale(1.05); }
+        
+        .slider-track { display: flex; width: 600%; height: 100%; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+        .slide-item { width: 16.666%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
+        
+        /* Mini Oyun Stilleri */
+        .game-start-btn { padding: 15px 40px; font-size: 1.5rem; background: transparent; color: var(--game-color); border: 2px solid var(--game-color); cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.3s; margin-bottom: 10px; box-shadow: 0 0 10px rgba(176, 0, 255, 0.3); }
+        .game-start-btn:hover { background: var(--game-color); color: #000; box-shadow: 0 0 25px var(--game-color); }
+        .game-msg { font-size: 1.4rem; min-height: 35px; text-shadow: 0 0 8px inherit; text-align: center; margin-top: 10px; font-weight: bold; }
+
+        .matrix-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+        .matrix-cell { width: 70px; height: 70px; border: 2px solid var(--game-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; transition: 0.2s; color: #fff; background: rgba(0,0,0,0.5); }
+        .matrix-cell.flash { background: var(--text-color); box-shadow: 0 0 20px var(--text-color); border-color: var(--text-color); color: #000; }
+        .matrix-cell.correct { background: var(--game-color); box-shadow: 0 0 15px var(--game-color); }
+        
+        .xylos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .xylos-cell { width: 90px; height: 90px; border: 2px dashed var(--game-color); display: flex; align-items: center; justify-content: center; font-size: 3rem; cursor: pointer; transition: 0.1s; color: var(--game-color); }
+        .xylos-cell:active { transform: scale(0.9); background: var(--game-color); color: #000; }
+        .xylos-cell.hidden { visibility: hidden; }
+
+        .arena-bar-container { width: 450px; height: 50px; border: 2px solid var(--game-color); margin: 30px 0; position: relative; background: #111; }
+        .arena-bar-fill { width: 0%; height: 100%; background: var(--game-color); box-shadow: 0 0 20px var(--game-color); transition: width 0.1s; }
+        
+        .riot-container { width: 550px; height: 60px; border: 2px solid #fff; position: relative; margin: 30px 0; background: #111; }
+        .riot-target { position: absolute; left: 40%; width: 20%; height: 100%; background: rgba(176, 0, 255, 0.4); border-left: 3px solid var(--game-color); border-right: 3px solid var(--game-color); }
+        .riot-cursor { position: absolute; left: 0%; width: 6px; height: 130%; top: -15%; background: #fff; box-shadow: 0 0 15px #fff; }
+
+        #alpha-container { width: 500px; height: 300px; border: 2px dashed var(--game-color); position: relative; margin: 20px 0; background: rgba(176, 0, 255, 0.05); overflow: hidden; }
+        #alpha-target { position: absolute; width: 60px; height: 60px; background: var(--game-color); border-radius: 50%; box-shadow: 0 0 20px var(--game-color); display: none; cursor: crosshair; transition: all 0.1s; }
+        #alpha-target:active { transform: scale(0.8); background: #fff; }
+
+        .hex-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+        .hex-cell { width: 120px; height: 60px; border: 1px solid var(--game-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; color: var(--game-color); background: #111; transition: 0.2s; }
+        .hex-cell:hover { background: rgba(176, 0, 255, 0.2); }
+
+        /* --- SALDIRI UYARISI --- */
+        #attack-banner { display: none; position: absolute; top: 140px; left: 50%; transform: translateX(-50%); background: rgba(20, 0, 0, 0.95); border: 3px solid var(--alert-color); box-shadow: 0 0 50px var(--alert-color); padding: 25px 50px; color: var(--alert-color); text-align: center; z-index: 100; animation: alertPulse 0.5s infinite alternate; }
+        @keyframes alertPulse { from { border-color: var(--alert-color); box-shadow: 0 0 30px var(--alert-color); } to { border-color: #ff5555; box-shadow: 0 0 60px #ff5555; transform: translateX(-50%) scale(1.02); } }
+        #defend-btn { background: var(--alert-color); color: #fff; border: none; padding: 15px 40px; font-size: 1.8rem; font-family: inherit; font-weight: bold; margin-top: 15px; cursor: pointer; transition: 0.1s; box-shadow: 0 0 15px var(--alert-color); }
+        #defend-btn:active { transform: scale(0.9) rotate(2deg); background: var(--alert-hover); }
+    </style>
+</head>
+<body>
+
+    <!-- GERÇEK BAŞLAT MENÜSÜ -->
+    <div id="start-menu">
+        <div class="start-title glitch-text" data-text="WE GONNA BYTE">WE GONNA BYTE</div>
+        <button class="start-btn" id="start-btn" onclick="initiateBoot()">SİSTEMİ BAŞLAT</button>
+        <div class="boot-log" id="boot-log"></div>
+    </div>
+
+    <!-- ANA OYUN -->
+    <div id="main-app">
+        <!-- Üst Panel -->
+        <div id="header-panel">
+            <div class="stat-box"><h2 class="glitch-text" data-text="BYTE DEPOSU">BYTE DEPOSU</h2><div class="stat-value" id="total-bytes">0</div></div>
+            <div class="stat-box"><h2>AĞ ÜRETİMİ (BPS)</h2><div class="stat-value" id="bps">0</div></div>
+            <div class="stat-box"><h2>ÇEKİRDEK GÜCÜ</h2><div class="stat-value hard-stat" id="click-power">1</div></div>
+            <div class="stat-box" style="width: 280px;">
+                <h2>SİBER KALKAN HP</h2>
+                <div class="stat-value defense-stat"><span id="current-shield">0</span> / <span id="max-shield">0</span></div>
+                <div id="shield-bar-container"><div id="shield-bar-fill"></div></div>
+            </div>
+        </div>
+
+        <!-- Sekme Menüsü -->
+        <div id="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('tab-terminal', this)">[01] TERMİNAL</button>
+            <button class="tab-btn" style="color: var(--hardware-color)" onclick="switchTab('tab-hardware', this)">[02] DONANIM</button>
+            <button class="tab-btn" style="color: var(--shield-color)" onclick="switchTab('tab-security', this)">[03] SAVUNMA</button>
+            <button class="tab-btn" style="color: var(--game-color)" onclick="switchTab('tab-games', this)">[04] PROTOKOLLER</button>
+        </div>
+
+        <!-- Saldırı Ekranı -->
+        <div id="attack-banner">
+            <h2 style="margin:0 0 10px 0; font-size: 2.5rem;" class="glitch-text" data-text="KIRILMA TESPİT EDİLDİ">KIRILMA TESPİT EDİLDİ</h2>
+            <p style="font-size: 1.2rem;">Sistem Hasar Alıyor: <b style="font-size:1.5rem;"><span id="attack-strength">0</span> Dmg/sn</b></p>
+            <button id="defend-btn" onclick="defendAttack()">VİRÜSÜ İMHA ET!</button>
+        </div>
+
+        <!-- SEKMELER -->
+        <div id="tab-terminal" class="tab-content active">
+            <div id="click-area"><button id="hack-btn">BYTE ÇEK</button></div>
+            <div class="market-area" id="automation-market"></div>
+        </div>
+
+        <div id="tab-hardware" class="tab-content hardware-theme">
+            <div id="click-area" style="border-color: var(--hardware-color);">
+                <div style="text-align: center; z-index: 2;">
+                    <h1 style="font-size: 3.5rem; text-shadow: 0 0 20px var(--hardware-color);">DONANIM MERKEZİ</h1>
+                    <p style="font-size: 1.2rem;">Fiziksel tıklama gücünü ve işlem hızını artır.</p>
+                    <h3 style="color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border: 1px dashed var(--hardware-color);">Otonom Vuruş: <span id="auto-click-rate">0</span> / sn</h3>
+                </div>
+            </div>
+            <div class="market-area" id="hardware-market"></div>
+        </div>
+
+        <div id="tab-security" class="tab-content defense-theme">
+            <div id="click-area" style="border-color: var(--shield-color);">
+                <div style="text-align: center; z-index: 2;">
+                    <h1 style="font-size: 3.5rem; text-shadow: 0 0 20px var(--shield-color);">GÜVENLİK DUVARI</h1>
+                    <p style="font-size: 1.2rem;">Saldırılarda önce Kalkan hasar alır.<br><b>Kalkan kırılırsa Byte havuzun boşalır ve SİSTEM ÇÖKER!</b></p>
+                </div>
+            </div>
+            <div class="market-area" id="defense-market"></div>
+        </div>
+
+        <!-- 4. SEKME (OYUNLAR) -->
+        <div id="tab-games" class="tab-content game-theme" style="padding: 0;">
+            <div id="custom-slider-container">
+                <div class="slider-header">
+                    <button class="slider-btn" onclick="moveSlide(-1)">&#9664; ÖNCEKİ</button>
+                    <div class="slider-title glitch-text" data-text="Protocol: SYNTAX BREACH" id="game-title-display">Protocol: SYNTAX BREACH</div>
+                    <button class="slider-btn" onclick="moveSlide(1)">SONRAKİ &#9654;</button>
+                </div>
+                
+                <div class="slider-track" id="slider-track">
+                    <div class="slide-item">
+                        <h2 style="font-size: 2rem;">Protocol: SYNTAX BREACH</h2>
+                        <p>Hafıza Testi: Yeşil yanan sektörleri sırasıyla tekrar et. (Ödül: BPS x5)</p>
+                        <button class="game-start-btn" id="btn-syntax" onclick="startSyntax()">Sistemi Analiz Et</button>
+                        <div class="matrix-grid" id="syntax-grid"></div>
+                        <div class="game-msg" id="msg-syntax" style="color: var(--game-color);">Bağlantı Bekleniyor...</div>
+                    </div>
+                    <div class="slide-item">
+                        <h2 style="font-size: 2rem;">Terminal: XYL0S</h2>
+                        <p>Port Tarayıcı: Rakamları 1'den 9'a kadar en hızlı şekilde tıkla! (Süre: 8sn)</p>
+                        <button class="game-start-btn" id="btn-xylos" onclick="startXylos()">Taramayı Başlat</button>
+                        <div class="xylos-grid" id="xylos-grid"></div>
+                        <div class="game-msg" id="msg-xylos" style="color: var(--game-color);">Bağlantı Bekleniyor...</div>
+                    </div>
+                    <div class="slide-item">
+                        <h2 style="font-size: 2rem;">COAD: AI Arena Override</h2>
+                        <p>Brute Force: Süre dolmadan barı %100 doldurmak için ardarda tıkla! (Süre: 4sn)</p>
+                        <button class="game-start-btn" id="btn-arena" onclick="startArena()">Saldırıyı Başlat</button>
+                        <div class="arena-bar-container"><div class="arena-bar-fill" id="arena-fill"></div></div>
+                        <button class="game-start-btn" id="arena-btn" onclick="clickArena()" disabled style="font-size:2.5rem; padding: 20px 60px;">GÜÇ YÜKLE!</button>
+                        <div class="game-msg" id="msg-arena" style="color: var(--game-color);">Bağlantı Bekleniyor...</div>
+                    </div>
+                    <div class="slide-item">
+                        <h2 style="font-size: 2rem;">R-IoT Bypass</h2>
+                        <p>Zamanlama: Kayan sinyali tam ortadaki mor alanda durdur! (Tek Tıkla)</p>
+                        <button class="game-start-btn" id="btn-riot" onclick="startRiot()">Sinyali Gönder</button>
+                        <div class="riot-container"><div class="riot-target"></div><div class="riot-cursor" id="riot-cursor"></div></div>
+                        <button class="game-start-btn" id="btn-riot-stop" onclick="stopRiot()" disabled style="background:var(--game-color); color:#000;">DURDUR!</button>
+                        <div class="game-msg" id="msg-riot" style="color: var(--game-color);">Bağlantı Bekleniyor...</div>
+                    </div>
+                    <div class="slide-item">
+                        <h2 style="font-size: 2rem;">Protocol: ALPHA-STRIKE</h2>
+                        <p>Refleks: Hedef 5 kez yer değiştirecek. Hepsini vur! (Ödül: BPS x5)</p>
+                        <button class="game-start-btn" id="btn-alpha" onclick="startAlpha()">Avı Başlat</button>
+                        <div id="alpha-container"><div id="alpha-target" onclick="clickAlphaTarget()"></div></div>
+                        <div class="game-msg" id="msg-alpha" style="color: var(--game-color);">Bağlantı Bekleniyor...</div>
+                    </div>
+                    <div class="slide-item">
+                        <h2 style="font-size: 2rem;">Domain: HEX EXPANSION</h2>
+                        <p>Tarama: Eşleşen Hex Kodunu 3 saniye içinde bul ve tıkla!</p>
+                        <button class="game-start-btn" id="btn-hex" onclick="startHex()">Genişlet</button>
+                        <h3 style="color: #fff; margin: 5px 0;">Hedef: <span id="hex-target-code" style="color:var(--text-color);">#XXXX</span></h3>
+                        <div class="hex-grid" id="hex-grid"></div>
+                        <div class="game-msg" id="msg-hex" style="color: var(--game-color);">Bağlantı Bekleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- SIFIRLANMIŞ VERİ TABANI ---
+        let gameData = {
+            bytes: 0, bps: 0, baseClickPower: 1, clickPower: 1, autoClickRate: 0,
+            defense: 0, maxShield: 100, currentShield: 100,
+            autoItems: {
+                script: { count: 0, price: 15, prod: 1, name: "Basit Script", desc: "+1 B/sn" },
+                botnet: { count: 0, price: 150, prod: 12, name: "Botnet Ağı", desc: "+12 B/sn" },
+                server: { count: 0, price: 1500, prod: 140, name: "Proxy Sunucu", desc: "+140 B/sn" },
+                ai: { count: 0, price: 12000, prod: 1200, name: "Yapay Zeka Core", desc: "+1200 B/sn" },
+                mainframe: { count: 0, price: 150000, prod: 15000, name: "Süper Bilgisayar", desc: "+15K B/sn" }
+            },
+            hardItems: {
+                mouse: { count: 0, price: 200, val: 1, type: "addClick", name: "Lazer Mouse", desc: "+1 Tık Gücü" },
+                keyboard: { count: 0, price: 1000, val: 5, type: "addClick", name: "Mekanik Klavye", desc: "+5 Tık Gücü" },
+                autoClicker: { count: 0, price: 5000, val: 1, type: "autoClick", name: "Oto-Tık Çipi", desc: "+1 Oto-Tık/sn" },
+                doubleClick: { count: 0, price: 25000, val: 2, type: "multClick", name: "Çift Çekirdek", desc: "Tüm Tık x2" }
+            },
+            defItems: {
+                firewall: { count: 0, price: 500, def: 50, name: "Güvenlik Duvarı", desc: "+50 Kalkan" },
+                antivirus: { count: 0, price: 5000, def: 600, name: "Aktif Antivirüs", desc: "+600 Kalkan" },
+                encryption: { count: 0, price: 50000, def: 7500, name: "Kripto Şifreleme", desc: "+7500 Kalkan" }
+            }
+        };
+
+        const ui = {
+            bytes: document.getElementById('total-bytes'), bps: document.getElementById('bps'),
+            cPow: document.getElementById('click-power'), aClick: document.getElementById('auto-click-rate'),
+            cShield: document.getElementById('current-shield'), mShield: document.getElementById('max-shield'),
+            sBar: document.getElementById('shield-bar-fill')
+        };
+        let activeAttack = null;
+
+        // --- BAŞLAT MENÜSÜ FONKSİYONU ---
+        function initiateBoot() {
+            document.getElementById('start-btn').style.display = 'none';
+            let logEl = document.getElementById('boot-log');
+            logEl.style.display = 'block';
+            
+            const logs = [ "Sunuculara Bağlanılıyor...", "Güvenlik Protokolleri Atlatılıyor...", "Bypass Başarılı...", "SİSTEME GİRİŞ YAPILDI." ];
+            let i = 0;
+            
+            let int = setInterval(() => {
+                logEl.innerHTML += logs[i] + "<br>"; i++;
+                if(i >= logs.length) {
+                    clearInterval(int);
+                    setTimeout(() => {
+                        document.getElementById('start-menu').style.opacity = '0';
+                        setTimeout(() => {
+                            document.getElementById('start-menu').style.display = 'none';
+                            document.getElementById('main-app').style.display = 'flex';
+                            startGameLoop(); // Oyunu başlat
+                        }, 500);
+                    }, 800);
+                }
+            }, 500);
+        }
+
+        // --- SEKME VE MARKET ---
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active'); btn.classList.add('active');
+        }
+
+        function renderMarkets() {
+            const mAuto = document.getElementById('automation-market'), mHard = document.getElementById('hardware-market'), mDef = document.getElementById('defense-market');
+            mAuto.innerHTML = '<h2>-- YAZILIM AĞI --</h2>'; mHard.innerHTML = '<h2>-- DONANIM AĞI --</h2>'; mDef.innerHTML = '<h2>-- KORUMA AĞI --</h2>';
+            let createItem = (cat, k, i, btnText) => `<div class="market-item"><div class="item-header"><span>${i.name}</span> <span id="cnt-${cat}-${k}" style="color:var(--text-color)">${i.count}</span></div><div class="item-desc">${i.desc}</div><button class="buy-btn" id="btn-${cat}-${k}" onclick="buyItem('${cat}Items', '${k}')">${btnText}: <span id="prc-${cat}-${k}">${i.price}</span> B</button></div>`;
+            for(let k in gameData.autoItems) mAuto.innerHTML += createItem('auto', k, gameData.autoItems[k], 'AL');
+            for(let k in gameData.hardItems) mHard.innerHTML += createItem('hard', k, gameData.hardItems[k], 'AL');
+            for(let k in gameData.defItems) mDef.innerHTML += createItem('def', k, gameData.defItems[k], 'KUR');
+        }
+
+        function calcStats() {
+            let tb=0, cp=1, mlt=1, ac=0, td=100;
+            for(let k in gameData.autoItems) tb += gameData.autoItems[k].count * gameData.autoItems[k].prod;
+            for(let k in gameData.hardItems) { let i=gameData.hardItems[k]; if(i.type==="addClick") cp+=i.count*i.val; if(i.type==="multClick") mlt+=i.count*i.val; if(i.type==="autoClick") ac+=i.count*i.val; }
+            for(let k in gameData.defItems) td += gameData.defItems[k].count * gameData.defItems[k].def;
+            gameData.bps = tb; gameData.clickPower = cp * mlt; gameData.autoClickRate = ac;
+            gameData.maxShield = td; if(gameData.currentShield > gameData.maxShield) gameData.currentShield = gameData.maxShield;
+        }
+
+        function updateUI() {
+            ui.bytes.innerText = Math.floor(gameData.bytes); ui.bps.innerText = gameData.bps;
+            ui.cPow.innerText = gameData.clickPower; ui.aClick.innerText = gameData.autoClickRate;
+            ui.cShield.innerText = Math.floor(gameData.currentShield); ui.mShield.innerText = gameData.maxShield;
+            let pct = (gameData.currentShield / gameData.maxShield) * 100;
+            ui.sBar.style.width = pct + '%'; ui.sBar.style.background = pct < 30 ? 'var(--alert-color)' : 'var(--shield-color)';
+            ['auto', 'hard', 'def'].forEach(cat => { let obj = gameData[cat+'Items']; for(let k in obj) { let btn = document.getElementById(`btn-${cat}-${k}`); if(btn) { document.getElementById(`cnt-${cat}-${k}`).innerText = obj[k].count; document.getElementById(`prc-${cat}-${k}`).innerText = obj[k].price; btn.disabled = gameData.bytes < obj[k].price; } } });
+        }
+
+        document.getElementById('hack-btn').addEventListener('click', () => { gameData.bytes += gameData.clickPower; updateUI(); });
+        function buyItem(cat, k) { let i = gameData[cat][k]; if (gameData.bytes >= i.price) { gameData.bytes -= i.price; i.count++; i.price = Math.ceil(i.price * 1.15); calcStats(); updateUI(); } }
+
+        // --- SİBER OYUNLAR & SLIDER ---
+        let currentSlide = 0; const slideNames = ["Protocol: SYNTAX BREACH", "Terminal: XYL0S", "COAD: AI Arena Override", "R-IoT Bypass", "Protocol: ALPHA-STRIKE", "Domain: HEX EXPANSION"];
+        function moveSlide(dir) {
+            currentSlide += dir; if(currentSlide < 0) currentSlide = 5; if(currentSlide > 5) currentSlide = 0;
+            document.getElementById('slider-track').style.transform = `translateX(-${currentSlide * 16.666}%)`;
+            let t = document.getElementById('game-title-display'); t.innerText = slideNames[currentSlide]; t.setAttribute('data-text', slideNames[currentSlide]);
+        }
+        function giveReward(msgEl) { let r = Math.max(100, Math.floor(gameData.bps * 5)); gameData.bytes += r; updateUI(); document.getElementById(msgEl).innerText = `BAŞARILI! +${r} Byte`; document.getElementById(msgEl).style.color = "var(--text-color)"; }
+
+        // Oyunlar
+        let synPat=[], synPl=[], synSt='idle'; const synGrid=document.getElementById('syntax-grid');
+        for(let i=0;i<16;i++){ let c=document.createElement('div'); c.className='matrix-cell'; c.id=`syn-${i}`; c.innerText="0x"+i.toString(16).toUpperCase(); c.onclick=()=>clickSyn(i); synGrid.appendChild(c); }
+        function startSyntax(){ if(synSt!=='idle') return; synSt='show'; document.getElementById('msg-syntax').innerText="İzle..."; document.getElementById('btn-syntax').disabled=true; synGrid.querySelectorAll('.matrix-cell').forEach(c=>c.classList.remove('flash','correct','wrong')); synPat=[]; synPl=[]; while(synPat.length<4){ let r=Math.floor(Math.random()*16); if(!synPat.includes(r)) synPat.push(r); } setTimeout(()=>synPat.forEach(i=>document.getElementById(`syn-${i}`).classList.add('flash')), 500); setTimeout(()=>{ synPat.forEach(i=>document.getElementById(`syn-${i}`).classList.remove('flash')); synSt='wait'; document.getElementById('msg-syntax').innerText="Tekrarla!"; }, 2000); }
+        function clickSyn(i){ if(synSt!=='wait'||synPl.includes(i)) return; synPl.push(i); if(synPat.includes(i)){ document.getElementById(`syn-${i}`).classList.add('correct'); if(synPl.length===4){ synSt='idle'; giveReward('msg-syntax'); setTimeout(()=>{document.getElementById('btn-syntax').disabled=false;},1500); } } else { document.getElementById(`syn-${i}`).classList.add('wrong'); synSt='idle'; document.getElementById('msg-syntax').innerText="HATA!"; document.getElementById('msg-syntax').style.color="var(--alert-color)"; setTimeout(()=>{document.getElementById('btn-syntax').disabled=false;},1500); } }
+
+        let xylExp=1, xylTmr; const xylGrid=document.getElementById('xylos-grid');
+        for(let i=0;i<9;i++){ let c=document.createElement('div'); c.className='xylos-cell'; c.id=`xyl-${i}`; c.onclick=()=>clickXyl(i); xylGrid.appendChild(c); }
+        function startXylos(){ clearInterval(xylTmr); xylExp=1; document.getElementById('btn-xylos').disabled=true; let nums=[1,2,3,4,5,6,7,8,9].sort(()=>Math.random()-0.5); for(let i=0;i<9;i++){ document.getElementById(`xyl-${i}`).innerText=nums[i]; document.getElementById(`xyl-${i}`).classList.remove('hidden'); } let t=8; document.getElementById('msg-xylos').innerText=`Süre: ${t}s`; xylTmr=setInterval(()=>{ t--; document.getElementById('msg-xylos').innerText=`Süre: ${t}s`; if(t<=0){ clearInterval(xylTmr); document.getElementById('msg-xylos').innerText="SÜRE BİTTİ!"; document.getElementById('msg-xylos').style.color="var(--alert-color)"; document.getElementById('btn-xylos').disabled=false; } }, 1000); }
+        function clickXyl(i){ let c=document.getElementById(`xyl-${i}`); if(c.classList.contains('hidden')||!xylTmr) return; if(parseInt(c.innerText)===xylExp){ c.classList.add('hidden'); xylExp++; if(xylExp>9){ clearInterval(xylTmr); giveReward('msg-xylos'); document.getElementById('btn-xylos').disabled=false; } } else { clearInterval(xylTmr); document.getElementById('msg-xylos').innerText="YANLIŞ PORT!"; document.getElementById('msg-xylos').style.color="var(--alert-color)"; document.getElementById('btn-xylos').disabled=false; } }
+
+        let arProg=0, arTmr;
+        function startArena(){ clearInterval(arTmr); arProg=0; document.getElementById('arena-fill').style.width='0%'; document.getElementById('btn-arena').disabled=true; document.getElementById('arena-btn').disabled=false; let t=40; document.getElementById('msg-arena').innerText="Saldır!"; document.getElementById('msg-arena').style.color="var(--game-color)"; arTmr=setInterval(()=>{ t--; arProg-=2; if(arProg<0) arProg=0; document.getElementById('arena-fill').style.width=arProg+'%'; if(t<=0){ clearInterval(arTmr); document.getElementById('arena-btn').disabled=true; document.getElementById('btn-arena').disabled=false; document.getElementById('msg-arena').innerText="BAŞARISIZ!"; document.getElementById('msg-arena').style.color="var(--alert-color)"; } }, 100); }
+        function clickArena(){ if(!arTmr) return; arProg+=15; if(arProg>=100){ arProg=100; clearInterval(arTmr); document.getElementById('arena-btn').disabled=true; document.getElementById('btn-arena').disabled=false; giveReward('msg-arena'); } document.getElementById('arena-fill').style.width=arProg+'%'; }
+
+        let rtAnim, rtPos=0, rtDir=1, rtAct=false;
+        function startRiot(){ if(rtAct) return; rtAct=true; document.getElementById('btn-riot').disabled=true; document.getElementById('btn-riot-stop').disabled=false; document.getElementById('msg-riot').innerText="Ortada durdur!"; document.getElementById('msg-riot').style.color="var(--game-color)"; function anim(){ rtPos+=2.5*rtDir; if(rtPos>=100||rtPos<=0) rtDir*=-1; document.getElementById('riot-cursor').style.left=rtPos+'%'; if(rtAct) rtAnim=requestAnimationFrame(anim); } rtAnim=requestAnimationFrame(anim); }
+        function stopRiot(){ rtAct=false; cancelAnimationFrame(rtAnim); document.getElementById('btn-riot').disabled=false; document.getElementById('btn-riot-stop').disabled=true; if(rtPos>=40&&rtPos<=60) giveReward('msg-riot'); else{ document.getElementById('msg-riot').innerText="KAÇIRDIN!"; document.getElementById('msg-riot').style.color="var(--alert-color)"; } }
+
+        let alpHits=0, alpTmr; const alpTar = document.getElementById('alpha-target');
+        function startAlpha(){ clearInterval(alpTmr); alpHits=0; document.getElementById('btn-alpha').disabled=true; alpTar.style.display='block'; moveAlpha(); document.getElementById('msg-alpha').innerText="Vurulan: 0/5"; document.getElementById('msg-alpha').style.color="var(--game-color)"; let t=6; alpTmr=setInterval(()=>{ t--; if(t<=0){ clearInterval(alpTmr); alpTar.style.display='none'; document.getElementById('btn-alpha').disabled=false; document.getElementById('msg-alpha').innerText="HIZLI OL!"; document.getElementById('msg-alpha').style.color="var(--alert-color)"; } },1000); }
+        function moveAlpha(){ alpTar.style.left = Math.random()*85 + '%'; alpTar.style.top = Math.random()*80 + '%'; }
+        function clickAlphaTarget(){ alpHits++; moveAlpha(); document.getElementById('msg-alpha').innerText=`Vurulan: ${alpHits}/5`; if(alpHits>=5){ clearInterval(alpTmr); alpTar.style.display='none'; document.getElementById('btn-alpha').disabled=false; giveReward('msg-alpha'); } }
+
+        let hexTarCode="", hexTmr; const hexGrid=document.getElementById('hex-grid');
+        for(let i=0;i<9;i++){ let c=document.createElement('div'); c.className='hex-cell'; c.id=`hex-${i}`; c.onclick=()=>clickHex(i); hexGrid.appendChild(c); }
+        function genHex(){ return "#"+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0').toUpperCase(); }
+        function startHex(){ clearInterval(hexTmr); document.getElementById('btn-hex').disabled=true; let ansIdx = Math.floor(Math.random()*9); hexTarCode = genHex(); document.getElementById('hex-target-code').innerText = hexTarCode; for(let i=0;i<9;i++){ document.getElementById(`hex-${i}`).innerText = i===ansIdx ? hexTarCode : genHex(); } let t=3; document.getElementById('msg-hex').innerText=`Süre: ${t}s`; document.getElementById('msg-hex').style.color="var(--game-color)"; hexTmr=setInterval(()=>{ t--; document.getElementById('msg-hex').innerText=`Süre: ${t}s`; if(t<=0){ clearInterval(hexTmr); document.getElementById('btn-hex').disabled=false; document.getElementById('msg-hex').innerText="BULAMADIN!"; document.getElementById('msg-hex').style.color="var(--alert-color)"; } },1000); }
+        function clickHex(i){ if(!hexTmr) return; let c = document.getElementById(`hex-${i}`); if(c.innerText === hexTarCode){ clearInterval(hexTmr); document.getElementById('btn-hex').disabled=false; giveReward('msg-hex'); } else { clearInterval(hexTmr); document.getElementById('btn-hex').disabled=false; document.getElementById('msg-hex').innerText="YANLIŞ KOD!"; document.getElementById('msg-hex').style.color="var(--alert-color)"; } }
+
+        // --- SALDIRI VE ANA OYUN DÖNGÜSÜ ---
+        function triggerAttack() {
+            if(activeAttack) return;
+            let dmg = Math.max(8, (Math.pow(gameData.bps, 0.6) * 2 + 15) * 1.6);
+            activeAttack = { strength: dmg, clicks: Math.floor(Math.random() * 20) + 10 };
+            document.getElementById('attack-banner').style.display = 'block';
+            document.getElementById('attack-strength').innerText = Math.floor(dmg);
+            document.getElementById('defend-btn').innerText = `VİRÜSÜ İMHA ET (${activeAttack.clicks})`;
+        }
+        function defendAttack() {
+            if(!activeAttack) return;
+            activeAttack.clicks--; document.getElementById('defend-btn').innerText = `VİRÜSÜ İMHA ET (${activeAttack.clicks})`;
+            if(activeAttack.clicks <= 0) { activeAttack = null; document.getElementById('attack-banner').style.display = 'none'; }
+        }
+
+        function startGameLoop() {
+            // Başlangıç değerlerini renderla
+            renderMarkets(); calcStats(); updateUI();
+
+            setInterval(() => {
+                if (gameData.bps > 0) gameData.bytes += (gameData.bps / 10);
+                if (gameData.autoClickRate > 0) gameData.bytes += ((gameData.autoClickRate * gameData.clickPower) / 10);
+                
+                if (activeAttack) { 
+                    let d = activeAttack.strength / 10; 
+                    if (gameData.currentShield > 0) { 
+                        gameData.currentShield -= d; 
+                        if(gameData.currentShield < 0) gameData.currentShield=0; 
+                    } else gameData.bytes -= d; 
+                }
+                else if (gameData.currentShield < gameData.maxShield) { 
+                    gameData.currentShield += (gameData.maxShield * 0.02) / 10; 
+                    if(gameData.currentShield > gameData.maxShield) gameData.currentShield = gameData.maxShield; 
+                }
+                
+                updateUI();
+
+                if (gameData.bytes < 0) { 
+                    alert("SİBER KALKAN KIRILDI VE VERİLER SİLİNDİ! SİSTEM YENİDEN BAŞLATILIYOR..."); 
+                    location.reload(); // Kayıt sistemi olmadığı için sadece sayfayı yeniliyoruz.
+                }
+            }, 100);
+
+            setInterval(() => { if(gameData.bps > 20 && Math.random() < 0.15) triggerAttack(); }, 5000);
+        }
+
+    </script>
+</body>
+</html>
