@@ -3,132 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIGSI - Saf Ses Ağı</title>
-    <!-- Doğrudan bağlantı için PeerJS kütüphanesi -->
+    <title>NIGSI - Siber Ağ (Ses + Mesaj)</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&display=swap');
 
         body {
-            background-color: #050505;
-            color: #fff;
-            font-family: 'Rajdhani', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-            background-image: radial-gradient(circle at center, #111 0%, #000 100%);
+            background-color: #030508;
+            background-image: 
+                linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: #fff; font-family: 'Rajdhani', sans-serif;
+            margin: 0; display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; overflow-x: hidden; position: relative;
         }
 
-        /* LOGO VE BAŞLIK */
-        .header { margin-top: 40px; text-align: center; }
+        body::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent 0%, #020202 100%);
+            z-index: -1;
+        }
+
+        .header { margin-top: 30px; text-align: center; z-index: 1; }
         .logo {
-            font-size: 3.5rem; color: #00ffff;
-            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
-            letter-spacing: 10px; font-weight: bold; margin: 0;
+            font-family: 'Orbitron', sans-serif; font-size: 3.5rem; color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4);
+            letter-spacing: 12px; margin: 0;
         }
-        .subtitle { color: #555; letter-spacing: 3px; font-size: 1rem; margin-top: 5px; }
+        .subtitle { color: #00ffff; opacity: 0.6; letter-spacing: 5px; font-size: 1rem; margin-top: 5px; text-transform: uppercase; }
 
-        /* GİRİŞ EKRANI */
-        #login-screen {
-            background: rgba(15, 15, 15, 0.9);
-            padding: 30px; border-radius: 10px;
-            border: 1px solid #00ffff;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
-            text-align: center; width: 280px; margin-top: 50px;
+        .panel {
+            background: rgba(10, 15, 20, 0.6); backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
         }
+
+        #login-screen { padding: 40px 30px; text-align: center; width: 300px; margin-top: 50px; z-index: 1; }
 
         input {
-            width: 90%; padding: 12px; margin: 10px 0;
-            background: #000; border: 1px solid #333;
-            color: #00ffff; font-family: 'Rajdhani', sans-serif;
-            font-size: 1.1rem; text-align: center;
-            border-radius: 5px; outline: none;
+            width: 90%; padding: 12px; margin: 10px 0; background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.3); color: #00ffff; font-family: 'Orbitron', sans-serif;
+            font-size: 1rem; text-align: center; border-radius: 6px; outline: none; transition: all 0.3s;
         }
-        input:focus { border-color: #00ffff; box-shadow: 0 0 8px rgba(0,255,255,0.3); }
+        input:focus { border-color: #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.3); background: rgba(0, 25, 30, 0.5); }
 
         .btn {
-            background: #000; color: #00ffff;
-            border: 1px solid #00ffff; padding: 12px;
-            margin-top: 15px; font-family: 'Rajdhani', sans-serif;
-            font-size: 1.1rem; font-weight: bold;
-            cursor: pointer; border-radius: 5px;
-            width: 100%; transition: 0.3s;
+            background: linear-gradient(45deg, #001a1a, #004d4d); color: #00ffff;
+            border: 1px solid #00ffff; padding: 12px; margin-top: 20px; font-family: 'Orbitron', sans-serif;
+            cursor: pointer; border-radius: 6px; width: 100%; transition: 0.3s; letter-spacing: 2px;
         }
-        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 15px #00ffff; }
-        #error-msg { color: #ff3333; display: none; margin-top: 10px; font-weight: bold; }
+        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
+        #error-msg { color: #ff3366; display: none; margin-top: 15px; font-weight: bold; }
 
-        /* ODA EKRANI */
-        #room-screen { display: none; flex-direction: column; align-items: center; width: 100%; margin-top: 30px; }
-        
-        .status-text { color: #00ffff; font-size: 1.2rem; margin-bottom: 20px; }
+        #room-screen { display: none; flex-direction: column; align-items: center; width: 100%; margin-top: 20px; z-index: 1; padding-bottom: 50px; }
+        .status-text { color: #00ffff; font-size: 1.1rem; margin-bottom: 20px; letter-spacing: 2px; text-shadow: 0 0 8px #00ffff; }
 
-        .grid {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;
-            max-width: 900px; width: 100%; padding: 0 20px;
-        }
+        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 1000px; width: 100%; padding: 0 20px; }
 
-        /* KULLANICI KARTLARI (Baştan Yazıldı) */
         .user-card {
-            background: #0a0a0a; border: 2px solid #222;
-            padding: 20px; border-radius: 8px; width: 150px;
-            text-align: center; transition: 0.2s; position: relative;
+            background: rgba(10, 15, 25, 0.8); backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 16px;
+            width: 140px; text-align: center; transition: all 0.3s ease; position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; align-items: center;
         }
 
-        /* PARLAMA EFEKTİ (Konuşurken aktif olur) */
-        .user-card.speaking {
-            border-color: #00ff66;
-            box-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
-            transform: scale(1.05);
+        .avatar-ring {
+            width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: #aaa; background: #111; transition: 0.3s;
         }
+        .user-name { font-size: 1.1rem; font-weight: 700; color: #ddd; margin-bottom: 15px; word-break: break-all;}
+
+        .user-card.me { border-color: rgba(0, 255, 255, 0.5); }
+        .user-card.me .avatar-ring { border-color: #00ffff; color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.2); }
+        .user-card.me .user-name { color: #00ffff; }
+
+        @keyframes ripple {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 255, 102, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0); }
+        }
+
+        .user-card.speaking { border-color: #00ff66; transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 255, 102, 0.1); }
+        .user-card.speaking .avatar-ring { border-color: #00ff66; color: #00ff66; animation: ripple 1s infinite; background: rgba(0, 255, 102, 0.1); }
         .user-card.speaking .user-name { color: #00ff66; text-shadow: 0 0 10px #00ff66; }
 
-        .user-card.me { border-color: #00ffff; }
-        .user-card.me .user-name { color: #00ffff; }
-        .user-card.me.speaking { border-color: #00ffff; box-shadow: 0 0 20px rgba(0, 255, 255, 0.4); }
+        .vol-box { width: 100%; margin-top: 10px; }
+        .vol-box label { display: block; font-size: 0.7rem; color: #777; margin-bottom: 8px; font-weight: bold; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 2px; outline: none; margin: 0; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #00ffff; cursor: pointer; box-shadow: 0 0 10px #00ffff; transition: 0.2s; }
 
-        .user-name { font-size: 1.3rem; font-weight: bold; color: #ddd; margin-bottom: 15px; word-break: break-all; transition: 0.2s;}
+        /* YENİ EKLENEN: SOHBET (CHAT) ALANI TASARIMI */
+        #chat-container {
+            width: 90%; max-width: 800px; margin-top: 30px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        #chat-box {
+            height: 180px; overflow-y: auto; background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(0, 255, 255, 0.2); border-radius: 8px;
+            padding: 15px; text-align: left; font-family: 'Rajdhani', sans-serif;
+        }
+        /* Özel Scrollbar */
+        #chat-box::-webkit-scrollbar { width: 6px; }
+        #chat-box::-webkit-scrollbar-thumb { background: rgba(0, 255, 255, 0.3); border-radius: 3px; }
         
-        /* SES ÇUBUĞU */
-        .vol-box { margin-top: 10px; }
-        .vol-box label { display: block; font-size: 0.8rem; color: #777; margin-bottom: 5px; }
-        input[type="range"] { width: 100%; accent-color: #00ffff; cursor: pointer; }
+        .chat-msg { margin-bottom: 10px; font-size: 1.1rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; }
+        .chat-name { font-weight: bold; color: #00ffff; margin-right: 8px; text-transform: uppercase; font-size: 0.9rem; }
+        .chat-name.me { color: #00ff66; }
+        .chat-text { color: #ccc; }
 
-        .controls { margin-top: 40px; display: flex; gap: 15px; }
-        .btn-mute { color: #ff3333; border-color: #ff3333; width: auto; padding: 10px 20px; }
-        .btn-mute:hover { background: #ff3333; color: #fff; box-shadow: none; }
-        .btn-leave { color: #777; border-color: #777; width: auto; padding: 10px 20px; }
-        .btn-leave:hover { background: #777; color: #fff; box-shadow: none; }
+        #chat-input-area { display: flex; gap: 10px; }
+        #chat-input { margin: 0; flex: 1; text-align: left; padding: 12px 15px; }
+        #send-btn { width: auto; margin: 0; padding: 0 30px; }
+
+        .controls { margin-top: 30px; display: flex; gap: 20px; background: rgba(0,0,0,0.5); padding: 10px 25px; border-radius: 30px; border: 1px solid #222;}
+        .btn-mute { background: transparent; color: #ff3366; border-color: #ff3366; width: auto; padding: 8px 20px; border-radius: 20px;}
+        .btn-mute:hover { background: #ff3366; color: #fff; box-shadow: 0 0 15px rgba(255, 51, 102, 0.5); }
+        .btn-leave { background: transparent; color: #888; border-color: #555; width: auto; padding: 8px 20px; border-radius: 20px;}
+        .btn-leave:hover { background: #555; color: #fff; border-color:#888;}
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1 class="logo">NIGSI</h1>
-        <div class="subtitle">KESİNTİSİZ İLETİŞİM AĞI</div>
+        <div class="subtitle">Secure Audio & Text Terminal</div>
     </div>
 
     <!-- GİRİŞ EKRANI -->
-    <div id="login-screen">
+    <div id="login-screen" class="panel">
         <input type="text" id="username" placeholder="Takma İsim" maxlength="12" autocomplete="off">
-        <input type="password" id="password" placeholder="Ağ Şifresi">
-        <button class="btn" onclick="startSystem()">SİSTEME GİR</button>
-        <p id="error-msg">Şifre Yanlış!</p>
+        <input type="password" id="password" placeholder="Sistem Şifresi">
+        <button class="btn" onclick="startSystem()">BAĞLANTIYI BAŞLAT</button>
+        <p id="error-msg">Yetkisiz Erişim!</p>
     </div>
 
-    <!-- SOHBET EKRANI -->
+    <!-- ODA EKRANI -->
     <div id="room-screen">
-        <div class="status-text" id="status-info">Ağa Bağlanılıyor... (Mikrofon İzni Verin)</div>
+        <div class="status-text" id="status-info">ŞİFRELİ AĞA BAĞLANILIYOR...</div>
         
-        <div class="grid" id="users-grid">
-            <!-- Kişi Kartları Buraya Gelecek -->
+        <!-- Kameralar / Ses Kartları -->
+        <div class="grid" id="users-grid"></div>
+
+        <!-- YENİ EKLENEN: SOHBET (CHAT) ALANI -->
+        <div id="chat-container" class="panel">
+            <div id="chat-box">
+                <!-- Mesajlar buraya gelecek -->
+            </div>
+            <div id="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Ağa mesaj gönder..." onkeypress="handleEnter(event)">
+                <button class="btn" id="send-btn" onclick="sendChatMessage()">GÖNDER</button>
+            </div>
         </div>
 
         <div class="controls">
             <button class="btn btn-mute" id="mute-btn" onclick="toggleMute()">MİKROFONU KAPAT</button>
-            <button class="btn btn-leave" onclick="location.reload()">AĞDAN ÇIK</button>
+            <button class="btn btn-leave" onclick="location.reload()">AĞDAN AYRIL</button>
         </div>
     </div>
 
@@ -141,6 +173,9 @@
         let mySlot = 0;
         let myName = "";
         let audioContext = null;
+        
+        // Yeni: Aktif veri bağlantılarını (mesaj atmak için) tutacağımız liste
+        let dataConnections = {}; 
 
         async function startSystem() {
             myName = document.getElementById("username").value.trim();
@@ -156,27 +191,20 @@
             document.getElementById("room-screen").style.display = "flex";
 
             try {
-                // MİKROFON İZNİ İSTE
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                
-                // SES ANALİZ MOTORUNU BAŞLAT (Parlamalar için)
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                audioContext.resume(); // Tarayıcı politikasını aşmak için butona basınca başlatılır
-
-                // Kendimizi sisteme bağlayalım (1'den 5'e kadar boş koltuk arar)
+                audioContext.resume();
                 connectToFreeSlot(1);
-
             } catch (err) {
-                document.getElementById("status-info").innerText = "HATA: Mikrofon izni reddedildi veya bulunamadı!";
-                document.getElementById("status-info").style.color = "#ff3333";
+                document.getElementById("status-info").innerText = "HATA: Mikrofon izni reddedildi!";
+                document.getElementById("status-info").style.color = "#ff3366";
             }
         }
 
-        // BOŞ BİR SLOT BUL VE YERLEŞ (Maksimum 5 Kişi)
         function connectToFreeSlot(slotNum) {
             if (slotNum > 5) {
-                document.getElementById("status-info").innerText = "HATA: Ağ Dolu! (Maksimum 5 Kişi)";
-                document.getElementById("status-info").style.color = "#ff3333";
+                document.getElementById("status-info").innerText = "HATA: Ağ Dolu! (Maks. 5 Kişi)";
+                document.getElementById("status-info").style.color = "#ff3366";
                 return;
             }
 
@@ -184,169 +212,211 @@
             const tempPeer = new Peer(myId);
 
             tempPeer.on('open', (id) => {
-                // Başarılı! Bu koltuğa oturduk.
                 peer = tempPeer;
                 mySlot = slotNum;
-                document.getElementById("status-info").innerText = "AĞA BAĞLANDINIZ";
+                document.getElementById("status-info").innerText = "AĞ BAĞLANTISI AKTİF";
                 setTimeout(() => { document.getElementById("status-info").style.display = "none"; }, 2000);
                 
-                // Kendi kartımızı ekranda oluşturalım
                 createCard(myId, myName, true);
                 analyzeMyVoice(myId, localStream);
 
-                // Odadaki DİĞER slotları (kişileri) aramaya başla
                 callOtherSlots();
                 listenForIncomingConnections();
             });
 
             tempPeer.on('error', (err) => {
-                // Eğer ID doluysa (biri oturuyorsa) bir sonraki koltuğa geç
                 if (err.type === 'unavailable-id') {
                     connectToFreeSlot(slotNum + 1);
-                } else {
-                    console.error("PeerJS Hatası:", err);
                 }
             });
         }
 
-        // GELEN ARAMALARI DİNLE
         function listenForIncomingConnections() {
-            // Biri bizi sesli aradığında:
+            // Sesli arama geldiğinde
             peer.on('call', (call) => {
-                call.answer(localStream); // Kendi sesimizle cevap veriyoruz
-                
+                call.answer(localStream);
                 call.on('stream', (remoteStream) => {
                     handleRemoteUser(call.peer, remoteStream);
                 });
+                call.on('close', () => removeUser(call.peer));
             });
 
-            // Biri ismini gönderdiğinde:
+            // Veri (İsim / Mesaj) bağlantısı geldiğinde
             peer.on('connection', (conn) => {
+                conn.on('open', () => {
+                    dataConnections[conn.peer] = conn; // Mesaj listesine ekle
+                    conn.send({ type: 'name_update', name: myName });
+                });
+                
                 conn.on('data', (data) => {
                     if (data.type === 'name_update') {
                         updateCardName(conn.peer, data.name);
+                    } else if (data.type === 'chat') {
+                        // Yeni Mesaj Geldiğinde
+                        displayChatMessage(data.name, data.message, false);
                     }
                 });
-                // Karşılık olarak kendi ismimizi gönderelim
-                conn.on('open', () => {
-                    conn.send({ type: 'name_update', name: myName });
+
+                conn.on('close', () => {
+                    delete dataConnections[conn.peer];
+                    removeUser(conn.peer);
                 });
             });
         }
 
-        // DİĞER KOLTUKLARDAKİLERİ ARA
         function callOtherSlots() {
             for (let i = 1; i <= 5; i++) {
-                if (i === mySlot) continue; // Kendimizi aramayalım
-                
+                if (i === mySlot) continue;
                 const targetId = ODA_PREFIX + i;
                 
-                // 1. Sesli Arama Yap
+                // Ses Bağlantısı Kur
                 const call = peer.call(targetId, localStream);
                 if (call) {
                     call.on('stream', (remoteStream) => {
                         handleRemoteUser(targetId, remoteStream);
                     });
+                    call.on('close', () => removeUser(targetId));
                 }
 
-                // 2. İsmimizi Gönder
+                // Veri Bağlantısı Kur
                 const conn = peer.connect(targetId);
                 if (conn) {
                     conn.on('open', () => {
+                        dataConnections[targetId] = conn; // Mesaj listesine ekle
                         conn.send({ type: 'name_update', name: myName });
                     });
+                    
                     conn.on('data', (data) => {
                         if (data.type === 'name_update') {
                             updateCardName(targetId, data.name);
+                        } else if (data.type === 'chat') {
+                            displayChatMessage(data.name, data.message, false);
                         }
+                    });
+
+                    conn.on('close', () => {
+                        delete dataConnections[targetId];
+                        removeUser(targetId);
                     });
                 }
             }
         }
 
-        // KARŞI TARAFTAN SES GELDİĞİNDE
-        function handleRemoteUser(userId, stream) {
-            // Zaten varsa ekleme
-            if(document.getElementById('audio-' + userId)) return; 
+        /* --- SOHBET / MESAJLAŞMA FONKSİYONLARI --- */
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
 
-            // Sesi oynatmak için HTML'e gizli bir audio etiketi ekle
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Kendi ekranımıza yazdıralım
+            displayChatMessage(myName, text, true);
+
+            // Ağdaki diğer aktif kişilere gönderelim
+            const payload = { type: 'chat', name: myName, message: text };
+            Object.values(dataConnections).forEach(conn => {
+                if (conn && conn.open) {
+                    conn.send(payload);
+                }
+            });
+
+            // Kutuyu temizle
+            input.value = "";
+        }
+
+        function displayChatMessage(senderName, messageText, isMe) {
+            const chatBox = document.getElementById('chat-box');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-msg';
+            
+            const nameClass = isMe ? "chat-name me" : "chat-name";
+            
+            msgDiv.innerHTML = `<span class="${nameClass}">${senderName}:</span> <span class="chat-text">${messageText}</span>`;
+            chatBox.appendChild(msgDiv);
+            
+            // Yeni mesaj gelince otomatik en aşağıya kaydır
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        /* ------------------------------------------- */
+
+        function handleRemoteUser(userId, stream) {
+            removeUser(userId);
             const audioEl = document.createElement('audio');
             audioEl.id = 'audio-' + userId;
             audioEl.srcObject = stream;
             audioEl.autoplay = true;
             document.body.appendChild(audioEl);
-
-            // Ekrana kartını çiz (İsmi veri kanalından gelene kadar Bekleniyor yazar)
             createCard(userId, "Bağlanıyor...", false);
-
-            // Konuşma parlaklık animasyonu için analiz başlat
             analyzeRemoteVoice(userId, stream);
         }
 
-        // EKRANA KİŞİ KARTI ÇİZME
+        function removeUser(userId) {
+            const oldAudio = document.getElementById('audio-' + userId);
+            if (oldAudio) oldAudio.remove();
+            const oldCard = document.getElementById('card-' + userId);
+            if (oldCard) oldCard.remove();
+        }
+
         function createCard(userId, name, isMe) {
             if(document.getElementById('card-' + userId)) return;
-
             const grid = document.getElementById('users-grid');
             const card = document.createElement('div');
             card.className = `user-card ${isMe ? 'me' : ''}`;
             card.id = `card-${userId}`;
+            
+            const initial = name && name !== "Bağlanıyor..." ? name.charAt(0).toUpperCase() : "?";
 
             let volumeControl = '';
             if (!isMe) {
-                // Başkasıysa Ses Ayar Çubuğu Ekle
                 volumeControl = `
                     <div class="vol-box">
-                        <label>SES KONTROLÜ</label>
+                        <label>SES KONTROL</label>
                         <input type="range" min="0" max="1" step="0.1" value="1" oninput="changeVol('${userId}', this.value)">
                     </div>
                 `;
             } else {
-                volumeControl = `<div style="color:#00ffff; font-size:0.9rem; margin-top:10px;">(SEN)</div>`;
+                volumeControl = `<div style="color:rgba(0,255,255,0.7); font-size:0.8rem; margin-top:15px; font-weight:bold;">(SEN)</div>`;
             }
 
             card.innerHTML = `
+                <div class="avatar-ring" id="avatar-${userId}">${initial}</div>
                 <div class="user-name" id="name-${userId}">${name}</div>
                 ${volumeControl}
             `;
             grid.appendChild(card);
         }
 
-        // İSİM GÜNCELLEME
         function updateCardName(userId, name) {
             const nameEl = document.getElementById(`name-${userId}`);
+            const avatarEl = document.getElementById(`avatar-${userId}`);
             if (nameEl) nameEl.innerText = name;
+            if (avatarEl) avatarEl.innerText = name.charAt(0).toUpperCase();
         }
 
-        // SES KISMA (BAŞKASININ SESİNİ)
         function changeVol(userId, val) {
             const audioEl = document.getElementById(`audio-${userId}`);
             if (audioEl) audioEl.volume = parseFloat(val);
         }
 
-        // KENDİ MİKROFONUNU KAPATMA
         function toggleMute() {
             if (localStream) {
                 const audioTrack = localStream.getAudioTracks()[0];
-                audioTrack.enabled = !audioTrack.enabled; // Aç/Kapat
-
+                audioTrack.enabled = !audioTrack.enabled;
                 const btn = document.getElementById('mute-btn');
                 if (audioTrack.enabled) {
                     btn.innerText = "MİKROFONU KAPAT";
-                    btn.style.color = "#ff3333";
-                    btn.style.borderColor = "#ff3333";
+                    btn.style.color = "#ff3366"; btn.style.borderColor = "#ff3366";
                 } else {
                     btn.innerText = "MİKROFONU AÇ";
-                    btn.style.color = "#777";
-                    btn.style.borderColor = "#777";
-                    
-                    // Sustuğumuzda parlaklığın kesin gitmesi için
+                    btn.style.color = "#888"; btn.style.borderColor = "#555";
                     document.getElementById(`card-${ODA_PREFIX}${mySlot}`).classList.remove('speaking');
                 }
             }
         }
 
-        // *** SES ANALİZİ VE PARLAMA SİSTEMİ (GERÇEK ZAMANLI) ***
         function analyzeRemoteVoice(userId, stream) {
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
@@ -355,6 +425,7 @@
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
             function checkVolume() {
+                if(!document.getElementById(`card-${userId}`)) return;
                 analyser.getByteFrequencyData(dataArray);
                 let sum = 0;
                 for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
@@ -362,7 +433,6 @@
 
                 const card = document.getElementById(`card-${userId}`);
                 if (card) {
-                    // Eğer ortalama ses seviyesi 10'dan büyükse kişi konuşuyor demektir
                     if (avg > 10) card.classList.add('speaking');
                     else card.classList.remove('speaking');
                 }
@@ -371,7 +441,6 @@
             checkVolume();
         }
 
-        // KENDİ SESİMİZİN PARLAMASI
         function analyzeMyVoice(myId, stream) {
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
@@ -380,12 +449,10 @@
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
             function checkVolume() {
-                // Eğer mikrofon kapalıysa hiç analiz etme
                 if(localStream && !localStream.getAudioTracks()[0].enabled) {
                     requestAnimationFrame(checkVolume);
                     return;
                 }
-
                 analyser.getByteFrequencyData(dataArray);
                 let sum = 0;
                 for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
