@@ -3,16 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIGSI - Siber Ağ (Ses + Mesaj + Resim)</title>
+    <title>NIGSI - Crimson Network</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&display=swap');
 
+        :root {
+            --neon-red: #ff1a1a;
+            --glow-red: rgba(255, 26, 26, 0.6);
+            --dark-red: #330000;
+            --bg-color: #050101;
+            --panel-bg: rgba(15, 5, 5, 0.7);
+        }
+
         body {
-            background-color: #030508;
+            background-color: var(--bg-color);
             background-image: 
-                linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+                linear-gradient(rgba(255, 26, 26, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 26, 26, 0.03) 1px, transparent 1px);
             background-size: 40px 40px;
             color: #fff; font-family: 'Rajdhani', sans-serif;
             margin: 0; display: flex; flex-direction: column; align-items: center;
@@ -21,109 +29,125 @@
 
         body::before {
             content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(circle at center, transparent 0%, #020202 100%);
+            background: radial-gradient(circle at center, transparent 0%, #000000 100%);
             z-index: -1;
         }
 
-        .header { margin-top: 30px; text-align: center; z-index: 1; }
-        .logo {
-            font-family: 'Orbitron', sans-serif; font-size: 3.5rem; color: #00ffff;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4);
-            letter-spacing: 12px; margin: 0;
+        /* --- ANİMASYONLAR --- */
+        @keyframes slideUpFade {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
-        .subtitle { color: #00ffff; opacity: 0.6; letter-spacing: 5px; font-size: 1rem; margin-top: 5px; text-transform: uppercase; }
+        @keyframes pulseRed {
+            0% { box-shadow: 0 0 0 0 rgba(255, 26, 26, 0.5); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 26, 26, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 26, 26, 0); }
+        }
+        @keyframes glowText {
+            0% { text-shadow: 0 0 10px var(--neon-red), 0 0 20px var(--neon-red); }
+            100% { text-shadow: 0 0 20px var(--neon-red), 0 0 40px var(--neon-red); }
+        }
 
+        .header { margin-top: 30px; text-align: center; z-index: 1; animation: slideUpFade 0.8s ease; }
+        .logo {
+            font-family: 'Orbitron', sans-serif; font-size: 3.5rem; color: var(--neon-red);
+            letter-spacing: 12px; margin: 0; animation: glowText 2s infinite alternate;
+        }
+        .subtitle { color: #ff8080; opacity: 0.8; letter-spacing: 5px; font-size: 1rem; margin-top: 5px; text-transform: uppercase; font-weight: bold;}
+
+        /* CAM PANEL EFEKTİ (Glassmorphism) */
         .panel {
-            background: rgba(10, 15, 20, 0.6); backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 255, 255, 0.2); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
-            border-radius: 12px;
+            background: var(--panel-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 26, 26, 0.15); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            border-radius: 12px; animation: slideUpFade 0.6s ease 0.2s backwards;
         }
 
         #login-screen { padding: 40px 30px; text-align: center; width: 300px; margin-top: 50px; z-index: 1; }
 
         input[type="text"], input[type="password"] {
-            width: 90%; padding: 12px; margin: 10px 0; background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(0, 255, 255, 0.3); color: #00ffff; font-family: 'Orbitron', sans-serif;
-            font-size: 1rem; text-align: center; border-radius: 6px; outline: none; transition: all 0.3s;
+            width: 90%; padding: 14px; margin: 10px 0; background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 26, 26, 0.3); color: var(--neon-red); font-family: 'Orbitron', sans-serif;
+            font-size: 1rem; text-align: center; border-radius: 8px; outline: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         input[type="text"]:focus, input[type="password"]:focus { 
-            border-color: #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.3); background: rgba(0, 25, 30, 0.5); 
+            border-color: var(--neon-red); box-shadow: 0 0 15px rgba(255, 26, 26, 0.4); background: rgba(26, 0, 0, 0.6); transform: scale(1.02);
         }
 
         .btn {
-            background: linear-gradient(45deg, #001a1a, #004d4d); color: #00ffff;
-            border: 1px solid #00ffff; padding: 12px; margin-top: 20px; font-family: 'Orbitron', sans-serif;
-            cursor: pointer; border-radius: 6px; width: 100%; transition: 0.3s; letter-spacing: 2px;
+            background: linear-gradient(45deg, var(--dark-red), #660000); color: #fff;
+            border: 1px solid var(--neon-red); padding: 14px; margin-top: 20px; font-family: 'Orbitron', sans-serif;
+            cursor: pointer; border-radius: 8px; width: 100%; transition: all 0.3s ease; letter-spacing: 2px; font-weight: bold;
         }
-        .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
-        #error-msg { color: #ff3366; display: none; margin-top: 15px; font-weight: bold; }
+        .btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 25px var(--glow-red); transform: translateY(-2px); }
+        #error-msg { color: #ff3333; display: none; margin-top: 15px; font-weight: bold; animation: slideUpFade 0.3s; }
 
         #room-screen { display: none; flex-direction: column; align-items: center; width: 100%; margin-top: 20px; z-index: 1; padding-bottom: 50px; }
-        .status-text { color: #00ffff; font-size: 1.1rem; margin-bottom: 20px; letter-spacing: 2px; text-shadow: 0 0 8px #00ffff; }
+        .status-text { color: var(--neon-red); font-size: 1.1rem; margin-bottom: 20px; letter-spacing: 2px; text-shadow: 0 0 8px var(--neon-red); animation: slideUpFade 0.5s ease; }
 
         .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 1000px; width: 100%; padding: 0 20px; }
 
+        /* KULLANICI KARTLARI */
         .user-card {
-            background: rgba(10, 15, 25, 0.8); backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 16px;
-            width: 140px; text-align: center; transition: all 0.3s ease; position: relative;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.5);
+            background: rgba(20, 5, 5, 0.8); backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 26, 26, 0.1); padding: 20px; border-radius: 16px;
+            width: 140px; text-align: center; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.6);
             display: flex; flex-direction: column; align-items: center;
+            animation: slideUpFade 0.5s ease backwards;
         }
+        .user-card:hover { transform: translateY(-5px); border-color: rgba(255, 26, 26, 0.4); }
 
         .avatar-ring {
-            width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2);
+            width: 55px; height: 55px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);
             display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
-            font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: #aaa; background: #111; transition: 0.3s;
+            font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: #aaa; background: #0a0000; transition: 0.3s;
         }
-        .user-name { font-size: 1.1rem; font-weight: 700; color: #ddd; margin-bottom: 15px; word-break: break-all;}
+        .user-name { font-size: 1.1rem; font-weight: 700; color: #ddd; margin-bottom: 15px; word-break: break-all; transition: 0.3s;}
 
-        .user-card.me { border-color: rgba(0, 255, 255, 0.5); }
-        .user-card.me .avatar-ring { border-color: #00ffff; color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.2); }
-        .user-card.me .user-name { color: #00ffff; }
+        .user-card.me { border-color: rgba(255, 26, 26, 0.5); }
+        .user-card.me .avatar-ring { border-color: var(--neon-red); color: var(--neon-red); box-shadow: 0 0 15px rgba(255,26,26,0.3); }
+        .user-card.me .user-name { color: var(--neon-red); }
 
-        @keyframes ripple {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.4); }
-            70% { box-shadow: 0 0 0 15px rgba(0, 255, 102, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0); }
-        }
-
-        .user-card.speaking { border-color: #00ff66; transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 255, 102, 0.1); }
-        .user-card.speaking .avatar-ring { border-color: #00ff66; color: #00ff66; animation: ripple 1s infinite; background: rgba(0, 255, 102, 0.1); }
-        .user-card.speaking .user-name { color: #00ff66; text-shadow: 0 0 10px #00ff66; }
+        /* KONUŞMA EFEKTİ */
+        .user-card.speaking { border-color: var(--neon-red); transform: translateY(-8px); box-shadow: 0 10px 25px rgba(255, 26, 26, 0.2); }
+        .user-card.speaking .avatar-ring { border-color: var(--neon-red); color: #fff; animation: pulseRed 1.2s infinite; background: rgba(255, 26, 26, 0.2); }
+        .user-card.speaking .user-name { color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); }
 
         .vol-box { width: 100%; margin-top: 10px; }
-        .vol-box label { display: block; font-size: 0.7rem; color: #777; margin-bottom: 8px; font-weight: bold; }
-        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 2px; outline: none; margin: 0; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #00ffff; cursor: pointer; box-shadow: 0 0 10px #00ffff; transition: 0.2s; }
+        .vol-box label { display: block; font-size: 0.7rem; color: #888; margin-bottom: 8px; font-weight: bold; letter-spacing: 1px;}
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #220000; border-radius: 2px; outline: none; margin: 0; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--neon-red); cursor: pointer; box-shadow: 0 0 10px var(--neon-red); transition: 0.2s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.4); }
 
         /* SOHBET (CHAT) ALANI TASARIMI */
-        #chat-container { width: 90%; max-width: 800px; margin-top: 30px; display: flex; flex-direction: column; gap: 10px; }
+        #chat-container { width: 90%; max-width: 800px; margin-top: 30px; display: flex; flex-direction: column; gap: 10px; animation: slideUpFade 0.6s ease backwards; }
         #chat-box {
-            height: 220px; overflow-y: auto; background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(0, 255, 255, 0.2); border-radius: 8px;
+            height: 220px; overflow-y: auto; background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 26, 26, 0.15); border-radius: 10px;
             padding: 15px; text-align: left; font-family: 'Rajdhani', sans-serif;
+            scroll-behavior: smooth;
         }
         #chat-box::-webkit-scrollbar { width: 6px; }
-        #chat-box::-webkit-scrollbar-thumb { background: rgba(0, 255, 255, 0.3); border-radius: 3px; }
+        #chat-box::-webkit-scrollbar-thumb { background: rgba(255, 26, 26, 0.4); border-radius: 3px; }
         
-        .chat-msg { margin-bottom: 12px; font-size: 1.1rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
-        .chat-name { font-weight: bold; color: #00ffff; margin-right: 8px; text-transform: uppercase; font-size: 0.9rem; }
-        .chat-name.me { color: #00ff66; }
-        .chat-text { color: #ccc; }
+        .chat-msg { margin-bottom: 12px; font-size: 1.1rem; line-height: 1.4; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 8px; animation: slideUpFade 0.3s ease; }
+        .chat-name { font-weight: bold; color: #ff8080; margin-right: 8px; text-transform: uppercase; font-size: 0.9rem; }
+        .chat-name.me { color: var(--neon-red); }
+        .chat-text { color: #e0e0e0; }
         
-        /* SOHBET İÇİ RESİM TASARIMI */
-        .chat-img { max-width: 250px; max-height: 250px; border-radius: 8px; margin-top: 8px; border: 1px solid rgba(0,255,255,0.5); box-shadow: 0 0 10px rgba(0,255,255,0.1); display: block; }
+        .chat-img { max-width: 250px; max-height: 250px; border-radius: 8px; margin-top: 8px; border: 1px solid rgba(255,26,26,0.3); box-shadow: 0 0 15px rgba(255,26,26,0.15); display: block; transition: 0.3s;}
+        .chat-img:hover { transform: scale(1.05); border-color: var(--neon-red); }
 
         #chat-input-area { display: flex; gap: 10px; align-items: center; }
-        #chat-input { margin: 0; flex: 1; text-align: left; padding: 12px 15px; }
-        #send-btn { width: auto; margin: 0; padding: 0 30px; }
-        #img-btn { width: auto; margin: 0; padding: 0 20px; font-size: 1.2rem; background: rgba(0, 255, 255, 0.1); }
+        #chat-input { margin: 0; flex: 1; text-align: left; padding: 14px 15px; }
+        #send-btn { width: auto; margin: 0; padding: 0 30px; background: linear-gradient(45deg, var(--dark-red), #660000); }
+        #img-btn { width: auto; margin: 0; padding: 0 20px; font-size: 1.2rem; background: rgba(255, 26, 26, 0.05); border-color: rgba(255, 26, 26, 0.3); color: var(--neon-red); transition: 0.3s;}
+        #img-btn:hover { background: rgba(255, 26, 26, 0.2); box-shadow: 0 0 15px rgba(255, 26, 26, 0.2); transform: translateY(-2px);}
 
-        .controls { margin-top: 30px; display: flex; gap: 20px; background: rgba(0,0,0,0.5); padding: 10px 25px; border-radius: 30px; border: 1px solid #222;}
-        .btn-mute { background: transparent; color: #ff3366; border-color: #ff3366; width: auto; padding: 8px 20px; border-radius: 20px;}
-        .btn-mute:hover { background: #ff3366; color: #fff; box-shadow: 0 0 15px rgba(255, 51, 102, 0.5); }
-        .btn-leave { background: transparent; color: #888; border-color: #555; width: auto; padding: 8px 20px; border-radius: 20px;}
+        .controls { margin-top: 30px; display: flex; gap: 20px; background: rgba(10, 0, 0, 0.6); padding: 12px 30px; border-radius: 30px; border: 1px solid rgba(255, 26, 26, 0.2); animation: slideUpFade 0.7s ease backwards;}
+        .btn-mute { background: transparent; color: #ff4d4d; border-color: #ff4d4d; width: auto; padding: 10px 25px; border-radius: 20px;}
+        .btn-mute:hover { background: #ff4d4d; color: #fff; box-shadow: 0 0 20px rgba(255, 77, 77, 0.5); }
+        .btn-leave { background: transparent; color: #888; border-color: #555; width: auto; padding: 10px 25px; border-radius: 20px;}
         .btn-leave:hover { background: #555; color: #fff; border-color:#888;}
     </style>
 </head>
@@ -131,14 +155,14 @@
 
     <div class="header">
         <h1 class="logo">NIGSI</h1>
-        <div class="subtitle">Secure Audio, Text & Image Terminal</div>
+        <div class="subtitle">Crimson Audio & Data Terminal</div>
     </div>
 
     <!-- GİRİŞ EKRANI -->
     <div id="login-screen" class="panel">
         <input type="text" id="username" placeholder="Takma İsim" maxlength="12" autocomplete="off">
         <input type="password" id="password" placeholder="Sistem Şifresi">
-        <button class="btn" onclick="startSystem()">BAĞLANTIYI BAŞLAT</button>
+        <button class="btn" onclick="startSystem()">SİSTEME BAĞLAN</button>
         <p id="error-msg">Yetkisiz Erişim!</p>
     </div>
 
@@ -154,11 +178,9 @@
                 <!-- Mesajlar ve Resimler buraya gelecek -->
             </div>
             <div id="chat-input-area">
-                <!-- GİZLİ RESİM SEÇİCİ -->
                 <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
-                
-                <button class="btn" id="img-btn" onclick="document.getElementById('image-input').click()" title="Resim Gönder">🖼️</button>
-                <input type="text" id="chat-input" placeholder="Ağa mesaj gönder..." onkeypress="handleEnter(event)">
+                <button class="btn" id="img-btn" onclick="document.getElementById('image-input').click()" title="Resim Gönder">📁</button>
+                <input type="text" id="chat-input" placeholder="Veri ağına mesaj ilet..." onkeypress="handleEnter(event)">
                 <button class="btn" id="send-btn" onclick="sendChatMessage()">GÖNDER</button>
             </div>
         </div>
@@ -200,14 +222,14 @@
                 connectToFreeSlot(1);
             } catch (err) {
                 document.getElementById("status-info").innerText = "HATA: Mikrofon izni reddedildi!";
-                document.getElementById("status-info").style.color = "#ff3366";
+                document.getElementById("status-info").style.color = "#ff3333";
             }
         }
 
         function connectToFreeSlot(slotNum) {
             if (slotNum > 5) {
                 document.getElementById("status-info").innerText = "HATA: Ağ Dolu! (Maks. 5 Kişi)";
-                document.getElementById("status-info").style.color = "#ff3366";
+                document.getElementById("status-info").style.color = "#ff3333";
                 return;
             }
 
@@ -255,7 +277,6 @@
                     } else if (data.type === 'chat') {
                         displayChatMessage(data.name, data.message, false);
                     } else if (data.type === 'image') {
-                        // Resim geldiğinde çalışacak kısım
                         displayImageMessage(data.name, data.image, false);
                     }
                 });
@@ -334,7 +355,6 @@
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // --- RESİM YÜKLEME VE GÖSTERME ---
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -342,22 +362,14 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const base64Data = e.target.result;
-                
-                // Kendi ekranımıza resmi yansıt
                 displayImageMessage(myName, base64Data, true);
 
-                // Odadaki diğer herkese resmi gönder
                 const payload = { type: 'image', name: myName, image: base64Data };
                 Object.values(dataConnections).forEach(conn => {
-                    if (conn && conn.open) {
-                        conn.send(payload);
-                    }
+                    if (conn && conn.open) conn.send(payload);
                 });
             };
-            // Resmi Base64 metin formatına çevir (P2P aktarım için)
             reader.readAsDataURL(file);
-            
-            // Aynı resmi tekrar seçebilmek için inputu sıfırla
             event.target.value = ''; 
         }
 
@@ -367,16 +379,13 @@
             msgDiv.className = 'chat-msg';
             const nameClass = isMe ? "chat-name me" : "chat-name";
             
-            // Resim etiketi (img) oluşturuluyor
             msgDiv.innerHTML = `
                 <span class="${nameClass}">${senderName}:</span> 
                 <br> 
-                <img src="${imgData}" class="chat-img" alt="Gönderilen Resim">
+                <img src="${imgData}" class="chat-img" alt="Dosya">
             `;
             
             chatBox.appendChild(msgDiv);
-            
-            // Resim yüklendiğinde sohbeti aşağı kaydır
             setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 100);
         }
         /* ------------------------------------------- */
@@ -412,12 +421,12 @@
             if (!isMe) {
                 volumeControl = `
                     <div class="vol-box">
-                        <label>SES KONTROL</label>
+                        <label>SES SEVİYESİ</label>
                         <input type="range" min="0" max="1" step="0.1" value="1" oninput="changeVol('${userId}', this.value)">
                     </div>
                 `;
             } else {
-                volumeControl = `<div style="color:rgba(0,255,255,0.7); font-size:0.8rem; margin-top:15px; font-weight:bold;">(SEN)</div>`;
+                volumeControl = `<div style="color:var(--neon-red); font-size:0.8rem; margin-top:15px; font-weight:bold; letter-spacing: 1px;">(SEN)</div>`;
             }
 
             card.innerHTML = `
@@ -426,6 +435,10 @@
                 ${volumeControl}
             `;
             grid.appendChild(card);
+            
+            // Kartlara sırayla animasyon gecikmesi ekleyelim
+            const existingCards = document.querySelectorAll('.user-card').length;
+            card.style.animationDelay = `${existingCards * 0.1}s`;
         }
 
         function updateCardName(userId, name) {
@@ -447,7 +460,7 @@
                 const btn = document.getElementById('mute-btn');
                 if (audioTrack.enabled) {
                     btn.innerText = "MİKROFONU KAPAT";
-                    btn.style.color = "#ff3366"; btn.style.borderColor = "#ff3366";
+                    btn.style.color = "#ff4d4d"; btn.style.borderColor = "#ff4d4d";
                 } else {
                     btn.innerText = "MİKROFONU AÇ";
                     btn.style.color = "#888"; btn.style.borderColor = "#555";
