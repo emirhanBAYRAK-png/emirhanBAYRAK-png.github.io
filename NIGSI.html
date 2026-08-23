@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIGSI</title>
+    <script src="https://meet.jit.si/external_api.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;700&display=swap');
+
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            font-family: 'Rajdhani', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 40px #00ffff;
+            margin-bottom: 30px;
+            letter-spacing: 10px;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; }
+            to { text-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff, 0 0 50px #00ffff; }
+        }
+
+        #login-screen {
+            background: rgba(10, 10, 10, 0.8);
+            padding: 40px 50px;
+            border-radius: 20px;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+            text-align: center;
+            width: 320px;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 12px 0;
+            background: #000;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            border-radius: 8px;
+            outline: none;
+            font-size: 1.1rem;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus {
+            box-shadow: 0 0 15px #00ffff;
+            background: #0a0a0a;
+        }
+
+        .btn {
+            background: #000;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            padding: 15px 30px;
+            margin-top: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 20px #00ffff;
+        }
+
+        #error-msg {
+            color: #ff3333;
+            display: none;
+            margin-top: 15px;
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 10px #ff3333;
+        }
+
+        #room-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .participants-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 40px;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .user-card {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #333;
+            padding: 25px 20px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 180px;
+            transition: all 0.4s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .avatar {
+            width: 90px;
+            height: 90px;
+            background: #111;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #555;
+            border: 3px solid #444;
+            transition: all 0.3s ease;
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .user-name {
+            margin-top: 15px;
+            font-size: 1.4rem;
+            color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .status-badge {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #888;
+            font-family: 'Orbitron', sans-serif;
+            background: #1a1a1a;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            letter-spacing: 1px;
+        }
+
+        .volume-control {
+            margin-top: 15px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .volume-label {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-bottom: 5px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        input[type="range"] {
+            width: 90%;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            accent-color: #00ffff;
+            border: none;
+            cursor: pointer;
+        }
+
+        @keyframes talk-wave {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.8); }
+            70% { box-shadow: 0 0 0 25px rgba(0, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
+        }
+
+        .user-card.speaking {
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .user-card.speaking .avatar {
+            border-color: #00ffff;
+            color: #00ffff;
+            animation: talk-wave 1.5s infinite;
+            text-shadow: 0 0 15px #00ffff;
+        }
+
+        .user-card.speaking .status-badge {
+            color: #000;
+            background: #00ffff;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        .user-card.muted {
+            border-color: #ff3333;
+            opacity: 0.8;
+        }
+
+        .user-card.muted .avatar {
+            border-color: #ff3333;
+            color: #ff3333;
+            text-shadow: 0 0 10px #ff3333;
+        }
+
+        .user-card.muted .status-badge {
+            color: #ff3333;
+            border-color: #ff3333;
+            background: rgba(255, 51, 51, 0.1);
+        }
+
+        .controls {
+            margin-top: auto;
+            margin-bottom: 40px;
+            display: flex;
+            gap: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #333;
+        }
+
+        .btn-mute { border-color: #ff3333; color: #ff3333; width: auto; margin: 0; }
+        .btn-mute:hover { background: #ff3333; color: #000; box-shadow: 0 0 20px #ff3333; }
+        
+        .btn-leave { border-color: #555; color: #aaa; width: auto; margin: 0; }
+        .btn-leave:hover { background: #555; color: #fff; box-shadow: 0 0 15px #fff; border-color: #fff; }
+
+        #hidden-jitsi {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: 0;
+            opacity: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="logo">NIGSI</div>
+
+    <div id="login-screen">
+        <h3 style="color: #aaa; font-family: 'Rajdhani'; letter-spacing: 2px; margin-top: 0;">SİSTEME BAĞLAN</h3>
+        <input type="text" id="username" placeholder="Kullanıcı Adı" autocomplete="off" maxlength="12">
+        <input type="password" id="room-pass" placeholder="Güvenlik Şifresi">
+        <button class="btn" onclick="connectNigsi()">GİRİŞ YAP</button>
+        <p id="error-msg">ERİŞİM REDDEDİLDİ</p>
+    </div>
+
+    <div id="room-screen">
+        <div class="participants-grid" id="participants-container">
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-mute" id="mute-btn" onclick="toggleMute()">MİKROFONU KAPAT</button>
+            <button class="btn btn-leave" onclick="location.reload()">BAĞLANTIYI KES</button>
+        </div>
+    </div>
+
+    <div id="hidden-jitsi"></div>
+
+    <script>
+        let api = null;
+        let isMuted = false;
+        let myId = null;
+
+        function connectNigsi() {
+            const username = document.getElementById("username").value.trim();
+            const pass = document.getElementById("room-pass").value;
+
+            if (pass !== "nigıbigı30") {
+                document.getElementById("error-msg").style.display = "block";
+                return;
+            }
+            if (!username) {
+                alert("Geçerli bir kimlik girin.");
+                return;
+            }
+
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("room-screen").style.display = "flex";
+
+            startVoiceEngine(username);
+        }
+
+        function startVoiceEngine(username) {
+            const domain = 'meet.jit.si';
+            const options = {
+                roomName: 'NIGSI_SecureNetwork_V3',
+                width: 0,
+                height: 0,
+                parentNode: document.querySelector('#hidden-jitsi'),
+                userInfo: { displayName: username },
+                configOverwrite: { 
+                    startAudioOnly: true,
+                    startWithVideoMuted: true,
+                    startWithAudioMuted: false,
+                    disableVideoBackground: true,
+                    prejoinPageEnabled: false,
+                    disableDeepLinking: true,
+                    p2p: { enabled: false }
+                },
+                interfaceConfigOverwrite: {
+                    filmStripOnly: true
+                }
+            };
+            
+            api = new JitsiMeetExternalAPI(domain, options);
+
+            api.addEventListeners({
+                videoConferenceJoined: function(user) {
+                    myId = user.id;
+                    addUserCard(user.id, username, true);
+                },
+                participantJoined: function(user) {
+                    addUserCard(user.id, user.displayName, false);
+                },
+                participantLeft: function(user) {
+                    removeUserCard(user.id);
+                },
+                dominantSpeakerChanged: function(user) {
+                    document.querySelectorAll('.user-card').forEach(card => {
+                        card.classList.remove('speaking');
+                        const badge = card.querySelector('.status-badge');
+                        if(badge && !card.classList.contains('muted')) badge.innerText = 'BEKLİYOR';
+                    });
+                    
+                    const speakerCard = document.getElementById('user-' + user.id);
+                    if (speakerCard && !speakerCard.classList.contains('muted')) {
+                        speakerCard.classList.add('speaking');
+                        speakerCard.querySelector('.status-badge').innerText = 'KONUŞUYOR';
+                    }
+                },
+                audioMuteStatusChanged: function(status) {
+                    const targetId = status.id || myId; 
+                    const userCard = document.getElementById('user-' + targetId);
+                    
+                    if (userCard) {
+                        if (status.muted) {
+                            userCard.classList.add('muted');
+                            userCard.classList.remove('speaking');
+                            userCard.querySelector('.status-badge').innerText = 'SESSİZ';
+                        } else {
+                            userCard.classList.remove('muted');
+                            userCard.querySelector('.status-badge').innerText = 'BEKLİYOR';
+                        }
+                    }
+                }
+            });
+        }
+
+        function addUserCard(id, name, isMe) {
+            const container = document.getElementById('participants-container');
+            if(document.getElementById('user-' + id)) return;
+
+            const firstLetter = (name || "?").charAt(0).toUpperCase();
+
+            const card = document.createElement('div');
+            card.className = 'user-card';
+            card.id = 'user-' + id;
+            
+            let volumeHtml = '';
+            if (!isMe) {
+                volumeHtml = `
+                    <div class="volume-control">
+                        <div class="volume-label">SES SEVİYESİ</div>
+                        <input type="range" min="0" max="1" step="0.05" value="1" oninput="changeVolume('${id}', this.value)">
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="avatar">${firstLetter}</div>
+                <div class="user-name">${name || "Bilinmeyen"}</div>
+                <div class="status-badge">BEKLİYOR</div>
+                ${volumeHtml}
+            `;
+            container.appendChild(card);
+        }
+
+        function removeUserCard(id) {
+            const card = document.getElementById('user-' + id);
+            if (card) {
+                card.remove();
+            }
+        }
+
+        function changeVolume(id, val) {
+            if(api) {
+                api.executeCommand('setParticipantVolume', id, parseFloat(val));
+            }
+        }
+
+        function toggleMute() {
+            if(api) {
+                api.executeCommand('toggleAudio');
+                isMuted = !isMuted;
+                const btn = document.getElementById('mute-btn');
+                const myCard = document.getElementById('user-' + myId);
+                
+                if(isMuted) {
+                    btn.innerText = "MİKROFONU AÇ";
+                    btn.style.color = "#00ffff";
+                    btn.style.borderColor = "#00ffff";
+                    if(myCard) {
+                        myCard.classList.add('muted');
+                        myCard.querySelector('.status-badge').innerText = 'SESSİZ';
+                    }
+                } else {
+                    btn.innerText = "MİKROFONU KAPAT";
+                    btn.style.color = "#ff3333";
+                    btn.style.borderColor = "#ff3333";
+                    if(myCard) {
+                        myCard.classList.remove('muted');
+                        myCard.querySelector('.status-badge').innerText = 'BEKLİYOR';
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
