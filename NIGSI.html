@@ -232,7 +232,14 @@
             document.getElementById("app-screen").style.display = "flex";
 
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+    audio: {
+        echoCancellation: true,     
+        noiseSuppression: true,      
+        autoGainControl: true        
+    }, 
+    video: false 
+});
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 audioContext.resume();
                 connectToFreeSlot(1);
