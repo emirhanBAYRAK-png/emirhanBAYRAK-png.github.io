@@ -46,7 +46,7 @@
         @keyframes glitch { 0%, 14%, 100% { text-shadow: 0.05em 0 0 var(--neon-red), -0.025em -0.025em 0 #00ffff; } 15%, 49% { text-shadow: -0.05em -0.025em 0 var(--neon-red), 0.025em 0.025em 0 #00ffff; } 50%, 99% { text-shadow: 0.025em 0.05em 0 var(--neon-red), 0.05em 0 0 #00ffff; } }
         .glitch-anim { animation: glitch 3s infinite linear alternate-reverse; }
 
-        /* YENİ: KADER ÇARKI (ROULETTE) EKRANI */
+        /* KADER ÇARKI EKRANI */
         #roulette-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.95); z-index: 9999; display: none;
@@ -164,20 +164,33 @@
         .ctrl-btn.active-red { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255,10,10,0.1); box-shadow: inset 0 0 15px rgba(255,10,10,0.3);}
         .ctrl-btn.active-blue { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); box-shadow: inset 0 0 15px rgba(0,255,255,0.3);}
 
+        /* SAĞ PANEL / CHAT */
         #main-area { flex: 1; display: flex; flex-direction: column; background: transparent; position: relative;}
+
+        /* YENİ: SAĞ ÜST MODERN HUD BUTONU */
+        #floating-hud-btn {
+            position: absolute; top: 25px; right: 35px; z-index: 100;
+            background: rgba(10, 2, 2, 0.7); border: 1px solid var(--neon-red);
+            color: var(--neon-red); font-family: 'Orbitron', sans-serif; font-size: 0.9rem;
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 0 15px rgba(255,10,10,0.2); font-weight: bold; letter-spacing: 1px;
+            backdrop-filter: blur(5px); display: flex; align-items: center; gap: 8px;
+        }
+        #floating-hud-btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 25px red; transform: translateY(-2px);}
+        #floating-hud-btn.active { background: var(--neon-red); color: #000; box-shadow: 0 0 25px red; }
         
         #screen-view-container {
             display: none; background: #000; border-bottom: 1px solid var(--border-color);
-            padding: 20px; align-items: center; justify-content: center; height: 65%; box-shadow: inset 0 0 80px rgba(255,0,0,0.08);
+            padding: 20px; align-items: center; justify-content: center; height: 65%; box-shadow: inset 0 0 80px rgba(255,0,0,0.05);
         }
-        #shared-screen { max-width: 100%; max-height: 100%; border: 2px solid var(--neon-red); border-radius: 8px; box-shadow: 0 0 40px rgba(255,10,10,0.3); }
+        #shared-screen { max-width: 100%; max-height: 100%; border: 2px solid var(--neon-red); border-radius: 8px; box-shadow: 0 0 40px rgba(255,10,10,0.2); }
 
         #chat-section { flex: 1; display: flex; flex-direction: column; padding: 25px 40px; min-height: 0; position: relative; }
         
         #chat-section::before {
             content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background-image: linear-gradient(rgba(255, 26, 26, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 26, 26, 0.03) 1px, transparent 1px);
-            background-size: 25px 25px; z-index: -1; pointer-events: none;
+            background-image: linear-gradient(rgba(255, 26, 26, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 26, 26, 0.02) 1px, transparent 1px);
+            background-size: 20px 20px; z-index: -1; pointer-events: none;
         }
 
         #chat-box { flex: 1; overflow-y: auto; padding-right: 20px; display: flex; flex-direction: column; gap: 15px; }
@@ -191,7 +204,7 @@
             border-left: 3px solid #444;
         }
         .chat-msg.me-msg { border-left-color: var(--neon-red); align-self: flex-start; background: linear-gradient(90deg, rgba(26, 0, 0, 0.95), rgba(10, 0, 0, 0.95));}
-        .chat-msg.system-msg { background: rgba(255,255,255,0.03); border-color: #222; border-left-color: #00ffff; color: #aaa; font-size: 1rem; align-self: center; border-radius: 20px; padding: 8px 20px;}
+        .chat-msg.system-msg { background: rgba(255,255,255,0.02); border-color: #222; border-left-color: #00ffff; color: #aaa; font-size: 1rem; align-self: center; border-radius: 20px; padding: 8px 20px;}
         .chat-msg.system-msg i { color: #00ffff; margin-right: 5px;}
         
         .chat-name { font-weight: bold; color: #999; margin-right: 8px; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;}
@@ -203,6 +216,7 @@
         
         .sfx-btn { background: #050505; border: 1px solid #330000; color: #888; font-size: 0.9rem; font-family: 'Orbitron', sans-serif; font-weight: bold; padding: 8px 15px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.6);}
         .sfx-btn:hover { background: rgba(255,26,26,0.1); border-color: var(--neon-red); color: var(--neon-red); transform: translateY(-2px); box-shadow: 0 5px 12px rgba(255,0,0,0.2);}
+        .sfx-btn.disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(100%); pointer-events: none;}
 
         #reaction-bar { display: flex; gap: 10px; }
         .react-btn { background: rgba(0,0,0,0.6); border: 1px solid #333; color: #fff; font-size: 1.1rem; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
@@ -221,7 +235,7 @@
 <body>
     
     <div class="scanlines"></div>
-    <canvas id="matrix-canvas"></canvas>
+    <canvas id="matrix-canvas"></canvas> <!-- EASTER EGG -->
 
     <!-- KADER ÇARKI ARAYÜZÜ -->
     <div id="roulette-overlay">
@@ -233,8 +247,8 @@
     <div id="nudge-flash"><div class="nudge-text glitch-anim">UYARI ALINDI!</div></div>
     <div id="tea-overlay"><i class="fa-solid fa-mug-hot tea-icon"></i><div class="tea-text" id="tea-msg">...</div></div>
 
-    <!-- GİZLİ PIP CANVAS'I (HUD SİSTEMİ İÇİN) -->
-    <canvas id="pip-canvas" width="400" height="300" style="display:none;"></canvas>
+    <!-- GİZLİ PIP CANVAS'I (HUD SİSTEMİ İÇİN - Daha ince ve uzun format) -->
+    <canvas id="pip-canvas" width="250" height="350" style="display:none;"></canvas>
     <video id="pip-video" style="display:none;" autoplay muted playsinline></video>
 
     <!-- GİRİŞ -->
@@ -254,15 +268,23 @@
                 <h1 class="logo glitch-anim" style="font-size: 2.5rem; animation-duration: 5s;">NIGSI</h1>
             </div>
             <div id="users-list"></div>
+            
+            <!-- ESKİ YERİNE GERİ DÖNEN YAYIN TUŞU DAHİL KONTROLLER -->
             <div id="my-controls">
                 <button class="ctrl-btn" id="mic-btn" onclick="toggleMute()" title="Mikrofon"><i class="fa-solid fa-microphone"></i></button>
                 <button class="ctrl-btn" id="afk-btn" onclick="toggleAFK()" title="AFK Modu"><i class="fa-solid fa-moon"></i></button>
-                <button class="ctrl-btn" id="hud-btn" onclick="startPIP()" title="Oyun İçi Mini HUD Aç"><i class="fa-solid fa-layer-group"></i></button>
+                <button class="ctrl-btn" id="screen-btn" onclick="toggleScreenShare()" title="Ekran Paylaş (Yayın)"><i class="fa-solid fa-desktop"></i></button>
                 <button class="ctrl-btn" onclick="location.reload()" title="Bağlantıyı Kes"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
 
         <div id="main-area">
+            
+            <!-- YENİ YERİNDE MODERN HUD TUŞU -->
+            <button id="floating-hud-btn" onclick="startPIP()" title="Oyun İçi HUD Aç">
+                <i class="fa-solid fa-layer-group"></i> HUD
+            </button>
+
             <div id="screen-view-container">
                 <video id="shared-screen" autoplay playsinline></video>
             </div>
@@ -270,7 +292,7 @@
                 <div id="chat-box"></div>
                 
                 <div class="tools-bar">
-                    <button class="sfx-btn" onclick="startRoulette()" title="Kader Çarkını Çevir"><i class="fa-solid fa-dharmachakra"></i> ÇARK</button>
+                    <button class="sfx-btn" id="roulette-btn" onclick="startRoulette()" title="Kader Çarkını Çevir (8 Dk Limit)"><i class="fa-solid fa-dharmachakra"></i> ÇARK</button>
                     <div id="reaction-bar">
                         <button class="react-btn" onclick="sendReaction('❤️')">❤️</button>
                         <button class="react-btn" onclick="sendReaction('🔥')">🔥</button>
@@ -297,10 +319,10 @@
         let mySlot = 0, myName = "", audioContext = null;
         let dataConnections = {}, isAFK = false, isMuted = false, screenCalls = [];
         let actionCooldowns = {}; 
+        let bannedPeers = []; 
         
-        // --- HUD (PIP) Canvas Sistemi ---
-        const pipCanvas = document.getElementById('pip-canvas');
-        const pipCtx = pipCanvas.getContext('2d');
+        // HUD (PIP) Sistemi
+        const pipCanvas = document.getElementById('pip-canvas'); const pipCtx = pipCanvas.getContext('2d');
         const pipVideo = document.getElementById('pip-video');
 
         const tabLockChannel = new BroadcastChannel('nigsi_tab_lock');
@@ -313,9 +335,18 @@
         tabLockChannel.postMessage('ping');
 
         window.addEventListener('beforeunload', () => { if (peer) peer.destroy(); });
-
         function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
 
+        function canDoAction(userId, actionType, customMinutes = 10) {
+            const now = Date.now(); const key = userId + '_' + actionType; const lastTime = actionCooldowns[key] || 0; const cooldownTime = customMinutes * 60 * 1000; 
+            if (now - lastTime < cooldownTime) {
+                alert(`Sistem Limiti: Bu eylem için ${Math.ceil((cooldownTime - (now - lastTime)) / 60000)} dakika beklemelisiniz.`);
+                return false;
+            }
+            actionCooldowns[key] = now; return true;
+        }
+
+        // SES MOTORU
         function playSfx(type) {
             if (!audioContext) return;
             const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
@@ -328,8 +359,7 @@
                 osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
                 gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
             } else if (type === 'msg') {
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now);
-                gain.gain.setValueAtTime(0.02, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now); gain.gain.setValueAtTime(0.02, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
             } else if (type === 'nudge') {
                 osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(900, now + 0.1); osc.frequency.setValueAtTime(300, now + 0.2);
                 gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
@@ -354,12 +384,10 @@
             osc.start(now); osc.stop(now + 0.1);
         }
 
-        /* EASTER EGG MATRIX */
         function triggerEasterEgg() {
             playSfx('easter');
             const c = document.getElementById('matrix-canvas'); const ctx = c.getContext('2d');
-            c.width = window.innerWidth; c.height = window.innerHeight;
-            c.style.display = 'block'; c.style.opacity = '1';
+            c.width = window.innerWidth; c.height = window.innerHeight; c.style.display = 'block'; c.style.opacity = '1';
             
             const chars = 'NIGSI REVERE GAMES 01010101'; const drops = [];
             const fontSize = 16; const columns = c.width / fontSize;
@@ -399,7 +427,6 @@
             if (pass !== ODA_SIFRESI) { document.getElementById("error-text").innerText = "Şifre Hatalı!"; document.getElementById("error-msg").style.display = "block"; return; }
             if (!myName) return alert("Lütfen Operatör ID girin.");
 
-            // YASAKLI İSİMLER
             const forbiddenNames = ["bağlanıyor", "baglaniyor", "bağlandı", "baglandi", "sistem", "admin", "system", "null", "undefined"];
             if (forbiddenNames.some(word => myName.toLowerCase().includes(word))) {
                 document.getElementById("error-text").innerText = "Bu Operatör ID rezerve edilmiştir!";
@@ -427,15 +454,16 @@
                 createCard(myId, myName, true); analyzeMyVoice(myId, localStream);
                 callOtherSlots(); listenForIncomingConnections(); playSfx('join');
                 
-                // PIP Stream'i başlat
-                pipVideo.srcObject = pipCanvas.captureStream(30);
-                drawPIPHUD();
+                // HUD BAŞLATICI
+                pipVideo.srcObject = pipCanvas.captureStream(30); drawPIPHUD();
             });
             tempPeer.on('error', (err) => { if (err.type === 'unavailable-id') connectToFreeSlot(slotNum + 1); });
         }
 
         function listenForIncomingConnections() {
             peer.on('call', (call) => {
+                if (bannedPeers.includes(call.peer)) { call.close(); return; }
+
                 if (call.metadata && call.metadata.isScreen) {
                     call.answer();
                     call.on('stream', stream => { document.getElementById('shared-screen').srcObject = stream; document.getElementById('screen-view-container').style.display = 'flex'; });
@@ -448,6 +476,8 @@
             });
 
             peer.on('connection', (conn) => {
+                if (bannedPeers.includes(conn.peer)) { conn.close(); return; }
+
                 conn.on('open', () => { dataConnections[conn.peer] = conn; conn.send({ type: 'name_update', name: myName, afk: isAFK }); });
                 conn.on('data', (data) => processData(conn.peer, data));
                 conn.on('close', () => { delete dataConnections[conn.peer]; removeUser(conn.peer); });
@@ -481,133 +511,130 @@
             else if (data.type === 'reaction') { showFloatingEmoji(data.emoji); }
             else if (data.type === 'easter_egg') { triggerEasterEgg(); }
             else if (data.type === 'roulette') { showRouletteAnim(data.winner); }
-            else if (data.type === 'kick_user') {
+            else if (data.type === 'ban_protocol_execute') {
                 if (data.target === (ODA_PREFIX + mySlot)) {
-                    // KESİN KICK & BAN
+                    // KENDİMİZE GELDİYSE BANLAN!
                     localStorage.setItem('nigsi_banned', Date.now());
                     isActiveInThisTab = false; if (peer) peer.destroy(); 
-                    document.body.innerHTML = ''; 
-                    alert("YÖNETİCİ MÜDAHALESİ: Ağdan uzaklaştırıldınız."); 
-                    window.location.reload(); 
+                    document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20%; font-family: Orbitron;">SİSTEMDEN ATILDINIZ</h1>'; 
+                    setTimeout(() => { window.location.reload(); }, 2000);
                 } else {
-                    removeUser(data.target); if(dataConnections[data.target]) dataConnections[data.target].close();
+                    executeBanLocally(data.target);
                 }
             } 
         }
 
-        /* YENİ ÖZELLİK 4: OYUN İÇİ HUD (Picture-in-Picture) */
-        async function startPIP() {
-            try {
-                const btn = document.getElementById('hud-btn');
-                if (document.pictureInPictureElement) {
-                    await document.exitPictureInPicture();
-                    btn.classList.remove('active-red');
-                } else {
-                    pipVideo.play();
-                    await pipVideo.requestPictureInPicture();
-                    btn.classList.add('active-red');
-                    displaySystemMessage(`<i class="fa-solid fa-layer-group"></i> Oyun İçi HUD Aktifleştirildi.`);
+        // --- KICK (10 KEZ SPAM & AFOROZ) ---
+        function kickUser(userId) {
+            if (confirm("Bu operatörü ağdan kalıcı olarak uzaklaştırmak istiyor musunuz?")) {
+                const payload = { type: 'ban_protocol_execute', target: userId };
+                
+                // Kaybolmasın diye 10 Kez Gönder (Spam)
+                for(let i=0; i<10; i++) {
+                    broadcastData(payload); 
+                    if(dataConnections[userId]) dataConnections[userId].send(payload); 
                 }
-            } catch (error) { alert("Tarayıcınız bu özelliği desteklemiyor olabilir."); }
+                
+                setTimeout(() => { executeBanLocally(userId); }, 500);
+            }
         }
 
-        // Canvas üzerine oyuncuları çizme döngüsü
+        function executeBanLocally(userId) {
+            if (!bannedPeers.includes(userId)) bannedPeers.push(userId);
+            removeUser(userId);
+            if(dataConnections[userId]) { dataConnections[userId].close(); delete dataConnections[userId]; }
+        }
+
+        // --- YENİ HUD (ŞEFFAF PIP SİSTEMİ) ---
+        async function startPIP() {
+            try {
+                const btn = document.getElementById('floating-hud-btn');
+                if (document.pictureInPictureElement) { await document.exitPictureInPicture(); btn.classList.remove('active'); } 
+                else { pipVideo.play(); await pipVideo.requestPictureInPicture(); btn.classList.add('active'); displaySystemMessage(`<i class="fa-solid fa-layer-group"></i> Oyun İçi HUD Aktif.`); }
+            } catch (error) { alert("Tarayıcınız HUD özelliğini desteklemiyor."); }
+        }
+
         function drawPIPHUD() {
-            pipCtx.fillStyle = '#050202';
-            pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+            // Şeffaflık için alanı temizle
+            pipCtx.clearRect(0, 0, pipCanvas.width, pipCanvas.height);
             
             const activeUsers = [{id: ODA_PREFIX+mySlot, name: myName}];
-            Object.keys(dataConnections).forEach(k => {
-                const el = document.getElementById(`name-${k}`);
-                if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({id: k, name: el.innerText});
-            });
-
-            pipCtx.font = '24px Orbitron';
-            pipCtx.textAlign = 'left';
+            Object.keys(dataConnections).forEach(k => { const el = document.getElementById(`name-${k}`); if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({id: k, name: el.innerText}); });
             
-            let y = 40;
+            pipCtx.textAlign = 'left';
+            let y = 35;
+            
             activeUsers.forEach(u => {
-                const card = document.getElementById(`card-${u.id}`);
+                const card = document.getElementById(`card-${u.id}`); 
                 const isSpeaking = card && card.classList.contains('speaking');
                 
-                // Çerçeve/Nokta
-                pipCtx.beginPath();
-                pipCtx.arc(30, y - 8, 10, 0, 2 * Math.PI);
-                pipCtx.fillStyle = isSpeaking ? '#ff0a0a' : '#333';
+                // Saydamlık ayarı (Konuşmayanlar %40, konuşanlar %100)
+                pipCtx.globalAlpha = isSpeaking ? 1.0 : 0.4;
+                
+                // Parlama (Sadece konuşanlar)
+                if (isSpeaking) {
+                    pipCtx.shadowColor = '#ff0a0a';
+                    pipCtx.shadowBlur = 15;
+                    pipCtx.fillStyle = '#ff0a0a';
+                } else {
+                    pipCtx.shadowBlur = 0;
+                    pipCtx.fillStyle = '#555555';
+                }
+
+                // Nokta Çizimi
+                pipCtx.beginPath(); 
+                pipCtx.arc(30, y - 6, isSpeaking ? 8 : 6, 0, 2 * Math.PI); 
                 pipCtx.fill();
                 
-                // İsim
-                pipCtx.fillStyle = isSpeaking ? '#ffffff' : '#aaaaaa';
-                pipCtx.fillText(u.name, 55, y);
+                // İsim Yazısı
+                pipCtx.shadowBlur = isSpeaking ? 10 : 0;
+                pipCtx.font = isSpeaking ? 'bold 24px Orbitron' : '20px Orbitron'; 
+                pipCtx.fillStyle = isSpeaking ? '#ffffff' : '#dddddd'; 
+                pipCtx.fillText(u.name.toUpperCase(), 50, y); 
+                
+                pipCtx.globalAlpha = 1.0; // Reset
                 y += 40;
             });
             requestAnimationFrame(drawPIPHUD);
         }
 
-        /* YENİ ÖZELLİK 9: KADER ÇARKI */
+        // --- KADER ÇARKI (8 Dk Sınır) ---
         function startRoulette() {
-            const activeUsers = [{name: myName}];
-            Object.keys(dataConnections).forEach(k => {
-                const el = document.getElementById(`name-${k}`);
-                if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({name: el.innerText});
-            });
+            if (!canDoAction(myName, 'roulette', 8)) return;
+            const btn = document.getElementById('roulette-btn');
+            btn.classList.add('disabled'); setTimeout(() => { btn.classList.remove('disabled'); }, 480000);
 
-            if (activeUsers.length < 2) return alert("Çarkı çevirmek için en az 2 kişi olmalı!");
+            const activeUsers = [{name: myName}];
+            Object.keys(dataConnections).forEach(k => { const el = document.getElementById(`name-${k}`); if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({name: el.innerText}); });
+            if (activeUsers.length < 2) {
+                actionCooldowns[myName + '_roulette'] = 0; btn.classList.remove('disabled');
+                return alert("Çarkı çevirmek için en az 2 kişi olmalı!");
+            }
             
             const winner = activeUsers[Math.floor(Math.random() * activeUsers.length)].name;
-            broadcastData({ type: 'roulette', winner: winner });
-            showRouletteAnim(winner);
+            broadcastData({ type: 'roulette', winner: winner }); showRouletteAnim(winner);
         }
 
         function showRouletteAnim(winnerName) {
-            const overlay = document.getElementById('roulette-overlay');
-            const nameDisplay = document.getElementById('roulette-name');
-            overlay.style.display = 'flex';
-            nameDisplay.classList.remove('roulette-winner');
+            const overlay = document.getElementById('roulette-overlay'); const nameDisplay = document.getElementById('roulette-name');
+            overlay.style.display = 'flex'; nameDisplay.classList.remove('roulette-winner');
             
             const activeUsers = [{name: myName}];
-            Object.keys(dataConnections).forEach(k => {
-                const el = document.getElementById(`name-${k}`);
-                if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({name: el.innerText});
-            });
+            Object.keys(dataConnections).forEach(k => { const el = document.getElementById(`name-${k}`); if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({name: el.innerText}); });
 
-            let ticks = 0;
-            const maxTicks = 30;
+            let ticks = 0; const maxTicks = 30;
             const interval = setInterval(() => {
-                playSfx('roulette_tick');
-                nameDisplay.innerText = activeUsers[ticks % activeUsers.length].name;
-                ticks++;
+                playSfx('roulette_tick'); nameDisplay.innerText = activeUsers[ticks % activeUsers.length].name; ticks++;
                 if (ticks >= maxTicks) {
-                    clearInterval(interval);
-                    nameDisplay.innerText = winnerName;
-                    nameDisplay.classList.add('roulette-winner');
-                    playSfx('roulette_win');
+                    clearInterval(interval); nameDisplay.innerText = winnerName; nameDisplay.classList.add('roulette-winner'); playSfx('roulette_win');
                     setTimeout(() => { overlay.style.display = 'none'; }, 4000);
                     displaySystemMessage(`<i class="fa-solid fa-dharmachakra"></i> Kader Çarkı Sonucu: <strong style="color:var(--neon-red); font-size:1.2rem;">${winnerName}</strong>`);
                 }
             }, 100);
         }
 
-        function kickUser(userId) {
-            if (confirm("Bu operatörü ağdan kalıcı olarak uzaklaştırmak istiyor musunuz?")) {
-                const payload = { type: 'kick_user', target: userId };
-                broadcastData(payload); 
-                if(dataConnections[userId]) dataConnections[userId].send(payload); 
-                removeUser(userId); 
-            }
-        }
-
-        function canDoAction(userId, actionType) {
-            const now = Date.now(); const key = userId + '_' + actionType; const lastTime = actionCooldowns[key] || 0; const cooldownTime = 10 * 60 * 1000; 
-            if (now - lastTime < cooldownTime) {
-                alert(`Sistem Limiti: Bu eylem için ${Math.ceil((cooldownTime - (now - lastTime)) / 60000)} dakika beklemelisiniz.`);
-                return false;
-            }
-            actionCooldowns[key] = now; return true;
-        }
-
         function sendTea(userId, targetName) {
-            if (!canDoAction(userId, 'tea')) return;
+            if (!canDoAction(userId, 'tea', 10)) return;
             const btn = document.getElementById(`tea-btn-${userId}`);
             if(btn) { btn.classList.add('disabled'); setTimeout(() => { btn.classList.remove('disabled'); }, 600000); }
             broadcastData({ type: 'tea', from: myName, toName: targetName }); showTeaAnimation(myName, targetName);
@@ -622,7 +649,7 @@
         }
 
         function nudgeUser(userId) {
-            if (!canDoAction(userId, 'nudge')) return;
+            if (!canDoAction(userId, 'nudge', 10)) return;
             const btn = document.getElementById(`nudge-btn-${userId}`);
             if(btn) { btn.classList.add('disabled'); setTimeout(() => { btn.classList.remove('disabled'); }, 600000); }
             if(dataConnections[userId]) dataConnections[userId].send({ type: 'nudge', target: userId, from: myName });
@@ -647,20 +674,17 @@
 
         function sendChatMessage() {
             const input = document.getElementById('chat-input'); const text = input.value.trim(); if (!text) return;
-            
             if (text.toLowerCase() === '/revere') {
                 triggerEasterEgg(); broadcastData({ type: 'easter_egg' });
                 displaySystemMessage(`<i class="fa-solid fa-user-secret"></i> GİZLİ PROTOKOL AKTİF: RevereGames Ağına Bağlanıldı.`);
                 input.value = ""; return;
             }
-
             const safeText = escapeHTML(text); displayChatMessage(myName, safeText, true);
             broadcastData({ type: 'chat', name: myName, message: safeText }); input.value = "";
         }
 
         function displaySystemMessage(htmlText) {
-            const box = document.getElementById('chat-box');
-            box.innerHTML += `<div class="chat-msg system-msg">${htmlText}</div>`;
+            const box = document.getElementById('chat-box'); box.innerHTML += `<div class="chat-msg system-msg">${htmlText}</div>`;
             setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
         }
 
@@ -688,7 +712,6 @@
             removeUser(userId); const audioEl = document.createElement('audio'); audioEl.id = 'audio-' + userId; audioEl.srcObject = stream; audioEl.autoplay = true;
             if(isAFK) audioEl.muted = true; document.body.appendChild(audioEl);
             createCard(userId, "Bağlanıyor...", false); analyzeRemoteVoice(userId, stream); playSfx('join');
-            
             setTimeout(() => { const nameEl = document.getElementById(`name-${userId}`); if (nameEl && nameEl.innerText === "Bağlanıyor...") removeUser(userId); }, 4000);
         }
 
