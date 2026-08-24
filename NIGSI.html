@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NIGSI - Crimson Command Center</title>
+    <title>NIGSI - Crimson Terminal [FINAL]</title>
+    <!-- Profesyonel İkon Kütüphanesi -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
 
         :root {
-            --neon-red: #ff1a1a;
-            --dark-red: #2a0000;
-            --bg-dark: #070303;
-            --bg-panel: #0d0505;
-            --border-color: #330d0d;
+            --neon-red: #ff0a0a;
+            --dark-red: #1a0000;
+            --bg-dark: #050202;
+            --border-color: rgba(255, 26, 26, 0.2);
             --text-main: #e0e0e0;
-            --text-muted: #888888;
+            --text-muted: #777777;
         }
 
         * { box-sizing: border-box; }
@@ -25,202 +26,222 @@
             margin: 0; padding: 0; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
 
-        /* SİBERPUNK CRT MONİTÖR EFEKTİ (SCANLINES) */
+        /* CRT SCANLINES & NOISE */
         .scanlines {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
-            background-size: 100% 4px; pointer-events: none; z-index: 9999; opacity: 0.4;
+            background-size: 100% 4px; pointer-events: none; z-index: 9999; opacity: 0.3;
         }
-        
-        @keyframes crtFlicker {
-            0% { opacity: 0.95; } 5% { opacity: 0.85; } 10% { opacity: 0.95; } 15% { opacity: 1; } 100% { opacity: 1; }
-        }
-        body { animation: crtFlicker 6s infinite; }
+        @keyframes crtFlicker { 0%, 100% { opacity: 1; } 5% { opacity: 0.9; } 10% { opacity: 0.95; } }
+        body { animation: crtFlicker 8s infinite; }
 
-        /* YENİ: DÜRTME EKRAN SALLANMA VE FLAŞ EFEKTİ */
-        @keyframes shakeScreen {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-3px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
-        .shaking { animation: shakeScreen 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        
-        #nudge-flash {
+        /* YENİ: EASTER EGG (KIZIL MATRIX YAĞMURU) */
+        #matrix-canvas {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(255, 0, 0, 0.4); z-index: 9998; pointer-events: none;
-            display: none; justify-content: center; align-items: center;
+            z-index: 9997; pointer-events: none; display: none; opacity: 1; transition: opacity 1s;
         }
-        .nudge-text { font-family: 'Orbitron', sans-serif; font-size: 6rem; color: #fff; text-shadow: 0 0 40px red, 0 0 80px red; font-weight: 900; letter-spacing: 10px;}
 
-        /* YENİ: GLITCH (BOZULMA) EFEKTİ */
-        @keyframes glitch {
-            0% { text-shadow: 0.05em 0 0 var(--neon-red), -0.05em -0.025em 0 #00ffff, -0.025em 0.05em 0 #00ff00; }
-            14% { text-shadow: 0.05em 0 0 var(--neon-red), -0.05em -0.025em 0 #00ffff, -0.025em 0.05em 0 #00ff00; }
-            15% { text-shadow: -0.05em -0.025em 0 var(--neon-red), 0.025em 0.025em 0 #00ffff, -0.05em -0.05em 0 #00ff00; }
-            49% { text-shadow: -0.05em -0.025em 0 var(--neon-red), 0.025em 0.025em 0 #00ffff, -0.05em -0.05em 0 #00ff00; }
-            50% { text-shadow: 0.025em 0.05em 0 var(--neon-red), 0.05em 0 0 #00ffff, 0 -0.05em 0 #00ff00; }
-            99% { text-shadow: 0.025em 0.05em 0 var(--neon-red), 0.05em 0 0 #00ffff, 0 -0.05em 0 #00ff00; }
-            100% { text-shadow: -0.025em 0 0 var(--neon-red), -0.025em -0.025em 0 #00ffff, -0.025em -0.05em 0 #00ff00; }
+        @keyframes shakeScreen { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 10%, 30%, 50%, 70%, 90% { transform: translate(-4px, -4px) rotate(-1deg); } 20%, 40%, 60%, 80% { transform: translate(4px, 4px) rotate(1deg); } }
+        .shaking { animation: shakeScreen 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        
+        #nudge-flash { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 0, 0, 0.3); z-index: 9998; pointer-events: none; display: none; justify-content: center; align-items: center; }
+        .nudge-text { font-family: 'Orbitron', sans-serif; font-size: 6rem; color: #fff; text-shadow: 0 0 50px red, 0 0 100px red; font-weight: 900; letter-spacing: 15px;}
+
+        @keyframes glitch { 0%, 14%, 100% { text-shadow: 0.05em 0 0 var(--neon-red), -0.025em -0.025em 0 #00ffff; } 15%, 49% { text-shadow: -0.05em -0.025em 0 var(--neon-red), 0.025em 0.025em 0 #00ffff; } 50%, 99% { text-shadow: 0.025em 0.05em 0 var(--neon-red), 0.05em 0 0 #00ffff; } }
+        .glitch-anim { animation: glitch 3s infinite linear alternate-reverse; }
+
+        #tea-overlay {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;
+            background: rgba(5, 0, 0, 0.95); border: 1px solid var(--neon-red); border-radius: 12px;
+            padding: 30px 60px; text-align: center; box-shadow: 0 0 60px rgba(255, 0, 0, 0.5);
+            display: none; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(15px);
         }
-        .glitch-anim { animation: glitch 1.5s infinite linear alternate-reverse; }
+        @keyframes teaPop { 0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5); } 15%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -70%) scale(0.8); } }
+        .tea-icon { font-size: 5rem; color: var(--neon-red); margin-bottom: 15px; filter: drop-shadow(0 0 20px rgba(255,0,0,0.8));}
+        .tea-text { font-family: 'Rajdhani', sans-serif; font-size: 1.8rem; color: #fff; font-weight: bold; text-shadow: 0 0 15px var(--neon-red);}
+
+        .floating-emoji { position: absolute; bottom: 90px; right: 50px; font-size: 2.5rem; pointer-events: none; z-index: 100; animation: floatUp 2s forwards ease-out; filter: drop-shadow(0 0 10px rgba(255,255,255,0.4)); }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-180px) scale(1.5); } }
 
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; border: 1px solid #111;}
         ::-webkit-scrollbar-thumb:hover { background: var(--neon-red); }
 
+        /* GİRİŞ EKRANI */
         #login-screen {
-            background: rgba(13, 5, 5, 0.85); backdrop-filter: blur(10px); border: 1px solid var(--border-color); padding: 40px; 
-            border-radius: 12px; text-align: center; width: 340px; box-shadow: 0 10px 40px rgba(255,26,26,0.15);
+            background: linear-gradient(145deg, #110404, #080202); backdrop-filter: blur(20px); border: 1px solid var(--border-color); padding: 50px 45px; 
+            border-radius: 16px; text-align: center; width: 380px; box-shadow: 0 20px 60px rgba(255,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
         }
-        .logo { font-family: 'Orbitron', sans-serif; font-size: 3.8rem; color: var(--neon-red); margin: 0 0 5px 0; letter-spacing: 8px; text-shadow: 0 0 15px rgba(255,26,26,0.6); position: relative; display: inline-block;}
-        .sub-logo { color: var(--text-muted); font-size: 0.9rem; letter-spacing: 4px; margin-bottom: 30px; text-transform: uppercase; font-weight: bold;}
+        .logo { font-family: 'Orbitron', sans-serif; font-size: 4rem; color: var(--neon-red); margin: 0 0 5px 0; letter-spacing: 10px; text-shadow: 0 0 20px rgba(255,10,10,0.7); }
+        .sub-logo { color: var(--text-muted); font-size: 1rem; letter-spacing: 5px; margin-bottom: 40px; text-transform: uppercase; font-weight: bold;}
         
         input.styled-input {
-            width: 100%; padding: 14px; margin-bottom: 15px; background: rgba(0,0,0,0.7); border: 1px solid var(--border-color);
-            color: var(--neon-red); font-family: 'Orbitron', sans-serif; text-align: center; border-radius: 6px; outline: none; transition: 0.3s;
+            width: 100%; padding: 16px; margin-bottom: 20px; background: rgba(0,0,0,0.8); border: 1px solid var(--border-color);
+            color: var(--neon-red); font-family: 'Orbitron', sans-serif; font-size: 1.1rem; text-align: center; border-radius: 8px; outline: none; transition: 0.3s;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
         }
-        input.styled-input:focus { border-color: var(--neon-red); box-shadow: 0 0 15px rgba(255,26,26,0.3); transform: scale(1.02);}
+        input.styled-input:focus { border-color: var(--neon-red); box-shadow: 0 0 20px rgba(255,10,10,0.2), inset 0 2px 5px rgba(0,0,0,0.8); background: rgba(20,0,0,0.9);}
         
         .btn {
-            background: linear-gradient(45deg, var(--dark-red), #550000); color: #fff; border: 1px solid var(--neon-red); padding: 14px; width: 100%;
-            font-family: 'Orbitron', sans-serif; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.3s; letter-spacing: 2px;
+            background: linear-gradient(to bottom, #4a0000, #220000); color: #fff; border: 1px solid var(--neon-red); padding: 16px; width: 100%;
+            font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1.1rem; border-radius: 8px; cursor: pointer; transition: 0.2s; letter-spacing: 2px;
+            display: flex; justify-content: center; align-items: center; gap: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
         }
-        .btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 20px rgba(255,26,26,0.6); transform: translateY(-2px);}
-        #error-msg { color: var(--neon-red); display: none; margin-top: 15px; font-weight: bold; font-size: 0.95rem; text-shadow: 0 0 5px red;}
+        .btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 25px rgba(255,10,10,0.5); transform: translateY(-2px);}
+        .btn:active { transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        
+        #error-msg { color: var(--neon-red); display: none; margin-top: 20px; font-weight: bold; font-size: 1rem; text-shadow: 0 0 8px red;}
 
-        #app-screen { display: none; width: 100%; height: 100vh; background: radial-gradient(circle at center, #0a0303 0%, #000 100%); }
+        /* ANA EKRAN */
+        #app-screen { display: none; width: 100%; height: 100vh; background: radial-gradient(circle at center, #0d0404 0%, #000 100%); }
         
         #sidebar {
-            width: 280px; background: rgba(13, 5, 5, 0.7); border-right: 1px solid var(--border-color);
-            display: flex; flex-direction: column; height: 100%; box-shadow: 5px 0 20px rgba(0,0,0,0.5); backdrop-filter: blur(5px);
+            width: 320px; background: linear-gradient(to bottom, #0a0303, #050101); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; height: 100%; box-shadow: 10px 0 30px rgba(0,0,0,0.8); z-index: 10;
         }
-        .sidebar-header { padding: 25px 20px; text-align: center; border-bottom: 1px solid var(--border-color); }
-        .sidebar-header .logo { font-size: 2.2rem; letter-spacing: 5px; }
+        .sidebar-header { padding: 30px 20px; text-align: center; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.4); box-shadow: inset 0 -5px 15px rgba(0,0,0,0.5);}
+        .sidebar-header .logo { font-size: 2.5rem; letter-spacing: 6px; margin: 0;}
         
-        #users-list { flex: 1; padding: 20px 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        #users-list { flex: 1; padding: 25px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         
+        /* PREMIUM KULLANICI KARTLARI */
         .user-item {
-            background: rgba(0,0,0,0.6); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px;
-            display: flex; flex-direction: column; transition: 0.3s; position: relative;
+            background: linear-gradient(145deg, #110505, #080202); border: 1px solid #1a0a0a; border-left: 4px solid #330000;
+            border-radius: 10px; padding: 15px; display: flex; flex-direction: column; transition: 0.3s; position: relative; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
         }
-        .user-item:hover { transform: translateX(5px); border-color: rgba(255,26,26,0.3); }
-        .user-item.me { border-color: rgba(255,26,26,0.5); background: linear-gradient(90deg, rgba(255,26,26,0.05), transparent); }
+        .user-item:hover { transform: translateX(5px); border-color: rgba(255,26,26,0.3); border-left-color: var(--neon-red); background: linear-gradient(145deg, #1a0808, #0a0202);}
+        .user-item.me { border-left-color: #ff0055; background: linear-gradient(145deg, #1f050d, #0a0202); }
         
-        /* AKSİYON BUTONLARI (DÜRTME VE KICK) */
-        .action-bar-top { position: absolute; top: 6px; right: 6px; display: flex; gap: 5px; opacity: 0; transition: 0.2s; }
+        /* AKSİYON BUTONLARI (PREMIUM) */
+        .action-bar-top { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; opacity: 0; transition: 0.2s; }
         .user-item:hover .action-bar-top { opacity: 1; }
         
         .mini-btn {
-            background: rgba(255,26,26,0.1); border: 1px solid rgba(255,26,26,0.3); color: var(--neon-red); 
-            cursor: pointer; font-size: 0.85rem; border-radius: 4px; padding: 3px 6px; transition: 0.2s;
+            background: linear-gradient(to bottom, #1a0505, #0a0000); border: 1px solid #330000; color: var(--text-muted); 
+            cursor: pointer; font-size: 0.95rem; border-radius: 6px; padding: 6px 10px; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.8);
         }
-        .mini-btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 10px red; transform: scale(1.1);}
-        .mini-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; border-color: #555; color: #555;}
+        .mini-btn:hover { background: var(--neon-red); color: #000; border-color: var(--neon-red); box-shadow: 0 0 12px red; transform: scale(1.1);}
+        .mini-btn.disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; filter: grayscale(100%);}
+        .kick-btn:hover { background: #ff0000; color: #fff;}
 
-        .user-info { display: flex; align-items: center; gap: 12px; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
         .avatar {
-            width: 38px; height: 38px; background: #000; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; font-family: 'Orbitron', sans-serif; color: var(--text-muted); border: 1px solid #444; transition: 0.3s; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            width: 44px; height: 44px; background: linear-gradient(135deg, #111, #000); border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-family: 'Orbitron', sans-serif; font-size: 1.3rem; color: #777; border: 2px solid #222; transition: 0.3s; box-shadow: 0 4px 8px rgba(0,0,0,0.8);
         }
-        .user-name { font-weight: bold; font-size: 1.15rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .user-name { font-weight: bold; font-size: 1.25rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eee; }
         
-        .afk-badge { display: none; background: #ff1a1a; color: #000; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; box-shadow: 0 0 5px red;}
-        .user-item.afk { opacity: 0.5; filter: grayscale(80%); }
+        .afk-badge { display: none; background: var(--neon-red); color: #000; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: bold; box-shadow: 0 0 8px red;}
+        .user-item.afk { opacity: 0.4; filter: grayscale(100%); border-left-color: #333;}
         .user-item.afk .afk-badge { display: inline-block; }
         
-        @keyframes pulseAudio { 0% { box-shadow: 0 0 0 0 rgba(255, 26, 26, 0.5); } 70% { box-shadow: 0 0 0 10px rgba(255, 26, 26, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 26, 26, 0); } }
-        .user-item.speaking .avatar { border-color: var(--neon-red); color: var(--neon-red); animation: pulseAudio 1s infinite; background: rgba(255,26,26,0.1);}
+        @keyframes pulseAudio { 0% { box-shadow: 0 0 0 0 rgba(255, 10, 10, 0.6); } 70% { box-shadow: 0 0 0 12px rgba(255, 10, 10, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 10, 10, 0); } }
+        .user-item.speaking { border-left-color: var(--neon-red); }
+        .user-item.speaking .avatar { border-color: var(--neon-red); color: #fff; animation: pulseAudio 1s infinite; background: rgba(255,10,10,0.15); text-shadow: 0 0 8px red;}
         
-        .vol-slider { -webkit-appearance: none; width: 100%; height: 3px; background: #222; outline: none; margin-top: 12px; border-radius: 2px;}
-        .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--neon-red); cursor: pointer; box-shadow: 0 0 5px red;}
+        .vol-slider { -webkit-appearance: none; width: 100%; height: 4px; background: #1a0a0a; outline: none; margin-top: 15px; border-radius: 2px; border: 1px solid #000;}
+        .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #666; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.9);}
+        .vol-slider::-webkit-slider-thumb:hover { background: var(--neon-red); box-shadow: 0 0 10px red; transform: scale(1.3);}
 
+        /* FİZİKSEL BUTON HİSSİYATI (HUD KONTROLLER) */
         #my-controls {
-            padding: 15px; border-top: 1px solid var(--border-color); background: rgba(0,0,0,0.8);
-            display: flex; justify-content: space-between; gap: 8px;
+            padding: 20px; border-top: 1px solid var(--border-color); background: #050202; display: flex; justify-content: space-between; gap: 12px;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.8);
         }
         .ctrl-btn {
-            flex: 1; background: #111; border: 1px solid #333; color: var(--text-muted); padding: 12px 0;
-            border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+            flex: 1; background: linear-gradient(to bottom, #1a0505, #0a0000); border: 1px solid #330000; color: var(--text-muted); padding: 14px 0;
+            border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
         }
-        .ctrl-btn:hover { background: #220000; color: var(--neon-red); border-color: var(--neon-red); box-shadow: 0 0 10px rgba(255,26,26,0.2);}
-        .ctrl-btn.active-red { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255,26,26,0.15); box-shadow: inset 0 0 10px rgba(255,26,26,0.2);}
-        .ctrl-btn.active-blue { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); box-shadow: inset 0 0 10px rgba(0,255,255,0.2);}
+        .ctrl-btn:hover { background: linear-gradient(to bottom, #2a0505, #110000); color: var(--neon-red); border-color: var(--neon-red); }
+        .ctrl-btn:active { box-shadow: inset 0 3px 6px rgba(0,0,0,0.9); transform: translateY(2px); }
+        .ctrl-btn.active-red { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255,10,10,0.1); box-shadow: inset 0 0 15px rgba(255,10,10,0.2);}
+        .ctrl-btn.active-blue { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); box-shadow: inset 0 0 15px rgba(0,255,255,0.2);}
 
+        /* SAĞ PANEL / CHAT */
         #main-area { flex: 1; display: flex; flex-direction: column; background: transparent; position: relative;}
         
         #screen-view-container {
-            display: none; background: rgba(0,0,0,0.9); border-bottom: 1px solid var(--border-color);
-            padding: 20px; align-items: center; justify-content: center; height: 65%;
+            display: none; background: #000; border-bottom: 1px solid var(--border-color);
+            padding: 20px; align-items: center; justify-content: center; height: 65%; box-shadow: inset 0 0 80px rgba(255,0,0,0.05);
         }
-        #shared-screen { max-width: 100%; max-height: 100%; border: 2px solid var(--neon-red); border-radius: 8px; box-shadow: 0 0 30px rgba(255,26,26,0.3); }
+        #shared-screen { max-width: 100%; max-height: 100%; border: 2px solid var(--neon-red); border-radius: 8px; box-shadow: 0 0 40px rgba(255,10,10,0.2); }
 
-        #chat-section { flex: 1; display: flex; flex-direction: column; padding: 25px; min-height: 0; }
-        #chat-box { flex: 1; overflow-y: auto; padding-right: 15px; display: flex; flex-direction: column; gap: 15px; }
+        #chat-section { flex: 1; display: flex; flex-direction: column; padding: 25px 40px; min-height: 0; position: relative; }
         
-        @keyframes slideInMsg { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+        /* CHAT BACKGROUND GRID */
+        #chat-section::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-image: linear-gradient(rgba(255, 26, 26, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 26, 26, 0.02) 1px, transparent 1px);
+            background-size: 20px 20px; z-index: -1; pointer-events: none;
+        }
+
+        #chat-box { flex: 1; overflow-y: auto; padding-right: 20px; display: flex; flex-direction: column; gap: 15px; }
+        
+        @keyframes slideInMsg { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         
         .chat-msg { 
-            background: rgba(13, 5, 5, 0.7); border: 1px solid rgba(255,26,26,0.15); padding: 12px 18px; 
-            border-radius: 10px; font-size: 1.05rem; animation: slideInMsg 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px);
+            background: linear-gradient(90deg, rgba(20, 5, 5, 0.9), rgba(5, 1, 1, 0.9)); border: 1px solid rgba(255,26,26,0.1); padding: 14px 20px; 
+            border-radius: 12px; font-size: 1.1rem; animation: slideInMsg 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6); backdrop-filter: blur(5px); width: fit-content; max-width: 85%;
+            border-left: 3px solid #444;
         }
-        .chat-name { font-weight: bold; color: #aaa; margin-right: 8px; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;}
-        .chat-name.me { color: var(--neon-red); text-shadow: 0 0 5px rgba(255,26,26,0.5);}
-        .chat-img { max-width: 300px; border-radius: 8px; margin-top: 10px; border: 1px solid #444; transition: 0.3s; cursor: pointer;}
-        .chat-img:hover { border-color: var(--neon-red); box-shadow: 0 0 15px rgba(255,26,26,0.4); transform: scale(1.02);}
-
-        #chat-input-area { display: flex; gap: 12px; margin-top: 20px; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 10px; border: 1px solid var(--border-color); }
-        #chat-input { flex: 1; background: transparent; border: none; color: #fff; padding: 12px; font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; outline: none; }
-        .action-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0 15px; font-size: 1.4rem; transition: 0.2s; border-radius: 6px;}
-        .action-btn:hover { color: var(--neon-red); background: rgba(255,26,26,0.1); }
-        .action-btn.send { color: var(--neon-red); font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; border: 1px solid rgba(255,26,26,0.3); padding: 0 25px;}
-        .action-btn.send:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 15px red;}
+        .chat-msg.me-msg { border-left-color: var(--neon-red); align-self: flex-start;}
+        .chat-msg.system-msg { background: rgba(255,255,255,0.02); border-color: #222; border-left-color: #00ffff; color: #aaa; font-size: 1rem; align-self: center; border-radius: 20px; padding: 8px 20px;}
+        .chat-msg.system-msg i { color: #00ffff; margin-right: 5px;}
         
-        #banned-screen {
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            width: 100%; height: 100vh; background: #050000; z-index: 1000; position: fixed; top: 0; left: 0;
-        }
-        .banned-text { font-family: 'Orbitron', sans-serif; font-size: 5rem; color: red; text-shadow: 0 0 30px red; margin: 0; animation: glitch 2s infinite linear alternate-reverse;}
+        .chat-name { font-weight: bold; color: #999; margin-right: 8px; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;}
+        .chat-name.me { color: var(--neon-red); text-shadow: 0 0 5px rgba(255,26,26,0.4);}
+        .chat-img { max-width: 350px; border-radius: 8px; margin-top: 12px; border: 1px solid #333; transition: 0.3s; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.8);}
+        .chat-img:hover { border-color: var(--neon-red); box-shadow: 0 0 20px rgba(255,10,10,0.5); transform: scale(1.02);}
+
+        /* SADELEŞTİRİLMİŞ REAKSİYON BARI */
+        #reaction-bar { display: flex; gap: 10px; margin-bottom: 12px; padding-left: 5px;}
+        .react-btn { background: rgba(0,0,0,0.5); border: 1px solid #333; color: #fff; font-size: 1.1rem; padding: 6px 16px; border-radius: 20px; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+        .react-btn:hover { background: rgba(255,26,26,0.1); border-color: var(--neon-red); transform: translateY(-3px) scale(1.1); box-shadow: 0 5px 10px rgba(255,0,0,0.2);}
+
+        #chat-input-area { display: flex; gap: 15px; background: rgba(5,0,0,0.9); padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
+        #chat-input { flex: 1; background: transparent; border: none; color: #fff; padding: 10px 15px; font-family: 'Rajdhani', sans-serif; font-size: 1.15rem; outline: none; }
+        
+        .action-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0 18px; font-size: 1.4rem; transition: 0.2s; border-radius: 8px; display: flex; align-items: center; justify-content: center;}
+        .action-btn:hover { color: var(--neon-red); background: rgba(255,26,26,0.1); }
+        .action-btn.send { background: linear-gradient(135deg, var(--dark-red), #550000); color: #fff; font-weight: bold; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; border: 1px solid var(--neon-red); padding: 0 30px; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);}
+        .action-btn.send:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 20px red; transform: translateX(2px);}
+        
     </style>
 </head>
 <body>
     
     <div class="scanlines"></div>
+    <canvas id="matrix-canvas"></canvas> <!-- EASTER EGG İÇİN -->
 
-    <!-- DÜRTME (NUDGE) FLASH EKRANI -->
-    <div id="nudge-flash">
-        <div class="nudge-text glitch-anim">DÜRTÜLDÜN!</div>
-    </div>
+    <div id="nudge-flash"><div class="nudge-text glitch-anim">UYARI ALINDI!</div></div>
+    <div id="tea-overlay"><i class="fa-solid fa-mug-hot tea-icon"></i><div class="tea-text" id="tea-msg">...</div></div>
 
+    <!-- GİRİŞ -->
     <div id="login-screen">
-        <h1 class="logo glitch-anim" style="animation-duration: 4s;">NIGSI</h1>
-        <div class="sub-logo">Terminal Girişi</div>
-        <input type="text" id="username" class="styled-input" placeholder="Operatör Adı" maxlength="15" autocomplete="off">
-        <input type="password" id="password" class="styled-input" placeholder="Ağ Şifresi">
-        <button class="btn" onclick="startSystem()">BAĞLAN</button>
-        <p id="error-msg">Yetkisiz Erişim!</p>
+        <h1 class="logo glitch-anim" style="animation-duration: 4s;"><i class="fa-solid fa-shield-halved" style="font-size: 2.8rem; vertical-align: middle; margin-right: 12px;"></i>NIGSI</h1>
+        <div class="sub-logo">Terminal v.Final</div>
+        <input type="text" id="username" class="styled-input" placeholder="Operatör ID" maxlength="15" autocomplete="off">
+        <input type="password" id="password" class="styled-input" placeholder="Şifreleme Anahtarı">
+        <button class="btn" onclick="startSystem()"><i class="fa-solid fa-satellite-dish"></i> SİSTEME GİR</button>
+        <p id="error-msg"><i class="fa-solid fa-triangle-exclamation"></i> Erişim Reddedildi!</p>
     </div>
 
+    <!-- ANA EKRAN -->
     <div id="app-screen">
         <div id="sidebar">
             <div class="sidebar-header">
-                <h1 class="logo glitch-anim" style="font-size: 2.2rem; animation-duration: 5s;">NIGSI</h1>
+                <h1 class="logo glitch-anim" style="font-size: 2.5rem; animation-duration: 5s;">NIGSI</h1>
             </div>
             <div id="users-list"></div>
             <div id="my-controls">
-                <button class="ctrl-btn" id="mic-btn" onclick="toggleMute()" title="Mikrofonu Kapat/Aç">🎤</button>
-                <button class="ctrl-btn" id="afk-btn" onclick="toggleAFK()" title="AFK Modu (Sustur)">💤</button>
-                <button class="ctrl-btn" id="screen-btn" onclick="toggleScreenShare()" title="Ekran Paylaş">📺</button>
-                <button class="ctrl-btn" onclick="location.reload()" title="Ağdan Çık">🚪</button>
+                <button class="ctrl-btn" id="mic-btn" onclick="toggleMute()" title="Mikrofon"><i class="fa-solid fa-microphone"></i></button>
+                <button class="ctrl-btn" id="afk-btn" onclick="toggleAFK()" title="AFK Modu"><i class="fa-solid fa-moon"></i></button>
+                <button class="ctrl-btn" id="screen-btn" onclick="toggleScreenShare()" title="Ekran Paylaş"><i class="fa-solid fa-desktop"></i></button>
+                <button class="ctrl-btn" onclick="location.reload()" title="Bağlantıyı Kes"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
 
@@ -230,19 +251,22 @@
             </div>
             <div id="chat-section">
                 <div id="chat-box"></div>
+                
+                <div id="reaction-bar">
+                    <button class="react-btn" onclick="sendReaction('❤️')">❤️</button>
+                    <button class="react-btn" onclick="sendReaction('🔥')">🔥</button>
+                    <button class="react-btn" onclick="sendReaction('👏')">👏</button>
+                    <button class="react-btn" onclick="sendReaction('💀')">💀</button>
+                </div>
+
                 <div id="chat-input-area">
                     <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
-                    <button class="action-btn" onclick="document.getElementById('image-input').click()" title="Resim Gönder">📁</button>
-                    <input type="text" id="chat-input" placeholder="Veri ağına mesaj gir..." onkeypress="handleEnter(event)">
-                    <button class="action-btn send" onclick="sendChatMessage()">İLET</button>
+                    <button class="action-btn" onclick="document.getElementById('image-input').click()" title="Görsel Yükle"><i class="fa-solid fa-image"></i></button>
+                    <input type="text" id="chat-input" placeholder="Ağa mesaj ilet..." onkeypress="handleEnter(event)">
+                    <button class="action-btn send" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <div id="banned-screen">
-        <h1 class="banned-text">ERİŞİM REDDEDİLDİ</h1>
-        <p style="color:#aaa; font-size:1.5rem; letter-spacing:2px; margin-top:20px;">Ağdan uzaklaştırıldınız.</p>
     </div>
 
     <script>
@@ -252,8 +276,6 @@
         let localStream = null, screenStream = null, peer = null;
         let mySlot = 0, myName = "", audioContext = null;
         let dataConnections = {}, isAFK = false, isMuted = false, screenCalls = [];
-        
-        // Dürtme Bekleme Süreleri Takibi (Kullanıcı bazlı)
         let nudgeCooldowns = {}; 
 
         const tabLockChannel = new BroadcastChannel('nigsi_tab_lock');
@@ -267,16 +289,12 @@
 
         window.addEventListener('beforeunload', () => { if (peer) peer.destroy(); });
 
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-        }
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
 
         function playSfx(type) {
             if (!audioContext) return;
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            osc.connect(gain); gain.connect(audioContext.destination);
-            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
+            osc.connect(gain); gain.connect(audioContext.destination); const now = audioContext.currentTime;
             
             if (type === 'join') {
                 osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
@@ -286,25 +304,64 @@
                 gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
             } else if (type === 'msg') {
                 osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now);
-                gain.gain.setValueAtTime(0.03, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                gain.gain.setValueAtTime(0.02, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
             } else if (type === 'nudge') {
-                // RAHATSIZ EDİCİ DÜRTME ALARMI SİNYALİ
-                osc.type = 'square'; osc.frequency.setValueAtTime(300, now);
-                osc.frequency.setValueAtTime(900, now + 0.1); osc.frequency.setValueAtTime(300, now + 0.2);
+                osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(900, now + 0.1); osc.frequency.setValueAtTime(300, now + 0.2);
                 gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-                osc.start(now); osc.stop(now + 0.5); return; // Özel stop
+                osc.start(now); osc.stop(now + 0.5); return;
+            } else if (type === 'tea') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.start(now); osc.stop(now + 0.4); return;
+            } else if (type === 'easter') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(1000, now + 2);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+                osc.start(now); osc.stop(now + 2.1); return;
             }
             osc.start(now); osc.stop(now + 0.1);
         }
 
+        /* YENİ: EASTER EGG FONKSİYONU */
+        function triggerEasterEgg() {
+            playSfx('easter');
+            const c = document.getElementById('matrix-canvas');
+            const ctx = c.getContext('2d');
+            c.width = window.innerWidth; c.height = window.innerHeight;
+            c.style.display = 'block'; c.style.opacity = '1';
+            
+            const chars = 'NIGSI REVERE GAMES HACKED 010101010101';
+            const drops = [];
+            const fontSize = 16;
+            const columns = c.width / fontSize;
+            for(let x = 0; x < columns; x++) drops[x] = 1;
+            
+            const interval = setInterval(() => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+                ctx.fillRect(0, 0, c.width, c.height);
+                ctx.fillStyle = '#ff0a0a';
+                ctx.font = fontSize + 'px Orbitron';
+                for(let i = 0; i < drops.length; i++) {
+                    const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if(drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }, 35);
+            
+            setTimeout(() => { 
+                c.style.opacity = '0'; 
+                setTimeout(() => { clearInterval(interval); c.style.display = 'none'; }, 1000); 
+            }, 5000);
+        }
+
         async function startSystem() {
-            if (window.anotherTabIsActive) return alert("GÜVENLİK REDDİ: Sistem zaten bu cihazda aktif.");
+            if (window.anotherTabIsActive) return alert("HATA: Sistem zaten başka bir sekmede aktif.");
 
             myName = document.getElementById("username").value.trim();
             const pass = document.getElementById("password").value;
 
             if (pass !== ODA_SIFRESI) { document.getElementById("error-msg").style.display = "block"; return; }
-            if (!myName) return alert("Lütfen bir isim girin!");
+            if (!myName) return alert("Lütfen Operatör ID girin.");
 
             myName = escapeHTML(myName);
             document.getElementById("login-screen").style.display = "none";
@@ -312,24 +369,20 @@
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                audioContext.resume();
+                audioContext = new (window.AudioContext || window.webkitAudioContext)(); audioContext.resume();
                 connectToFreeSlot(1);
-            } catch (err) { alert("Mikrofon izni reddedildi!"); location.reload(); }
+            } catch (err) { alert("Mikrofon reddedildi!"); location.reload(); }
         }
 
         function connectToFreeSlot(slotNum) {
-            if (slotNum > 5) return alert("Ağ Dolu! (Maks. 5 Kişi)");
+            if (slotNum > 5) return alert("Ağ Dolu!");
             const myId = ODA_PREFIX + slotNum;
             const tempPeer = new Peer(myId);
 
             tempPeer.on('open', (id) => {
                 peer = tempPeer; mySlot = slotNum; isActiveInThisTab = true; 
-                createCard(myId, myName, true);
-                analyzeMyVoice(myId, localStream);
-                callOtherSlots();
-                listenForIncomingConnections();
-                playSfx('join');
+                createCard(myId, myName, true); analyzeMyVoice(myId, localStream);
+                callOtherSlots(); listenForIncomingConnections(); playSfx('join');
             });
             tempPeer.on('error', (err) => { if (err.type === 'unavailable-id') connectToFreeSlot(slotNum + 1); });
         }
@@ -359,10 +412,7 @@
                 if (i === mySlot) continue;
                 const targetId = ODA_PREFIX + i;
                 const call = peer.call(targetId, localStream);
-                if (call) {
-                    call.on('stream', (stream) => handleRemoteUser(targetId, stream));
-                    call.on('close', () => removeUser(targetId));
-                }
+                if (call) { call.on('stream', (stream) => handleRemoteUser(targetId, stream)); call.on('close', () => removeUser(targetId)); }
                 const conn = peer.connect(targetId);
                 if (conn) {
                     conn.on('open', () => { dataConnections[targetId] = conn; conn.send({ type: 'name_update', name: myName, afk: isAFK }); });
@@ -379,281 +429,198 @@
             else if (data.type === 'chat') { displayChatMessage(data.name, data.message, false); } 
             else if (data.type === 'image') { displayImageMessage(data.name, data.image, false); } 
             else if (data.type === 'afk_status') { updateAFKUI(userId, data.status); } 
+            else if (data.type === 'nudge') { if (data.target === (ODA_PREFIX + mySlot)) triggerNudgeEffect(); }
+            else if (data.type === 'tea') { showTeaAnimation(data.from, data.toName); }
+            else if (data.type === 'reaction') { showFloatingEmoji(data.emoji); }
+            else if (data.type === 'easter_egg') { triggerEasterEgg(); }
             else if (data.type === 'kick_user') {
                 if (data.target === (ODA_PREFIX + mySlot)) {
-                    isActiveInThisTab = false;
-                    if (peer) peer.destroy(); 
-                    document.getElementById('app-screen').style.display = "none";
-                    document.getElementById('banned-screen').style.display = "flex";
+                    isActiveInThisTab = false; if (peer) peer.destroy(); 
+                    alert("YÖNETİCİ MÜDAHALESİ: Ağdan uzaklaştırıldınız."); window.location.reload(); 
                 } else {
-                    removeUser(data.target);
-                    if(dataConnections[data.target]) dataConnections[data.target].close();
+                    removeUser(data.target); if(dataConnections[data.target]) dataConnections[data.target].close();
                 }
             } 
-            else if (data.type === 'nudge') {
-                // BİRİ BİZİ DÜRTTÜĞÜNDE ÇALIŞACAK KOD
-                if (data.target === (ODA_PREFIX + mySlot)) {
-                    triggerNudgeEffect(data.from);
-                }
-            }
         }
 
-        // --- YÖNETİCİ ATMA (KICK) FONKSİYONU ---
         function kickUser(userId) {
             if (confirm("Bu operatörü ağdan kalıcı olarak uzaklaştırmak istiyor musunuz?")) {
                 broadcastData({ type: 'kick_user', target: userId });
-                if(dataConnections[userId]) {
-                    dataConnections[userId].send({ type: 'kick_user', target: userId });
-                    setTimeout(() => { dataConnections[userId].close(); delete dataConnections[userId]; }, 300);
-                }
-                setTimeout(() => removeUser(userId), 500);
+                if(dataConnections[userId]) dataConnections[userId].send({ type: 'kick_user', target: userId });
+                setTimeout(() => removeUser(userId), 300);
             }
         }
 
-        // --- DÜRTME (NUDGE) FONKSİYONU ---
+        function sendTea(userId, targetName) {
+            broadcastData({ type: 'tea', from: myName, toName: targetName }); showTeaAnimation(myName, targetName);
+            displaySystemMessage(`<i class="fa-solid fa-mug-hot"></i> ${myName}, ${targetName} adlı operatöre çay gönderdi!`);
+        }
+
+        function showTeaAnimation(from, to) {
+            playSfx('tea'); const overlay = document.getElementById('tea-overlay'); const msg = document.getElementById('tea-msg');
+            msg.innerText = `${from}, ${to} kişisine çay gönderdi!`;
+            overlay.style.display = 'flex'; overlay.style.animation = 'none'; void overlay.offsetWidth; overlay.style.animation = 'teaPop 3s forwards';
+            setTimeout(() => { overlay.style.display = 'none'; }, 3000);
+        }
+
         function nudgeUser(userId) {
-            const now = Date.now();
-            const lastNudge = nudgeCooldowns[userId] || 0;
-            const cooldownTime = 5 * 60 * 1000; // 5 Dakika (Milisaniye)
-
-            if (now - lastNudge < cooldownTime) {
-                const remainingMinutes = Math.ceil((cooldownTime - (now - lastNudge)) / 60000);
-                alert(`Sistem Limiti: Bu kullanıcıyı tekrar dürtmek için ${remainingMinutes} dakika beklemelisiniz.`);
-                return;
-            }
-
-            // Dürtmeyi onayla ve gönder
+            const now = Date.now(); const lastNudge = nudgeCooldowns[userId] || 0; const cooldownTime = 5 * 60 * 1000;
+            if (now - lastNudge < cooldownTime) return alert(`Sistem Limiti: ${Math.ceil((cooldownTime - (now - lastNudge)) / 60000)} dk bekleyin.`);
             nudgeCooldowns[userId] = now;
-            
-            // Butonu görsel olarak deaktif et (Cooldown için)
             const btn = document.getElementById(`nudge-btn-${userId}`);
-            if(btn) {
-                btn.classList.add('disabled');
-                btn.title = "Bekleme Süresinde";
-                setTimeout(() => { 
-                    btn.classList.remove('disabled'); 
-                    btn.title = "Dürt (Uyarı Gönder)";
-                }, cooldownTime);
-            }
-
-            if(dataConnections[userId]) {
-                dataConnections[userId].send({ type: 'nudge', target: userId, from: myName });
-                displayChatMessage("Sistem", `${escapeHTML(myName)}, bir kullanıcıyı dürttü.`, false);
-            }
+            if(btn) { btn.classList.add('disabled'); setTimeout(() => { btn.classList.remove('disabled'); }, cooldownTime); }
+            if(dataConnections[userId]) dataConnections[userId].send({ type: 'nudge', target: userId, from: myName });
+            displaySystemMessage(`<i class="fa-solid fa-bolt"></i> ${myName}, bir operatörü dürttü.`);
         }
 
-        // Bizi Dürttüklerinde Olacak Efektler
-        function triggerNudgeEffect(fromName) {
-            playSfx('nudge');
-            document.body.classList.add('shaking');
-            
-            const flash = document.getElementById('nudge-flash');
-            flash.style.display = 'flex';
-            
-            setTimeout(() => {
-                document.body.classList.remove('shaking');
-                flash.style.display = 'none';
-            }, 500); // Yarım saniye sallanma ve kırmızı flaş
+        function triggerNudgeEffect() {
+            playSfx('nudge'); document.body.classList.add('shaking');
+            const flash = document.getElementById('nudge-flash'); flash.style.display = 'flex';
+            setTimeout(() => { document.body.classList.remove('shaking'); flash.style.display = 'none'; }, 500);
         }
 
-        async function toggleScreenShare() {
-            const btn = document.getElementById('screen-btn');
-            if (screenStream) {
-                screenStream.getTracks().forEach(t => t.stop()); screenStream = null;
-                document.getElementById('screen-view-container').style.display = 'none';
-                screenCalls.forEach(call => call.close()); screenCalls = [];
-                btn.classList.remove('active-blue'); return;
-            }
-            try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
-                document.getElementById('shared-screen').srcObject = screenStream;
-                document.getElementById('screen-view-container').style.display = 'flex';
-                btn.classList.add('active-blue');
-                for (let i = 1; i <= 5; i++) {
-                    if (i === mySlot) continue;
-                    const call = peer.call(ODA_PREFIX + i, screenStream, { metadata: { isScreen: true } });
-                    if(call) screenCalls.push(call);
-                }
-                screenStream.getVideoTracks()[0].onended = () => toggleScreenShare();
-            } catch(err) {}
+        function sendReaction(emoji) { showFloatingEmoji(emoji); broadcastData({ type: 'reaction', emoji: emoji }); }
+        function showFloatingEmoji(emoji) {
+            const chatSec = document.getElementById('chat-section'); const el = document.createElement('div');
+            el.className = 'floating-emoji'; el.innerText = emoji; el.style.right = Math.floor(Math.random() * 50 + 30) + 'px';
+            chatSec.appendChild(el); setTimeout(() => el.remove(), 2000);
         }
 
-        function toggleAFK() {
-            isAFK = !isAFK;
-            const btn = document.getElementById('afk-btn'); const myCard = document.getElementById(`card-${ODA_PREFIX}${mySlot}`);
-            if (localStream && !isMuted) localStream.getAudioTracks()[0].enabled = !isAFK;
-            document.querySelectorAll('audio').forEach(a => { a.muted = isAFK; });
-
-            if (isAFK) { btn.classList.add('active-red'); if(myCard) myCard.classList.add('afk'); }
-            else { btn.classList.remove('active-red'); if(myCard) myCard.classList.remove('afk'); }
-            broadcastData({ type: 'afk_status', status: isAFK });
-        }
-
-        function updateAFKUI(userId, status) {
-            const card = document.getElementById(`card-${userId}`);
-            if(card) { if(status) card.classList.add('afk'); else card.classList.remove('afk'); }
-        }
-
-        function broadcastData(payload) {
-            Object.values(dataConnections).forEach(conn => { if (conn && conn.open) conn.send(payload); });
-        }
-
+        function broadcastData(payload) { Object.values(dataConnections).forEach(conn => { if (conn && conn.open) conn.send(payload); }); }
         function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
 
         function sendChatMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text) return;
+            const input = document.getElementById('chat-input'); const text = input.value.trim(); if (!text) return;
             
-            const safeText = escapeHTML(text);
-            displayChatMessage(myName, safeText, true);
-            broadcastData({ type: 'chat', name: myName, message: safeText });
-            input.value = "";
+            // EASTER EGG KONTROLÜ
+            if (text.toLowerCase() === '/revere') {
+                triggerEasterEgg();
+                broadcastData({ type: 'easter_egg' });
+                displaySystemMessage(`<i class="fa-solid fa-user-secret"></i> GİZLİ PROTOKOL AKTİF: RevereGames Ağına Bağlanıldı.`);
+                input.value = "";
+                return;
+            }
+
+            const safeText = escapeHTML(text); displayChatMessage(myName, safeText, true);
+            broadcastData({ type: 'chat', name: myName, message: safeText }); input.value = "";
+        }
+
+        function displaySystemMessage(htmlText) {
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div class="chat-msg system-msg">${htmlText}</div>`;
+            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
         }
 
         function displayChatMessage(senderName, messageText, isMe) {
-            if(!isMe && senderName !== "Sistem") playSfx('msg');
-            const box = document.getElementById('chat-box');
-            const safeName = escapeHTML(senderName);
-            
-            let nameClass = isMe ? "chat-name me" : "chat-name";
-            if (safeName === "Sistem") nameClass = "chat-name"; // Sistem mesajı beyaz/gri olur
-            
-            box.innerHTML += `<div class="chat-msg"><span class="${nameClass}">${safeName}:</span> <span class="chat-text">${messageText}</span></div>`;
+            if(!isMe) playSfx('msg'); const box = document.getElementById('chat-box'); const safeName = escapeHTML(senderName);
+            const msgClass = isMe ? "chat-msg me-msg" : "chat-msg";
+            const nameClass = isMe ? "chat-name me" : "chat-name";
+            box.innerHTML += `<div class="${msgClass}"><span class="${nameClass}">${safeName}:</span> <span class="chat-text">${messageText}</span></div>`;
             setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
         }
 
         function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                displayImageMessage(myName, e.target.result, true);
-                broadcastData({ type: 'image', name: myName, image: e.target.result });
-            };
-            reader.readAsDataURL(file);
-            event.target.value = ''; 
+            const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = function(e) { displayImageMessage(myName, e.target.result, true); broadcastData({ type: 'image', name: myName, image: e.target.result }); };
+            reader.readAsDataURL(file); event.target.value = ''; 
         }
 
         function displayImageMessage(senderName, imgData, isMe) {
-            if(!isMe) playSfx('msg');
-            const box = document.getElementById('chat-box');
-            const safeName = escapeHTML(senderName);
-            box.innerHTML += `<div class="chat-msg"><span class="chat-name ${isMe ? 'me' : ''}">${safeName}:</span><br><img src="${imgData}" class="chat-img" onclick="window.open('${imgData}')"></div>`;
+            if(!isMe) playSfx('msg'); const box = document.getElementById('chat-box'); const safeName = escapeHTML(senderName);
+            const msgClass = isMe ? "chat-msg me-msg" : "chat-msg";
+            box.innerHTML += `<div class="${msgClass}"><span class="chat-name ${isMe ? 'me' : ''}">${safeName}:</span><br><img src="${imgData}" class="chat-img" onclick="window.open('${imgData}')"></div>`;
             setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
         }
 
         function handleRemoteUser(userId, stream) {
-            removeUser(userId);
-            const audioEl = document.createElement('audio');
-            audioEl.id = 'audio-' + userId; audioEl.srcObject = stream; audioEl.autoplay = true;
-            if(isAFK) audioEl.muted = true;
-            document.body.appendChild(audioEl);
-            
-            createCard(userId, "Bağlanıyor...", false);
-            analyzeRemoteVoice(userId, stream);
-            playSfx('join');
-
-            setTimeout(() => {
-                const nameEl = document.getElementById(`name-${userId}`);
-                if (nameEl && nameEl.innerText === "Bağlanıyor...") removeUser(userId);
-            }, 3000);
+            removeUser(userId); const audioEl = document.createElement('audio'); audioEl.id = 'audio-' + userId; audioEl.srcObject = stream; audioEl.autoplay = true;
+            if(isAFK) audioEl.muted = true; document.body.appendChild(audioEl);
+            createCard(userId, "Bağlanıyor...", false); analyzeRemoteVoice(userId, stream); playSfx('join');
+            setTimeout(() => { const nameEl = document.getElementById(`name-${userId}`); if (nameEl && nameEl.innerText === "Bağlanıyor...") removeUser(userId); }, 3000);
         }
 
         function removeUser(userId) {
             const oldAudio = document.getElementById('audio-' + userId); if (oldAudio) oldAudio.remove();
-            const oldCard = document.getElementById('card-' + userId); 
-            if (oldCard) { oldCard.remove(); playSfx('leave'); }
+            const oldCard = document.getElementById('card-' + userId); if (oldCard) { oldCard.remove(); playSfx('leave'); }
         }
 
         function createCard(userId, name, isMe) {
             if(document.getElementById('card-' + userId)) return;
-            const list = document.getElementById('users-list');
+            const list = document.getElementById('users-list'); const safeName = escapeHTML(name);
             
-            // ACTION BAR: Dürtme ve Kick butonlarını yan yana yerleştireceğimiz alan
             let actionBarHTML = '';
             if (!isMe) {
                 actionBarHTML += `<div class="action-bar-top">`;
-                // Dürtme (Nudge) Butonu - Herkeste görünür
-                actionBarHTML += `<button class="mini-btn" id="nudge-btn-${userId}" onclick="nudgeUser('${userId}')" title="Dürt (Uyarı Gönder)">⚡</button>`;
-                
-                // Kick Butonu - Sadece Emran'da görünür
-                if (myName.toLowerCase() === 'emran') {
-                    actionBarHTML += `<button class="mini-btn" onclick="kickUser('${userId}')" title="Ağdan Uzaklaştır">❌</button>`;
-                }
+                actionBarHTML += `<button class="mini-btn" onclick="sendTea('${userId}', '${safeName}')" title="Çay Gönder"><i class="fa-solid fa-mug-hot"></i></button>`;
+                actionBarHTML += `<button class="mini-btn" id="nudge-btn-${userId}" onclick="nudgeUser('${userId}')" title="Dürt"><i class="fa-solid fa-bolt"></i></button>`;
+                if (myName.toLowerCase() === 'emran') actionBarHTML += `<button class="mini-btn kick-btn" onclick="kickUser('${userId}')" title="Ağdan At"><i class="fa-solid fa-skull"></i></button>`;
                 actionBarHTML += `</div>`;
             }
 
-            const safeName = escapeHTML(name);
-            let html = `
-                <div class="user-item ${isMe ? 'me' : ''}" id="card-${userId}">
-                    ${actionBarHTML}
-                    <div class="user-info">
-                        <div class="avatar" id="avatar-${userId}">${safeName.charAt(0).toUpperCase()}</div>
-                        <div class="user-name" id="name-${userId}">${safeName}</div>
-                        <div class="afk-badge">AFK</div>
-                    </div>
-            `;
-            if (!isMe) {
-                html += `<input type="range" class="vol-slider" min="0" max="1" step="0.1" value="1" oninput="changeVol('${userId}', this.value)" title="Ses Düzeyi">`;
-            }
+            let html = `<div class="user-item ${isMe ? 'me' : ''}" id="card-${userId}">${actionBarHTML}
+                        <div class="user-info"><div class="avatar" id="avatar-${userId}">${safeName.charAt(0).toUpperCase()}</div>
+                        <div class="user-name" id="name-${userId}">${safeName}</div><div class="afk-badge">AFK</div></div>`;
+            if (!isMe) html += `<input type="range" class="vol-slider" min="0" max="1" step="0.1" value="1" oninput="changeVol('${userId}', this.value)">`;
             html += `</div>`;
             list.insertAdjacentHTML('beforeend', html);
         }
 
         function updateCardName(userId, name) {
-            const n = document.getElementById(`name-${userId}`); const a = document.getElementById(`avatar-${userId}`);
-            const safeName = escapeHTML(name);
+            const n = document.getElementById(`name-${userId}`); const a = document.getElementById(`avatar-${userId}`); const safeName = escapeHTML(name);
             if (n) n.innerText = safeName; if (a) a.innerText = safeName.charAt(0).toUpperCase();
+            const card = document.getElementById(`card-${userId}`);
+            if (card && safeName !== "Bağlanıyor...") { const teaBtn = card.querySelector('button[title="Çay Gönder"]'); if(teaBtn) teaBtn.setAttribute('onclick', `sendTea('${userId}', '${safeName}')`); }
         }
 
-        function changeVol(userId, val) {
-            const a = document.getElementById(`audio-${userId}`); if (a && !isAFK) a.volume = parseFloat(val);
-        }
-
+        function changeVol(userId, val) { const a = document.getElementById(`audio-${userId}`); if (a && !isAFK) a.volume = parseFloat(val); }
+        
         function toggleMute() {
-            isMuted = !isMuted;
-            const btn = document.getElementById('mic-btn');
+            isMuted = !isMuted; const btn = document.getElementById('mic-btn');
             if (localStream && !isAFK) localStream.getAudioTracks()[0].enabled = !isMuted;
-            if (isMuted) btn.classList.add('active-red'); else btn.classList.remove('active-red');
+            if (isMuted) { btn.classList.add('active-red'); btn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i>'; } 
+            else { btn.classList.remove('active-red'); btn.innerHTML = '<i class="fa-solid fa-microphone"></i>'; }
         }
+
+        async function toggleScreenShare() {
+            const btn = document.getElementById('screen-btn');
+            if (screenStream) {
+                screenStream.getTracks().forEach(t => t.stop()); screenStream = null; document.getElementById('screen-view-container').style.display = 'none';
+                screenCalls.forEach(call => call.close()); screenCalls = []; btn.classList.remove('active-blue'); return;
+            }
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
+                document.getElementById('shared-screen').srcObject = screenStream; document.getElementById('screen-view-container').style.display = 'flex';
+                btn.classList.add('active-blue');
+                for (let i = 1; i <= 5; i++) { if (i === mySlot) continue; const call = peer.call(ODA_PREFIX + i, screenStream, { metadata: { isScreen: true } }); if(call) screenCalls.push(call); }
+                screenStream.getVideoTracks()[0].onended = () => toggleScreenShare();
+            } catch(err) {}
+        }
+
+        function toggleAFK() {
+            isAFK = !isAFK; const btn = document.getElementById('afk-btn'); const myCard = document.getElementById(`card-${ODA_PREFIX}${mySlot}`);
+            if (localStream && !isMuted) localStream.getAudioTracks()[0].enabled = !isAFK; document.querySelectorAll('audio').forEach(a => { a.muted = isAFK; });
+            if (isAFK) { btn.classList.add('active-red'); if(myCard) myCard.classList.add('afk'); } else { btn.classList.remove('active-red'); if(myCard) myCard.classList.remove('afk'); }
+            broadcastData({ type: 'afk_status', status: isAFK });
+        }
+
+        function updateAFKUI(userId, status) { const card = document.getElementById(`card-${userId}`); if(card) { if(status) card.classList.add('afk'); else card.classList.remove('afk'); } }
 
         function analyzeRemoteVoice(userId, stream) {
-            const src = audioContext.createMediaStreamSource(stream); const anl = audioContext.createAnalyser();
-            src.connect(anl); anl.fftSize = 256; const data = new Uint8Array(anl.frequencyBinCount);
+            const src = audioContext.createMediaStreamSource(stream); const anl = audioContext.createAnalyser(); src.connect(anl); anl.fftSize = 256; const data = new Uint8Array(anl.frequencyBinCount);
             function check() {
-                if(!document.getElementById(`card-${userId}`)) return;
-                anl.getByteFrequencyData(data);
-                let sum = 0; for(let i=0; i<data.length; i++) sum += data[i];
-                let avg = sum / data.length;
-                const card = document.getElementById(`card-${userId}`);
-                if (card && !card.classList.contains('afk')) {
-                    if (avg > 10) card.classList.add('speaking'); else card.classList.remove('speaking');
-                }
-                requestAnimationFrame(check);
-            }
-            check();
+                if(!document.getElementById(`card-${userId}`)) return; anl.getByteFrequencyData(data);
+                let sum = 0; for(let i=0; i<data.length; i++) sum += data[i]; let avg = sum / data.length; const card = document.getElementById(`card-${userId}`);
+                if (card && !card.classList.contains('afk')) { if (avg > 10) card.classList.add('speaking'); else card.classList.remove('speaking'); } requestAnimationFrame(check);
+            } check();
         }
 
         function analyzeMyVoice(myId, stream) {
-            const src = audioContext.createMediaStreamSource(stream); const anl = audioContext.createAnalyser();
-            src.connect(anl); anl.fftSize = 256; const data = new Uint8Array(anl.frequencyBinCount);
+            const src = audioContext.createMediaStreamSource(stream); const anl = audioContext.createAnalyser(); src.connect(anl); anl.fftSize = 256; const data = new Uint8Array(anl.frequencyBinCount);
             function check() {
-                if(localStream && !localStream.getAudioTracks()[0].enabled) {
-                    const card = document.getElementById(`card-${myId}`);
-                    if(card) card.classList.remove('speaking');
-                    requestAnimationFrame(check); return;
-                }
-                anl.getByteFrequencyData(data);
-                let sum = 0; for(let i=0; i<data.length; i++) sum += data[i];
-                let avg = sum / data.length;
-                const card = document.getElementById(`card-${myId}`);
-                if (card && !card.classList.contains('afk')) {
-                    if (avg > 10) card.classList.add('speaking'); else card.classList.remove('speaking');
-                }
-                requestAnimationFrame(check);
-            }
-            check();
+                if(localStream && !localStream.getAudioTracks()[0].enabled) { const card = document.getElementById(`card-${myId}`); if(card) card.classList.remove('speaking'); requestAnimationFrame(check); return; }
+                anl.getByteFrequencyData(data); let sum = 0; for(let i=0; i<data.length; i++) sum += data[i]; let avg = sum / data.length; const card = document.getElementById(`card-${myId}`);
+                if (card && !card.classList.contains('afk')) { if (avg > 10) card.classList.add('speaking'); else card.classList.remove('speaking'); } requestAnimationFrame(check);
+            } check();
         }
     </script>
 </body>
