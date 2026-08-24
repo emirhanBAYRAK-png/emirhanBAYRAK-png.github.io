@@ -30,7 +30,6 @@
         ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--neon-red); }
 
-        /* --- GİRİŞ EKRANI --- */
         #login-screen {
             background: var(--bg-panel); border: 1px solid var(--border-color); padding: 40px; 
             border-radius: 12px; text-align: center; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.9);
@@ -51,10 +50,8 @@
         .btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 15px rgba(255,26,26,0.4); }
         #error-msg { color: var(--neon-red); display: none; margin-top: 15px; font-weight: bold; font-size: 0.9rem;}
 
-        /* --- ANA UYGULAMA (APP) DÜZENİ --- */
         #app-screen { display: none; width: 100%; height: 100vh; background: var(--bg-dark); }
         
-        /* SOL PANEL (Kullanıcılar ve Kontroller) */
         #sidebar {
             width: 260px; background: var(--bg-panel); border-right: 1px solid var(--border-color);
             display: flex; flex-direction: column; height: 100%;
@@ -64,12 +61,19 @@
         
         #users-list { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
         
-        /* Kullanıcı Kartı (Kompakt ve Temiz) */
         .user-item {
             background: #050505; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;
             display: flex; flex-direction: column; transition: 0.3s; position: relative;
         }
         .user-item.me { border-color: rgba(255,26,26,0.4); }
+        
+        /* EMRAN YETKİSİ: ATMA BUTONU */
+        .kick-btn {
+            position: absolute; top: 5px; right: 5px; background: transparent; border: none; 
+            color: var(--neon-red); cursor: pointer; font-size: 0.9rem; transition: 0.2s; opacity: 0.5;
+        }
+        .kick-btn:hover { opacity: 1; transform: scale(1.2); }
+
         .user-info { display: flex; align-items: center; gap: 10px; }
         .avatar {
             width: 35px; height: 35px; background: var(--bg-dark); border-radius: 50%; display: flex; align-items: center; 
@@ -77,7 +81,6 @@
         }
         .user-name { font-weight: bold; font-size: 1.1rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
-        /* AFK ve Konuşma Durumları */
         .afk-badge { display: none; background: #333; color: #fff; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;}
         .user-item.afk { opacity: 0.4; filter: grayscale(100%); }
         .user-item.afk .afk-badge { display: inline-block; }
@@ -88,7 +91,6 @@
         .vol-slider { -webkit-appearance: none; width: 100%; height: 2px; background: #333; outline: none; margin-top: 10px; }
         .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: var(--neon-red); cursor: pointer; }
 
-        /* Alt Kontroller */
         #my-controls {
             padding: 15px; border-top: 1px solid var(--border-color); background: #080808;
             display: flex; justify-content: space-between; gap: 5px;
@@ -101,17 +103,14 @@
         .ctrl-btn.active-red { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255,26,26,0.1); }
         .ctrl-btn.active-blue { color: #00ffff; border-color: #00ffff; background: rgba(0,255,255,0.1); }
 
-        /* SAĞ PANEL (Ekran Paylaşımı ve Sohbet) */
         #main-area { flex: 1; display: flex; flex-direction: column; background: #050505; }
         
-        /* Ekran Paylaşım Alanı */
         #screen-view-container {
             display: none; background: #000; border-bottom: 1px solid var(--border-color);
             padding: 20px; align-items: center; justify-content: center; height: 60%;
         }
         #shared-screen { max-width: 100%; max-height: 100%; border: 1px solid var(--neon-red); border-radius: 8px; box-shadow: 0 0 20px rgba(255,26,26,0.2); }
 
-        /* Sohbet Alanı */
         #chat-section { flex: 1; display: flex; flex-direction: column; padding: 20px; min-height: 0; }
         #chat-box { flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 10px; }
         
@@ -129,7 +128,6 @@
 </head>
 <body>
 
-    <!-- GİRİŞ -->
     <div id="login-screen">
         <h1 class="logo">NIGSI</h1>
         <div class="sub-logo">Crimson Terminal</div>
@@ -139,20 +137,14 @@
         <p id="error-msg">Yetkisiz Erişim!</p>
     </div>
 
-    <!-- ANA UYGULAMA -->
     <div id="app-screen">
-        
-        <!-- SOL MENÜ -->
         <div id="sidebar">
             <div class="sidebar-header">
                 <h1 class="logo" style="font-size: 2rem;">NIGSI</h1>
             </div>
             
-            <div id="users-list">
-                <!-- Kullanıcı Kartları -->
-            </div>
+            <div id="users-list"></div>
 
-            <!-- ALT KONTROLLER -->
             <div id="my-controls">
                 <button class="ctrl-btn" id="mic-btn" onclick="toggleMute()" title="Mikrofonu Kapat/Aç">🎤</button>
                 <button class="ctrl-btn" id="afk-btn" onclick="toggleAFK()" title="AFK Modu (Sustur)">💤</button>
@@ -161,15 +153,11 @@
             </div>
         </div>
 
-        <!-- SAĞ İÇERİK -->
         <div id="main-area">
-            
-            <!-- EKRAN PAYLAŞIM ALANI -->
             <div id="screen-view-container">
                 <video id="shared-screen" autoplay playsinline></video>
             </div>
 
-            <!-- SOHBET -->
             <div id="chat-section">
                 <div id="chat-box"></div>
                 <div id="chat-input-area">
@@ -197,15 +185,26 @@
         let isMuted = false;
         let screenCalls = [];
 
-        // --- SİBERPUNK BİLDİRİM SESLERİ ÜRETİCİSİ (Dış dosya gerektirmez) ---
+        // --- ÇİFT SEKMEYİ ENGELLEME SİSTEMİ (Anti-Ghosting) ---
+        const tabLockChannel = new BroadcastChannel('nigsi_tab_lock');
+        let isActiveInThisTab = false; // Sadece odaya bağlanan sekme "Ben buradayım" der
+        
+        tabLockChannel.onmessage = (e) => {
+            if (e.data === 'ping' && isActiveInThisTab) tabLockChannel.postMessage('pong');
+            if (e.data === 'pong') window.anotherTabIsActive = true;
+        };
+        // Sayfa açıldığında diğer sekmelere "Açık mısınız?" diye sor
+        tabLockChannel.postMessage('ping');
+
+        window.addEventListener('beforeunload', () => { if (peer) peer.destroy(); });
+
         function playSfx(type) {
             if (!audioContext) return;
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            
+            osc.connect(gain); gain.connect(audioContext.destination);
             const now = audioContext.currentTime;
+            
             if (type === 'join') {
                 osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
                 gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
@@ -222,6 +221,12 @@
         }
 
         async function startSystem() {
+            // ÇİFT GİRİŞ KONTROLÜ
+            if (window.anotherTabIsActive) {
+                alert("GÜVENLİK REDDİ: Sistem zaten bu cihazda başka bir sekmede aktif. Çift giriş yapılamaz.");
+                return;
+            }
+
             myName = document.getElementById("username").value.trim();
             const pass = document.getElementById("password").value;
 
@@ -233,13 +238,9 @@
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ 
-    audio: {
-        echoCancellation: true,     
-        noiseSuppression: true,      
-        autoGainControl: true        
-    }, 
-    video: false 
-});
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
+                    video: false 
+                });
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 audioContext.resume();
                 connectToFreeSlot(1);
@@ -254,11 +255,13 @@
 
             tempPeer.on('open', (id) => {
                 peer = tempPeer; mySlot = slotNum;
+                isActiveInThisTab = true; // Sisteme başarıyla giriş yaptık, diğer sekmeleri engelle
+                
                 createCard(myId, myName, true);
                 analyzeMyVoice(myId, localStream);
                 callOtherSlots();
                 listenForIncomingConnections();
-                playSfx('join'); // Kendimiz girince ses çal
+                playSfx('join');
             });
 
             tempPeer.on('error', (err) => {
@@ -266,20 +269,16 @@
             });
         }
 
-        // --- GELEN BAĞLANTILARI DİNLEME ---
         function listenForIncomingConnections() {
             peer.on('call', (call) => {
-                // Eğer gelen arama EKRAN PAYLAŞIMI ise
                 if (call.metadata && call.metadata.isScreen) {
-                    call.answer(); // Sadece izle, stream gönderme
+                    call.answer();
                     call.on('stream', remoteStream => {
                         document.getElementById('shared-screen').srcObject = remoteStream;
                         document.getElementById('screen-view-container').style.display = 'flex';
                     });
                     call.on('close', () => { document.getElementById('screen-view-container').style.display = 'none'; });
-                } 
-                // Eğer normal SES araması ise
-                else {
+                } else {
                     call.answer(localStream);
                     call.on('stream', (remoteStream) => { handleRemoteUser(call.peer, remoteStream); });
                     call.on('close', () => removeUser(call.peer));
@@ -293,6 +292,8 @@
                 });
                 
                 conn.on('data', (data) => {
+                    confirmConnection(conn.peer, data.name);
+                    
                     if (data.type === 'name_update') {
                         updateCardName(conn.peer, data.name);
                         updateAFKUI(conn.peer, data.afk);
@@ -302,6 +303,18 @@
                         displayImageMessage(data.name, data.image, false);
                     } else if (data.type === 'afk_status') {
                         updateAFKUI(conn.peer, data.status);
+                    } else if (data.type === 'kick_user') {
+                        // BİRİSİ ATILDIĞINDA DEVREYE GİREN KOD
+                        if (data.target === (ODA_PREFIX + mySlot)) {
+                            // Atılan kişi BİZ isek verileri yok edip sistemi kapat
+                            isActiveInThisTab = false;
+                            if (peer) peer.destroy();
+                            alert("YÖNETİCİ MÜDAHALESİ: Sunucudan atıldınız.");
+                            location.reload();
+                        } else {
+                            // Atılan kişi başkasıysa onu listeden sil (Ekranı temizle)
+                            removeUser(data.target);
+                        }
                     }
                 });
 
@@ -327,21 +340,32 @@
                         conn.send({ type: 'name_update', name: myName, afk: isAFK });
                     });
                     conn.on('data', (data) => {
+                        confirmConnection(targetId, data.name);
                         if (data.type === 'name_update') { updateCardName(targetId, data.name); updateAFKUI(targetId, data.afk); }
                         else if (data.type === 'chat') displayChatMessage(targetId, data.message, false);
                         else if (data.type === 'image') displayImageMessage(targetId, data.image, false);
                         else if (data.type === 'afk_status') updateAFKUI(targetId, data.status);
+                        else if (data.type === 'kick_user') {
+                            if (data.target === (ODA_PREFIX + mySlot)) {
+                                isActiveInThisTab = false; if (peer) peer.destroy(); alert("YÖNETİCİ MÜDAHALESİ: Sunucudan atıldınız."); location.reload();
+                            } else { removeUser(data.target); }
+                        }
                     });
                     conn.on('close', () => { delete dataConnections[targetId]; removeUser(targetId); });
                 }
             }
         }
 
-        // --- EKRAN PAYLAŞIMI (Yeni Özellik) ---
+        // --- YÖNETİCİ (EMRAN) ATMA FONKSİYONU ---
+        function kickUser(userId) {
+            if (confirm("Kullanıcıyı ağdan uzaklaştırmak istiyor musunuz?")) {
+                broadcastData({ type: 'kick_user', target: userId }); // Herkese bu kişiyi atmasını söyle
+                setTimeout(() => removeUser(userId), 500); // Kendi ekranımızdan da anında silelim
+            }
+        }
+
         async function toggleScreenShare() {
             const btn = document.getElementById('screen-btn');
-            
-            // Eğer zaten paylaşıyorsak kapat
             if (screenStream) {
                 screenStream.getTracks().forEach(t => t.stop());
                 screenStream = null;
@@ -351,61 +375,37 @@
                 btn.classList.remove('active-blue');
                 return;
             }
-            
-            // Paylaşımı başlat
             try {
                 screenStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
                 document.getElementById('shared-screen').srcObject = screenStream;
                 document.getElementById('screen-view-container').style.display = 'flex';
                 btn.classList.add('active-blue');
-                
-                // Diğerlerine yolla
                 for (let i = 1; i <= 5; i++) {
                     if (i === mySlot) continue;
                     const call = peer.call(ODA_PREFIX + i, screenStream, { metadata: { isScreen: true } });
                     if(call) screenCalls.push(call);
                 }
-                
-                // Tarayıcının kendi "Paylaşmayı Durdur" butonuna basılırsa
                 screenStream.getVideoTracks()[0].onended = () => toggleScreenShare();
-            } catch(err) { console.log("Ekran paylaşımı iptal edildi."); }
+            } catch(err) {}
         }
 
-        // --- AFK MODU (Yeni Özellik) ---
         function toggleAFK() {
             isAFK = !isAFK;
             const btn = document.getElementById('afk-btn');
             const myCard = document.getElementById(`card-${ODA_PREFIX}${mySlot}`);
-            
-            // Kendi mikrofonumuzu kapat/aç
-            if (localStream && !isMuted) {
-                localStream.getAudioTracks()[0].enabled = !isAFK;
-            }
-
-            // Gelen sesleri kapat/aç
+            if (localStream && !isMuted) localStream.getAudioTracks()[0].enabled = !isAFK;
             document.querySelectorAll('audio').forEach(a => { a.muted = isAFK; });
 
-            if (isAFK) {
-                btn.classList.add('active-red');
-                if(myCard) myCard.classList.add('afk');
-            } else {
-                btn.classList.remove('active-red');
-                if(myCard) myCard.classList.remove('afk');
-            }
-
-            // Durumu herkese bildir
+            if (isAFK) { btn.classList.add('active-red'); if(myCard) myCard.classList.add('afk'); }
+            else { btn.classList.remove('active-red'); if(myCard) myCard.classList.remove('afk'); }
             broadcastData({ type: 'afk_status', status: isAFK });
         }
 
         function updateAFKUI(userId, status) {
             const card = document.getElementById(`card-${userId}`);
-            if(card) {
-                if(status) card.classList.add('afk');
-                else card.classList.remove('afk');
-            }
+            if(card) { if(status) card.classList.add('afk'); else card.classList.remove('afk'); }
         }
 
-        // --- MESAJ & RESİM İŞLEMLERİ ---
         function broadcastData(payload) {
             Object.values(dataConnections).forEach(conn => { if (conn && conn.open) conn.send(payload); });
         }
@@ -422,7 +422,7 @@
         }
 
         function displayChatMessage(senderName, messageText, isMe) {
-            if(!isMe) playSfx('msg'); // Biri mesaj atınca ses çal
+            if(!isMe) playSfx('msg');
             const box = document.getElementById('chat-box');
             box.innerHTML += `<div class="chat-msg"><span class="chat-name ${isMe ? 'me' : ''}">${senderName}:</span> <span class="chat-text">${messageText}</span></div>`;
             box.scrollTop = box.scrollHeight;
@@ -447,31 +447,46 @@
             setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
         }
 
-        // --- KULLANICI YÖNETİMİ ---
         function handleRemoteUser(userId, stream) {
             removeUser(userId);
             const audioEl = document.createElement('audio');
             audioEl.id = 'audio-' + userId; audioEl.srcObject = stream; audioEl.autoplay = true;
-            if(isAFK) audioEl.muted = true; // AFK isek gelen sesi duyma
+            if(isAFK) audioEl.muted = true;
             document.body.appendChild(audioEl);
             
             createCard(userId, "Bağlanıyor...", false);
             analyzeRemoteVoice(userId, stream);
-            playSfx('join'); // Biri odaya girince ses çal
+            playSfx('join');
+
+            setTimeout(() => {
+                const nameEl = document.getElementById(`name-${userId}`);
+                if (nameEl && nameEl.innerText === "Bağlanıyor...") removeUser(userId);
+            }, 3000);
         }
 
         function removeUser(userId) {
             const oldAudio = document.getElementById('audio-' + userId); if (oldAudio) oldAudio.remove();
             const oldCard = document.getElementById('card-' + userId); 
-            if (oldCard) { oldCard.remove(); playSfx('leave'); } // Çıkış sesi
+            if (oldCard) { oldCard.remove(); playSfx('leave'); }
+        }
+
+        function confirmConnection(userId, realName) {
+            if (realName) updateCardName(userId, realName);
         }
 
         function createCard(userId, name, isMe) {
             if(document.getElementById('card-' + userId)) return;
             const list = document.getElementById('users-list');
             
+            // YÖNETİCİ KONTROLÜ (İsim emran ise diğerlerine atma butonu koy)
+            let kickBtnHTML = '';
+            if (myName.toLowerCase() === 'emran' && !isMe) {
+                kickBtnHTML = `<button class="kick-btn" onclick="kickUser('${userId}')" title="Ağdan Uzaklaştır">❌</button>`;
+            }
+
             let html = `
                 <div class="user-item ${isMe ? 'me' : ''}" id="card-${userId}">
+                    ${kickBtnHTML}
                     <div class="user-info">
                         <div class="avatar" id="avatar-${userId}">${name.charAt(0).toUpperCase()}</div>
                         <div class="user-name" id="name-${userId}">${name}</div>
@@ -497,16 +512,10 @@
         function toggleMute() {
             isMuted = !isMuted;
             const btn = document.getElementById('mic-btn');
-            
-            if (localStream && !isAFK) {
-                localStream.getAudioTracks()[0].enabled = !isMuted;
-            }
-            
-            if (isMuted) btn.classList.add('active-red');
-            else btn.classList.remove('active-red');
+            if (localStream && !isAFK) localStream.getAudioTracks()[0].enabled = !isMuted;
+            if (isMuted) btn.classList.add('active-red'); else btn.classList.remove('active-red');
         }
 
-        // --- SES ANALİZİ (Konuşurken Parlama) ---
         function analyzeRemoteVoice(userId, stream) {
             const src = audioContext.createMediaStreamSource(stream); const anl = audioContext.createAnalyser();
             src.connect(anl); anl.fftSize = 256; const data = new Uint8Array(anl.frequencyBinCount);
