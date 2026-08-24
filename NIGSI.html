@@ -167,7 +167,6 @@
         /* SAĞ PANEL / CHAT */
         #main-area { flex: 1; display: flex; flex-direction: column; background: transparent; position: relative;}
 
-        /* YENİ: SAĞ ÜST MODERN HUD BUTONU */
         #floating-hud-btn {
             position: absolute; top: 25px; right: 35px; z-index: 100;
             background: rgba(10, 2, 2, 0.7); border: 1px solid var(--neon-red);
@@ -235,9 +234,9 @@
 <body>
     
     <div class="scanlines"></div>
-    <canvas id="matrix-canvas"></canvas> <!-- EASTER EGG -->
+    <canvas id="matrix-canvas"></canvas>
 
-    <!-- KADER ÇARKI ARAYÜZÜ -->
+    <!-- KADER ÇARKI -->
     <div id="roulette-overlay">
         <div class="roulette-title glitch-anim"><i class="fa-solid fa-dharmachakra"></i> KADER ÇARKI</div>
         <div id="roulette-name">BEKLENİYOR...</div>
@@ -247,8 +246,8 @@
     <div id="nudge-flash"><div class="nudge-text glitch-anim">UYARI ALINDI!</div></div>
     <div id="tea-overlay"><i class="fa-solid fa-mug-hot tea-icon"></i><div class="tea-text" id="tea-msg">...</div></div>
 
-    <!-- GİZLİ PIP CANVAS'I (HUD SİSTEMİ İÇİN - Daha ince ve uzun format) -->
-    <canvas id="pip-canvas" width="250" height="350" style="display:none;"></canvas>
+    <!-- ULTRA-MİNİMAL HUD CANVAS (100x90) -->
+    <canvas id="pip-canvas" width="100" height="90" style="display:none;"></canvas>
     <video id="pip-video" style="display:none;" autoplay muted playsinline></video>
 
     <!-- GİRİŞ -->
@@ -269,7 +268,6 @@
             </div>
             <div id="users-list"></div>
             
-            <!-- ESKİ YERİNE GERİ DÖNEN YAYIN TUŞU DAHİL KONTROLLER -->
             <div id="my-controls">
                 <button class="ctrl-btn" id="mic-btn" onclick="toggleMute()" title="Mikrofon"><i class="fa-solid fa-microphone"></i></button>
                 <button class="ctrl-btn" id="afk-btn" onclick="toggleAFK()" title="AFK Modu"><i class="fa-solid fa-moon"></i></button>
@@ -280,7 +278,7 @@
 
         <div id="main-area">
             
-            <!-- YENİ YERİNDE MODERN HUD TUŞU -->
+            <!-- SAĞ ÜST MODERN HUD TUŞU -->
             <button id="floating-hud-btn" onclick="startPIP()" title="Oyun İçi HUD Aç">
                 <i class="fa-solid fa-layer-group"></i> HUD
             </button>
@@ -321,7 +319,6 @@
         let actionCooldowns = {}; 
         let bannedPeers = []; 
         
-        // HUD (PIP) Sistemi
         const pipCanvas = document.getElementById('pip-canvas'); const pipCtx = pipCanvas.getContext('2d');
         const pipVideo = document.getElementById('pip-video');
 
@@ -346,7 +343,6 @@
             actionCooldowns[key] = now; return true;
         }
 
-        // SES MOTORU
         function playSfx(type) {
             if (!audioContext) return;
             const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
@@ -407,7 +403,6 @@
         }
 
         async function startSystem() {
-            // BAN KONTROLÜ (3 DAKİKA)
             const banTime = localStorage.getItem('nigsi_banned');
             if (banTime && (Date.now() - parseInt(banTime) < 180000)) { 
                 const remainingMins = Math.ceil((180000 - (Date.now() - parseInt(banTime))) / 60000);
@@ -454,7 +449,6 @@
                 createCard(myId, myName, true); analyzeMyVoice(myId, localStream);
                 callOtherSlots(); listenForIncomingConnections(); playSfx('join');
                 
-                // HUD BAŞLATICI
                 pipVideo.srcObject = pipCanvas.captureStream(30); drawPIPHUD();
             });
             tempPeer.on('error', (err) => { if (err.type === 'unavailable-id') connectToFreeSlot(slotNum + 1); });
@@ -513,7 +507,6 @@
             else if (data.type === 'roulette') { showRouletteAnim(data.winner); }
             else if (data.type === 'ban_protocol_execute') {
                 if (data.target === (ODA_PREFIX + mySlot)) {
-                    // KENDİMİZE GELDİYSE BANLAN!
                     localStorage.setItem('nigsi_banned', Date.now());
                     isActiveInThisTab = false; if (peer) peer.destroy(); 
                     document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20%; font-family: Orbitron;">SİSTEMDEN ATILDINIZ</h1>'; 
@@ -524,17 +517,13 @@
             } 
         }
 
-        // --- KICK (10 KEZ SPAM & AFOROZ) ---
         function kickUser(userId) {
             if (confirm("Bu operatörü ağdan kalıcı olarak uzaklaştırmak istiyor musunuz?")) {
                 const payload = { type: 'ban_protocol_execute', target: userId };
-                
-                // Kaybolmasın diye 10 Kez Gönder (Spam)
                 for(let i=0; i<10; i++) {
                     broadcastData(payload); 
                     if(dataConnections[userId]) dataConnections[userId].send(payload); 
                 }
-                
                 setTimeout(() => { executeBanLocally(userId); }, 500);
             }
         }
@@ -545,7 +534,7 @@
             if(dataConnections[userId]) { dataConnections[userId].close(); delete dataConnections[userId]; }
         }
 
-        // --- YENİ HUD (ŞEFFAF PIP SİSTEMİ) ---
+        // --- ULTRA-MİNİMAL HUD ÇİZİMİ ---
         async function startPIP() {
             try {
                 const btn = document.getElementById('floating-hud-btn');
@@ -555,50 +544,40 @@
         }
 
         function drawPIPHUD() {
-            // Şeffaflık için alanı temizle
-            pipCtx.clearRect(0, 0, pipCanvas.width, pipCanvas.height);
+            pipCtx.fillStyle = '#050202';
+            pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
             
             const activeUsers = [{id: ODA_PREFIX+mySlot, name: myName}];
             Object.keys(dataConnections).forEach(k => { const el = document.getElementById(`name-${k}`); if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({id: k, name: el.innerText}); });
             
             pipCtx.textAlign = 'left';
-            let y = 35;
+            let y = 15; 
             
             activeUsers.forEach(u => {
                 const card = document.getElementById(`card-${u.id}`); 
                 const isSpeaking = card && card.classList.contains('speaking');
                 
-                // Saydamlık ayarı (Konuşmayanlar %40, konuşanlar %100)
-                pipCtx.globalAlpha = isSpeaking ? 1.0 : 0.4;
+                pipCtx.globalAlpha = isSpeaking ? 1.0 : 0.3;
                 
-                // Parlama (Sadece konuşanlar)
                 if (isSpeaking) {
-                    pipCtx.shadowColor = '#ff0a0a';
-                    pipCtx.shadowBlur = 15;
-                    pipCtx.fillStyle = '#ff0a0a';
+                    pipCtx.shadowColor = '#ff0a0a'; pipCtx.shadowBlur = 5; pipCtx.fillStyle = '#ff0a0a';
                 } else {
-                    pipCtx.shadowBlur = 0;
-                    pipCtx.fillStyle = '#555555';
+                    pipCtx.shadowBlur = 0; pipCtx.fillStyle = '#333333';
                 }
 
-                // Nokta Çizimi
-                pipCtx.beginPath(); 
-                pipCtx.arc(30, y - 6, isSpeaking ? 8 : 6, 0, 2 * Math.PI); 
-                pipCtx.fill();
+                pipCtx.beginPath(); pipCtx.arc(8, y - 3, isSpeaking ? 3 : 2, 0, 2 * Math.PI); pipCtx.fill();
                 
-                // İsim Yazısı
-                pipCtx.shadowBlur = isSpeaking ? 10 : 0;
-                pipCtx.font = isSpeaking ? 'bold 24px Orbitron' : '20px Orbitron'; 
-                pipCtx.fillStyle = isSpeaking ? '#ffffff' : '#dddddd'; 
-                pipCtx.fillText(u.name.toUpperCase(), 50, y); 
+                pipCtx.shadowBlur = isSpeaking ? 5 : 0;
+                pipCtx.font = isSpeaking ? 'bold 10px Orbitron' : '9px Orbitron'; 
+                pipCtx.fillStyle = isSpeaking ? '#ffffff' : '#888888'; 
+                pipCtx.fillText(u.name.toUpperCase().substring(0, 10), 16, y); 
                 
-                pipCtx.globalAlpha = 1.0; // Reset
-                y += 40;
+                pipCtx.globalAlpha = 1.0;
+                y += 16; 
             });
             requestAnimationFrame(drawPIPHUD);
         }
 
-        // --- KADER ÇARKI (8 Dk Sınır) ---
         function startRoulette() {
             if (!canDoAction(myName, 'roulette', 8)) return;
             const btn = document.getElementById('roulette-btn');
