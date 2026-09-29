@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LETUGGS - Charged P2P Arena</title>
+    <!-- WebRTC PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; overflow: hidden; font-family: 'Orbitron', sans-serif; }
+        body { background-color: #030305; color: #fff; width: 100vw; height: 100vh; }
+        
+        #gameCanvas {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            object-fit: contain; z-index: 1; background: radial-gradient(circle at center, #0a0a15 0%, #000 100%);
+        }
+
+        /* --- UI --- */
+        #uiLayer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; display: none; }
+        
+        #roomInfo {
+            position: absolute; top: 20px; left: 20px; font-size: 18px; color: #0ff;
+            background: rgba(0,255,255,0.1); padding: 10px 20px; border: 1px solid #0ff; border-radius: 8px;
+            backdrop-filter: blur(5px); box-shadow: 0 0 15px rgba(0,255,255,0.2);
+        }
+
+        #leaderboard {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(10, 10, 25, 0.7); backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 255, 0.1); padding: 20px; border-radius: 12px;
+        }
+        #leaderboard h2 { font-size: 14px; color: #0ff; margin-bottom: 12px; letter-spacing: 2px; }
+        #leaderList { list-style: none; font-size: 14px; }
+        #leaderList li { margin-bottom: 8px; display: flex; justify-content: space-between; gap: 30px;}
+
+        #skillsPanel { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; }
+        .skill {
+            width: 70px; height: 70px; background: rgba(15, 15, 30, 0.9);
+            border: 2px solid #222; border-radius: 12px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; overflow: hidden; transition: 0.2s;
+        }
+        .skill.ready { border-color: #0ff; box-shadow: 0 0 20px rgba(0, 255, 255, 0.3); }
+        .skill .cd-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(255, 0, 50, 0.3); transition: height 0.1s linear; }
+        .skill .key { font-size: 18px; font-weight: bold; color: #fff; z-index: 2; text-shadow: 0 0 5px #000;}
+        .skill .name { font-size: 10px; color: #0ff; z-index: 2; margin-top: 5px; text-transform: uppercase; text-align: center;}
+
+        #loginScreen {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; pointer-events: auto; backdrop-filter: blur(10px);
+        }
+        #loginScreen h1 { font-size: 80px; font-weight: 900; letter-spacing: 10px; color: #fff; text-shadow: 0 0 40px #0ff, 0 0 10px #b026ff; margin-bottom: 10px; }
+        #loginScreen p { color: #aaa; margin-bottom: 40px; letter-spacing: 3px; }
+        
+        .panel-container { display: flex; gap: 30px; margin-top: 20px; }
+        .panel { background: rgba(255,255,255,0.05); padding: 30px; border-radius: 15px; border: 1px solid #333; text-align: center; width: 300px; }
+        .panel h3 { margin-bottom: 20px; letter-spacing: 2px; }
+        
+        input { width: 100%; padding: 12px; margin-bottom: 15px; font-size: 16px; background: rgba(0,0,0,0.5); border: 1px solid #555; color: #fff; border-radius: 8px; text-align: center; outline: none; }
+        input:focus { border-color: #0ff; }
+        
+        .action-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .host-btn { background: #0ff; color: #000; }
+        .host-btn:hover { box-shadow: 0 0 20px #0ff; transform: scale(1.05); }
+        .join-btn { background: #f0f; color: #fff; }
+        .join-btn:hover { box-shadow: 0 0 20px #f0f; transform: scale(1.05); }
+
+        #killFeed { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); font-size: 20px; color: #fff; text-shadow: 0 0 15px #f00; opacity: 0; transition: 0.3s; font-weight: bold;}
+    </style>
+</head>
+<body>
+    <div id="loginScreen">
+        <h1>LETUGGS</h1>
+        <p>CHARGED ARENA (P2P)</p>
+        <input type="text" id="nickname" placeholder="Nickini Gir..." maxlength="12" style="width: 300px; font-size: 20px; border-color: #0ff;">
+        
+        <div class="panel-container">
+            <div class="panel" style="border-color: rgba(0,255,255,0.3);">
+                <h3 style="color:#0ff;">YENİ OYUN</h3>
+                <button id="hostBtn" class="action-btn host-btn">ODA KUR</button>
+            </div>
+            <div class="panel" style="border-color: rgba(255,0,255,0.3);">
+                <h3 style="color:#f0f;">ODAYA KATIL</h3>
+                <input type="text" id="joinCode" placeholder="5 Haneli Kod" maxlength="5">
+                <button id="joinBtn" class="action-btn join-btn">KATIL</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="uiLayer">
+        <div id="roomInfo">Oda Kodu: <span id="displayCode" style="color:#fff; font-weight:bold;">BAĞLANIYOR...</span></div>
+        <div id="leaderboard"><h2>Sıralama</h2><ul id="leaderList"></ul></div>
+        <div id="killFeed"></div>
+        <div id="skillsPanel">
+            <div class="skill" id="skill-L"><div class="cd-fill" id="cd-L"></div><div class="key">S.Tık</div><div class="name">Kement<br>(Basılı Tut)</div></div>
+            <div class="skill" id="skill-R"><div class="cd-fill" id="cd-R"></div><div class="key">Sağ</div><div class="name">Nova</div></div>
+            <div class="skill" id="skill-Space"><div class="cd-fill" id="cd-Space"></div><div class="key">Space</div><div class="name">Dash</div></div>
+            <div class="skill" id="skill-Shift"><div class="cd-fill" id="cd-Shift"></div><div class="key">Shift</div><div class="name">Faz</div></div>
+            <div class="skill" id="skill-E"><div class="cd-fill" id="cd-E"></div><div class="key">E</div><div class="name">Karadelik</div></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="1920" height="1080"></canvas>
+
+<script>
+/** LETUGGS - P2P CHARGED HOOK MOTORU */
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const WIDTH = 1920, HEIGHT = 1080, CENTER_X = WIDTH / 2, CENTER_Y = HEIGHT / 2;
+const ARENA_RADIUS = 650; // Harita Küçültüldü
+
+let peer = null, connections = [], isHost = false, myRoomId = "";
+const NETWORK_TICK_RATE = 30;
+
+document.getElementById('hostBtn').addEventListener('click', hostGame);
+document.getElementById('joinBtn').addEventListener('click', joinGame);
+
+function getNick() {
+    let n = document.getElementById('nickname').value.trim();
+    return n ? n.substring(0, 12) : "Pilot_" + Math.floor(Math.random()*1000);
+}
+
+function hostGame() {
+    me.name = getNick();
+    myRoomId = Math.random().toString(36).substr(2, 5).toUpperCase();
+    document.getElementById('loginScreen').style.display = 'none'; document.getElementById('uiLayer').style.display = 'block';
+    peer = new Peer(myRoomId);
+    peer.on('open', id => { document.getElementById('displayCode').innerText = id; isHost = true; startGame(); });
+    peer.on('connection', conn => { setupConnection(conn); });
+    peer.on('error', err => { alert("Hata: " + err); location.reload(); });
+}
+
+function joinGame() {
+    let code = document.getElementById('joinCode').value.trim().toUpperCase();
+    if(!code) return alert("Kod girin!");
+    me.name = getNick();
+    document.getElementById('loginScreen').style.display = 'none'; document.getElementById('uiLayer').style.display = 'block';
+    peer = new Peer();
+    peer.on('open', id => {
+        document.getElementById('displayCode').innerText = code + " (Bağlı)";
+        let conn = peer.connect(code); setupConnection(conn); startGame();
+    });
+    peer.on('error', err => { alert("Hata: " + err); location.reload(); });
+}
+
+function setupConnection(conn) {
+    connections.push(conn);
+    conn.on('data', data => {
+        handleNetworkMessage(data);
+        if(isHost) connections.forEach(c => { if(c.peer !== conn.peer && c.open) c.send(data); });
+    });
+    conn.on('close', () => connections = connections.filter(c => c !== conn));
+}
+function networkBroadcast(data) { connections.forEach(c => { if(c.open) c.send(data); }); }
+
+function startGame() {
+    calculateMouseScale(); window.addEventListener('resize', calculateMouseScale);
+    setInterval(sendNetworkState, 1000 / NETWORK_TICK_RATE);
+    requestAnimationFrame(gameLoop);
+}
+
+// --- FİZİK VE OYUNCU DURUMU ---
+let lastTime = performance.now(), dt = 0, hitstopTimer = 0, shakeTimer = 0;
+
+let myId = Math.random().toString(36).substr(2, 9);
+let me = {
+    id: myId, name: "",
+    x: CENTER_X + (Math.random()*200-100), y: CENTER_Y + (Math.random()*200-100),
+    vx: 0, vy: 0, radius: 20, mass: 1, color: `hsl(${Math.random() * 360}, 100%, 65%)`,
+    score: 0, isDead: false, isGhost: false, aimAngle: 0,
+    
+    // Şarjlı Kement Sistemi (0: Boş, 1: Şarj Ediyor, 2: Havada, 3: Bağlı)
+    tether: { state: 0, charge: 0, power: 0, px: 0, py: 0, pvx: 0, pvy: 0, attachedId: null, life: 0 }
+};
+
+let players = {}, particles = [], blackHoles = [], trails = {}, keys = {};
+let mouseX = CENTER_X, mouseY = CENTER_Y;
+
+// Bekleme Süreleri (Dengelenmiş)
+const skills = {
+    tether: { cd: 3.0, timer: 0 }, nova: { cd: 8.0, timer: 0 }, dash: { cd: 5.0, timer: 0 },
+    ghost: { cd: 12.0, timer: 0 }, bhole: { cd: 20.0, timer: 0 }
+};
+
+let scaleX = 1, scaleY = 1, rectLeft = 0, rectTop = 0;
+function calculateMouseScale() {
+    const rect = canvas.getBoundingClientRect();
+    scaleX = canvas.width / rect.width; scaleY = canvas.height / rect.height;
+    rectLeft = rect.left; rectTop = rect.top;
+}
+
+canvas.addEventListener('mousemove', e => { mouseX = (e.clientX - rectLeft) * scaleX; mouseY = (e.clientY - rectTop) * scaleY; });
+window.addEventListener('keydown', e => { keys[e.code] = true; handleInput(e.code); });
+window.addEventListener('keyup', e => keys[e.code] = false);
+canvas.addEventListener('mousedown', e => { if(e.button === 0) handleInput('MouseLeftDown'); if(e.button === 2) handleInput('MouseRight'); });
+canvas.addEventListener('mouseup', e => { if(e.button === 0) handleInput('MouseLeftUp'); });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+function dist(x1, y1, x2, y2) { return Math.max(Math.sqrt((x2-x1)**2 + (y2-y1)**2), 0.1); }
+function normalize(x, y) { let l = dist(0,0,x,y); return {x: x/l, y: y/l}; }
+
+function handleInput(act) {
+    if(me.isDead || me.isGhost) return;
+    me.aimAngle = Math.atan2(mouseY - me.y, mouseX - me.x);
+    let dir = { x: Math.cos(me.aimAngle), y: Math.sin(me.aimAngle) };
+
+    // KEMENT ŞARJ ETME (Basılı Tutma)
+    if(act === 'MouseLeftDown') {
+        if(me.tether.state === 0 && skills.tether.timer <= 0) {
+            me.tether.state = 1; // Şarj Başladı
+            me.tether.charge = 0;
+        } 
+        else if(me.tether.state === 3) {
+            // Bağlıyken basarsa kopar
+            me.tether.state = 0;
+            skills.tether.timer = skills.tether.cd;
+        }
+    }
+    
+    // KEMENT FIRLATMA (Bırakma)
+    if(act === 'MouseLeftUp' && me.tether.state === 1) {
+        me.tether.state = 2; // Fırlatıldı
+        me.tether.power = Math.max(0.1, me.tether.charge); // Minimum güç
+        me.tether.px = me.x; me.tether.py = me.y;
+        
+        // Hız şarja göre artar (1500 - 2500)
+        let speed = 1500 + (me.tether.power * 1000); 
+        me.tether.pvx = dir.x * speed; me.tether.pvy = dir.y * speed;
+        
+        // Havada kalma süresi (Menzili belirler, max ~550px menzil)
+        me.tether.life = 0.1 + (me.tether.power * 0.2); 
+        createParticles(me.x, me.y, '#0ff', 15, 300);
+    }
+
+    // NOVA (Menzil Daraltıldı)
+    if(act === 'MouseRight' && skills.nova.timer <= 0) {
+        skills.nova.timer = skills.nova.cd;
+        createParticles(me.x, me.y, '#0ff', 30, 800); triggerShake(0.15);
+        Object.values(players).forEach(p => {
+            if(p.id === myId || p.isDead || p.isGhost) return;
+            let d = dist(me.x, me.y, p.x, p.y);
+            if(d < 250) { // Menzil 400'den 250'ye düştü
+                let pushDir = normalize(p.x - me.x, p.y - me.y), force = (250 - d) * 6; 
+                networkBroadcast({ type: 'impulse', targetId: p.id, vx: pushDir.x * force, vy: pushDir.y * force, attacker: me.name });
+            }
+        });
+    }
+
+    // DASH (Kuvvet Dengelendi)
+    if(act === 'Space' && skills.dash.timer <= 0) {
+        skills.dash.timer = skills.dash.cd;
+        let dashDir = {x: 0, y: 0};
+        if(keys['KeyW']) dashDir.y -= 1; if(keys['KeyS']) dashDir.y += 1;
+        if(keys['KeyA']) dashDir.x -= 1; if(keys['KeyD']) dashDir.x += 1;
+        if(dashDir.x === 0 && dashDir.y === 0) dashDir = dir; else dashDir = normalize(dashDir.x, dashDir.y);
+        
+        me.vx += dashDir.x * 1000; // Kuvvet 1500'den 1000'e düştü (Küçük haritaya uygun)
+        me.vy += dashDir.y * 1000;
+        createParticles(me.x, me.y, '#fff', 15, 600); triggerShake(0.1);
+    }
+
+    if((act === 'ShiftLeft' || act === 'ShiftRight') && skills.ghost.timer <= 0) {
+        skills.ghost.timer = skills.ghost.cd; me.isGhost = true; me.tether.state = 0; 
+        setTimeout(() => me.isGhost = false, 1500);
+    }
+
+    if(act === 'KeyE' && skills.bhole.timer <= 0) {
+        skills.bhole.timer = skills.bhole.cd;
+        let bh = { x: mouseX, y: mouseY, life: 4.0 }; blackHoles.push(bh);
+        networkBroadcast({ type: 'blackhole', x: bh.x, y: bh.y }); triggerShake(0.3);
+    }
+}
+
+function updatePhysics() {
+    if(me.isDead) return;
+    me.aimAngle = Math.atan2(mouseY - me.y, mouseX - me.x);
+
+    let acc = me.isGhost ? 3000 : 2500; let ax = 0, ay = 0;
+    if(keys['KeyW']) ay -= 1; if(keys['KeyS']) ay += 1;
+    if(keys['KeyA']) ax -= 1; if(keys['KeyD']) ax += 1;
+    
+    if(ax !== 0 || ay !== 0) {
+        let inputDir = normalize(ax, ay);
+        me.vx += inputDir.x * acc * dt; me.vy += inputDir.y * acc * dt;
+    }
+    me.vx -= me.vx * 4.0 * dt; me.vy -= me.vy * 4.0 * dt;
+
+    // ŞARJ DURUMU YAVAŞLATMASI (Cezalandırıcı Mekanik)
+    if(me.tether.state === 1) {
+        me.tether.charge += dt * 1.5; // 0.6 saniyede Full Şarj
+        if(me.tether.charge > 1) me.tether.charge = 1;
+        // Şarj ederken %50 yavaşlar
+        me.vx *= 0.5; me.vy *= 0.5; 
+    }
+    // MERMİ HAVADA
+    else if(me.tether.state === 2) {
+        me.tether.px += me.tether.pvx * dt; me.tether.py += me.tether.pvy * dt; me.tether.life -= dt;
+        Object.values(players).forEach(p => {
+            if(p.id === myId || p.isDead || p.isGhost) return;
+            if(dist(me.tether.px, me.tether.py, p.targetX || p.x, p.targetY || p.y) < p.radius + 15) {
+                me.tether.state = 3; me.tether.attachedId = p.id; me.tether.life = 2.5; // 2.5 Sn Max Kalır
+                createParticles(me.tether.px, me.tether.py, '#0ff', 15, 500); triggerShake(0.1);
+            }
+        });
+        if(me.tether.life <= 0) { me.tether.state = 0; skills.tether.timer = skills.tether.cd; } // Kaçırdı
+    } 
+    // BAĞLI (Elastik Yay)
+    else if (me.tether.state === 3) {
+        me.tether.life -= dt;
+        let target = players[me.tether.attachedId];
+        if(me.tether.life <= 0 || !target || target.isDead || target.isGhost) {
+            me.tether.state = 0; skills.tether.timer = skills.tether.cd; // Süre doldu veya hedef koptu
+        } else {
+            let tx = target.targetX || target.x, ty = target.targetY || target.y;
+            let d = dist(me.x, me.y, tx, ty);
+            if(d > 80) { // Dinlenme mesafesi
+                // Güç ne kadar şarj edildiğine göre artar
+                let spring = 4.0 + (me.tether.power * 10.0);
+                let force = (d - 80) * spring, dir = normalize(tx - me.x, ty - me.y);
+                let totalMass = me.mass + target.mass;
+                let myRatio = target.mass / totalMass, targetRatio = me.mass / totalMass;
+
+                me.vx += dir.x * force * myRatio * dt; me.vy += dir.y * force * myRatio * dt;
+                networkBroadcast({ type: 'spring_pull', targetId: target.id, vx: -dir.x * force * targetRatio * dt, vy: -dir.y * force * targetRatio * dt, attacker: me.name });
+            }
+        }
+    }
+
+    // KARADELİK (Menzil 350)
+    blackHoles.forEach(bh => {
+        if(me.isGhost) return;
+        let d = dist(me.x, me.y, bh.x, bh.y);
+        if(d < 350) {
+            let pullDir = normalize(bh.x - me.x, bh.y - me.y), pullForce = (350 - d) * 5; 
+            me.vx += pullDir.x * pullForce * dt; me.vy += pullDir.y * pullForce * dt;
+        }
+    });
+
+    if(!me.isGhost) {
+        Object.values(players).forEach(p => {
+            if(p.id === myId || p.isDead || p.isGhost) return;
+            let px = p.targetX || p.x, py = p.targetY || p.y, d = dist(me.x, me.y, px, py), minDist = me.radius + p.radius;
+            if(d < minDist) {
+                let n = normalize(me.x - px, me.y - py), overlap = minDist - d;
+                me.x += n.x * (overlap / 2); me.y += n.y * (overlap / 2);
+
+                let speed = dist(0, 0, me.vx, me.vy);
+                if(speed > 500) {
+                    let impulse = speed * 0.8;
+                    networkBroadcast({ type: 'impulse', targetId: p.id, vx: -n.x * impulse, vy: -n.y * impulse, attacker: me.name });
+                    me.vx *= -0.3; me.vy *= -0.3;
+                    if(me.tether.state === 1) { me.tether.state = 0; skills.tether.timer = skills.tether.cd; } // Darbe alınca şarj bozulur
+                    triggerShake(0.3); hitstopTimer = 0.05; 
+                }
+            }
+        });
+    }
+
+    me.x += me.vx * dt; me.y += me.vy * dt;
+    if(dist(me.x, me.y, CENTER_X, CENTER_Y) > ARENA_RADIUS) die();
+}
+
+function die() {
+    me.isDead = true; me.tether.state = 0;
+    createParticles(me.x, me.y, me.color, 100, 2000); triggerShake(0.6); hitstopTimer = 0.1;
+    networkBroadcast({ type: 'kill', victim: me.name });
+
+    setTimeout(() => {
+        me.x = CENTER_X + (Math.random()*100-50); me.y = CENTER_Y + (Math.random()*100-50);
+        me.vx = 0; me.vy = 0; me.score = Math.max(0, me.score - 1);
+        me.mass = 1 + (me.score * 0.2); me.radius = 20 + (me.score * 2);
+        me.isDead = false; me.isGhost = true; 
+        setTimeout(() => me.isGhost = false, 2000);
+    }, 2500);
+}
+
+function sendNetworkState() {
+    if(me.isDead) return;
+    networkBroadcast({ type: 'state', player: me });
+}
+
+function handleNetworkMessage(msg) {
+    if(msg.type === 'state') {
+        let pId = msg.player.id;
+        if(!players[pId]) players[pId] = msg.player;
+        players[pId].targetX = msg.player.x; players[pId].targetY = msg.player.y;
+        players[pId].isGhost = msg.player.isGhost; players[pId].isDead = msg.player.isDead;
+        players[pId].score = msg.player.score; players[pId].radius = msg.player.radius; 
+        players[pId].tether = msg.player.tether; players[pId].aimAngle = msg.player.aimAngle;
+    }
+    else if(msg.type === 'impulse' && msg.targetId === myId && !me.isGhost) {
+        me.vx += msg.vx; me.vy += msg.vy; 
+        if(me.tether.state === 1) { me.tether.state = 0; skills.tether.timer = skills.tether.cd; } // Darbe şarjı bozar
+        triggerShake(0.2);
+    }
+    else if(msg.type === 'spring_pull' && msg.targetId === myId && !me.isGhost) {
+        me.vx += msg.vx; me.vy += msg.vy; 
+    }
+    else if(msg.type === 'blackhole') {
+        blackHoles.push({ x: msg.x, y: msg.y, life: 4.0 }); triggerShake(0.2);
+    }
+    else if(msg.type === 'kill') {
+        showKillFeed(`BİRİLERİ HİÇLİĞE KARIŞTI: ${msg.victim}`); triggerShake(0.4);
+    }
+}
+
+function triggerShake(intensity) { shakeTimer = intensity; }
+function createParticles(x, y, color, count, speed) {
+    for(let i=0; i<count; i++) {
+        let a = Math.random() * Math.PI * 2, s = Math.random() * speed;
+        particles.push({ x: x, y: y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, color: color, life: 1.0, maxLife: 1.0, size: Math.random()*5 + 2 });
+    }
+}
+function showKillFeed(text) {
+    let el = document.getElementById('killFeed'); el.innerText = text; el.style.opacity = 1;
+    setTimeout(() => el.style.opacity = 0, 3000);
+}
+
+function gameLoop(time) {
+    dt = (time - lastTime) / 1000; if(dt > 0.1) dt = 0.1; lastTime = time;
+
+    if(hitstopTimer > 0) { hitstopTimer -= dt; } else { updatePhysics(); }
+    
+    ['tether', 'nova', 'dash', 'ghost', 'bhole'].forEach(k => { if(skills[k].timer > 0) skills[k].timer -= dt; });
+    document.getElementById('cd-L').style.height = (skills.tether.timer / skills.tether.cd) * 100 + "%"; document.getElementById('skill-L').className = skills.tether.timer <= 0 ? "skill ready" : "skill";
+    document.getElementById('cd-R').style.height = (skills.nova.timer / skills.nova.cd) * 100 + "%"; document.getElementById('skill-R').className = skills.nova.timer <= 0 ? "skill ready" : "skill";
+    document.getElementById('cd-Space').style.height = (skills.dash.timer / skills.dash.cd) * 100 + "%"; document.getElementById('skill-Space').className = skills.dash.timer <= 0 ? "skill ready" : "skill";
+    document.getElementById('cd-Shift').style.height = (skills.ghost.timer / skills.ghost.cd) * 100 + "%"; document.getElementById('skill-Shift').className = skills.ghost.timer <= 0 ? "skill ready" : "skill";
+    document.getElementById('cd-E').style.height = (skills.bhole.timer / skills.bhole.cd) * 100 + "%"; document.getElementById('skill-E').className = skills.bhole.timer <= 0 ? "skill ready" : "skill";
+
+    ctx.save();
+    if(shakeTimer > 0) {
+        let mag = shakeTimer * 50; ctx.translate((Math.random()-0.5)*mag, (Math.random()-0.5)*mag); shakeTimer -= dt;
+    }
+
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    let grad = ctx.createRadialGradient(CENTER_X, CENTER_Y, ARENA_RADIUS - 100, CENTER_X, CENTER_Y, ARENA_RADIUS);
+    grad.addColorStop(0, "rgba(5, 5, 15, 0)"); grad.addColorStop(0.9, "rgba(80, 0, 30, 0.4)"); grad.addColorStop(1, "rgba(0, 0, 0, 0.95)");
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.02)"; ctx.lineWidth = 1;
+    for(let i = 0; i < WIDTH; i+=100) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, HEIGHT); ctx.stroke(); }
+    for(let i = 0; i < HEIGHT; i+=100) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(WIDTH, i); ctx.stroke(); }
+
+    for(let i = blackHoles.length - 1; i >= 0; i--) {
+        let bh = blackHoles[i]; bh.life -= dt;
+        if(bh.life <= 0) { blackHoles.splice(i, 1); continue; }
+        ctx.beginPath(); ctx.arc(bh.x, bh.y, 25 + Math.random()*10, 0, Math.PI*2);
+        ctx.fillStyle = "#000"; ctx.shadowColor = "#b026ff"; ctx.shadowBlur = 40; ctx.fill(); ctx.shadowBlur = 0;
+    }
+
+    let allPlayers = [me, ...Object.values(players)];
+    allPlayers.forEach(p => {
+        if(p.isDead) return;
+
+        if(p.id !== myId && p.targetX !== undefined) {
+            p.x += (p.targetX - p.x) * 10 * dt; p.y += (p.targetY - p.y) * 10 * dt;
+        }
+
+        // ŞARJ LAZERİ ÇİZİMİ
+        if(p.tether && p.tether.state === 1) {
+            ctx.beginPath();
+            let aimLen = 100 + (p.tether.charge * 450); // Lazer boyu şarjla uzar
+            let endX = p.x + Math.cos(p.aimAngle) * aimLen;
+            let endY = p.y + Math.sin(p.aimAngle) * aimLen;
+            ctx.moveTo(p.x, p.y); ctx.lineTo(endX, endY);
+            ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 + p.tether.charge * 0.7})`;
+            ctx.lineWidth = 2 + (p.tether.charge * 3);
+            ctx.setLineDash([10, 10]); ctx.stroke(); ctx.setLineDash([]);
+        }
+
+        // KEMENT ÇİZİMİ
+        if(p.tether && (p.tether.state === 2 || p.tether.state === 3)) {
+            ctx.beginPath(); ctx.moveTo(p.x, p.y);
+            let tx, ty;
+            if(p.tether.state === 2) { tx = p.tether.px; ty = p.tether.py; }
+            else if (p.tether.state === 3 && players[p.tether.attachedId]) { tx = players[p.tether.attachedId].x; ty = players[p.tether.attachedId].y; } 
+            else if (p.tether.state === 3 && p.tether.attachedId === myId) { tx = me.x; ty = me.y; }
+            
+            if(tx && ty) {
+                ctx.lineTo(tx, ty); ctx.strokeStyle = p.tether.state === 3 ? "#ff00ff" : "#00ffff"; 
+                ctx.lineWidth = p.tether.state === 3 ? 6 + (p.tether.power*4) : 4; ctx.stroke();
+                ctx.beginPath(); ctx.arc(tx, ty, 6, 0, Math.PI*2); ctx.fillStyle = "#fff"; ctx.fill();
+            }
+        }
+
+        if(!trails[p.id]) trails[p.id] = []; trails[p.id].unshift({x: p.x, y: p.y}); if(trails[p.id].length > 15) trails[p.id].pop();
+        ctx.beginPath(); for(let i=0; i<trails[p.id].length; i++) ctx.lineTo(trails[p.id][i].x, trails[p.id][i].y);
+        ctx.strokeStyle = p.color; ctx.lineWidth = p.radius * 0.6; ctx.lineCap = "round"; ctx.globalAlpha = 0.2; ctx.stroke(); ctx.globalAlpha = 1.0;
+
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+        ctx.fillStyle = p.isGhost ? "rgba(255,255,255,0.2)" : p.color; ctx.shadowColor = p.color; ctx.shadowBlur = p.isGhost ? 0 : 20; ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = "#fff"; ctx.font = "bold 14px Orbitron"; ctx.textAlign = "center"; ctx.fillText(p.name, p.x, p.y - p.radius - 10);
+    });
+
+    for(let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.95; p.vy *= 0.95; p.life -= dt;
+        if(p.life <= 0) { particles.splice(i, 1); continue; }
+        ctx.fillStyle = p.color; ctx.globalAlpha = p.life / p.maxLife; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1.0;
+    }
+
+    ctx.restore(); requestAnimationFrame(gameLoop);
+}
+
+setInterval(() => {
+    let sorted = Object.values(players).concat(me).sort((a,b) => b.score - a.score); let html = "";
+    sorted.slice(0, 5).forEach((p, index) => { html += `<li><span>${index+1}. <span style="color:${p.color}">${p.name}</span></span> <span>${p.score} Kill</span></li>`; });
+    document.getElementById('leaderList').innerHTML = html;
+}, 1000);
+</script>
+</body>
+</html>
