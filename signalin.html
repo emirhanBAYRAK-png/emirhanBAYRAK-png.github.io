@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGNAL LOST - V1.0 FULL</title>
+    <style>
+        /* =========================================================
+           1. CSS VE GÖRSEL STİLLER (CRT / HEXTECH VIBE)
+           ========================================================= */
+        :root { --term-green: #0fa; --term-red: #f03; --hex-gold: #c5a365; --bg-dark: #020202; }
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; background: var(--bg-dark); color: var(--term-green); font-family: 'Courier New', Courier, monospace; overflow: hidden; height: 100vh; user-select: none; }
+        
+        .crt::before {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100; background-size: 100% 2px, 3px 100%; pointer-events: none;
+        }
+
+        #setup-screen { padding: 2rem; max-width: 900px; margin: 2vh auto; z-index: 10; position: relative; }
+        .panel { border: 1px solid var(--term-green); padding: 1.5rem; margin-bottom: 1.5rem; background: rgba(0,20,0,0.8); box-shadow: 0 0 15px rgba(0,255,0,0.1); }
+        .panel.red { border-color: var(--term-red); background: rgba(20,0,0,0.8); }
+        h2, h3 { margin-top: 0; text-shadow: 0 0 5px currentColor; }
+        textarea, input { width: 100%; background: #000; color: var(--term-green); border: 1px solid #333; padding: 0.8rem; font-family: inherit; margin-top: 8px; outline: none; }
+        textarea:focus, input:focus { border-color: var(--term-green); box-shadow: 0 0 8px var(--term-green); }
+        button { background: var(--term-green); color: #000; border: none; padding: 0.8rem 1.5rem; cursor: pointer; font-weight: bold; margin-top: 10px; text-transform: uppercase; }
+        button:hover { background: #fff; box-shadow: 0 0 10px #fff; }
+        .btn-red { background: var(--term-red); color: #fff; }
+        .btn-red:hover { background: #fff; color: var(--term-red); box-shadow: 0 0 10px var(--term-red); }
+
+        #operator-screen, #field-screen { display: none; height: 100vh; width: 100vw; position: relative; }
+        #op-layout { display: flex; height: 100%; width: 100%; }
+        #radar-container { flex: 2; border-right: 2px solid var(--term-green); position: relative; background: #000; }
+        #terminal-container { flex: 1.2; display: flex; flex-direction: column; background: #020202; }
+        #radarCanvas, #gameCanvas { display: block; width: 100%; height: 100%; }
+        #op-hud { position: absolute; top: 10px; left: 10px; pointer-events: none; z-index: 5;}
+        
+        #terminal-header { padding: 10px; border-bottom: 1px solid #333; font-weight: bold; background: #0a0a0a; }
+        #terminal-log { flex: 1; overflow-y: auto; padding: 15px; font-size: 14px; line-height: 1.4; }
+        #cmd-input-wrapper { display: flex; border-top: 2px solid var(--term-green); background: #000; }
+        #cmd-prefix { padding: 15px 5px 15px 15px; font-weight: bold; }
+        #cmd-input { flex: 1; border: none; background: transparent; padding: 15px; font-size: 16px; margin: 0; box-shadow: none; }
+
+        /* Bodycam ve Statik TV Karlanması */
+        #bodycam-container { position: absolute; bottom: 20px; right: 20px; width: 280px; height: 180px; z-index: 10; border: 2px solid #333; background: #000; box-shadow: 0 0 20px rgba(0, 0, 0, 0.8); overflow: hidden; }
+        #op-bodycam { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(150%) brightness(80%) sepia(20%) hue-rotate(180deg); transition: 0.2s; }
+        #bodycam-static { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; mix-blend-mode: screen; transition: 0.1s; }
+        #bodycam-label { position: absolute; top: 5px; right: 10px; color: #fff; background: #f00; font-size: 12px; font-weight: bold; padding: 2px 5px; z-index: 11; animation: blink 2s infinite; }
+        
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        @keyframes glitch { 0% { transform: translate(0) } 20% { transform: translate(-2px, 2px) } 40% { transform: translate(-2px, -2px) } 60% { transform: translate(2px, 2px) } 80% { transform: translate(2px, -2px) } 100% { transform: translate(0) } }
+        .glitch-active { animation: glitch 0.2s infinite; filter: hue-rotate(90deg) drop-shadow(2px 4px 6px red); }
+    </style>
+</head>
+<body class="crt">
+
+    <div id="setup-screen">
+        <h2 style="text-align: center; font-size: 2.5em; letter-spacing: 5px;">SIGNAL LOST <span style="color:var(--term-red);">V1.0</span></h2>
+        <div class="panel">
+            <h3 style="color: var(--hex-gold);">> OPERATÖR (HOST)</h3>
+            <button id="btn-host">1. AĞ OLUŞTUR (TOKEN ÜRET)</button>
+            <textarea id="host-token" rows="2" readonly placeholder="[Token bekleniyor...] Üretildiğinde Saha oyuncusuna gönderin."></textarea>
+            <textarea id="client-response" rows="2" placeholder="Saha oyuncusunun yanıtını buraya yapıştırın..."></textarea>
+            <button id="btn-connect-host" class="btn-red">2. BAĞLANTIYI ZORLA</button>
+        </div>
+        <div class="panel red">
+            <h3 style="color: var(--term-red);">> SAHA BİRİMİ (CLIENT)</h3>
+            <textarea id="host-offer" rows="2" placeholder="Operatör Token'ını yapıştırın..."></textarea>
+            <button id="btn-client" class="btn-red">1. SİSTEME SIZ (YANIT ÜRET)</button>
+            <textarea id="client-token" rows="2" readonly placeholder="[Yanıt bekleniyor...] Operatöre gönderin."></textarea>
+        </div>
+    </div>
+
+    <div id="operator-screen">
+        <div id="op-layout">
+            <div id="radar-container">
+                <div id="op-hud">
+                    <h3 style="margin:0; color: #555;">SYS.RADAR <span style="color:var(--term-green);">[AKTİF]</span></h3>
+                    <div style="font-size: 12px; color: #444; margin-top: 5px;">GRID: 16x12 | PING: <span id="net-ping">0</span>ms</div>
+                </div>
+                <canvas id="radarCanvas"></canvas>
+                <div id="bodycam-container">
+                    <video id="op-bodycam" autoplay playsinline muted></video>
+                    <canvas id="bodycam-static"></canvas>
+                    <div id="bodycam-label">REC - CAM 01</div>
+                </div>
+            </div>
+            <div id="terminal-container">
+                <div id="terminal-header">NIGSI OS - KONSOL ERİŞİMİ v1.0</div>
+                <div id="terminal-log">
+                    > SİSTEM BOOT EDİLİYOR...<br>
+                    > MİKROFON VE KAMERA SÜRÜCÜLERİ: YÜKLENDİ<br>
+                </div>
+                <div id="cmd-input-wrapper">
+                    <span id="cmd-prefix">root@nigsios:~#</span>
+                    <input type="text" id="cmd-input" placeholder="Komut (help)..." autocomplete="off" spellcheck="false">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="field-screen">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. OYUN MOTORU SABİTLERİ VE DEĞİŞKENLER
+        // ==========================================
+        const CONST = { TILE: 150, COLS: 16, ROWS: 12, FOV: Math.PI / 2.2, RAYS: 200, SIGHT: 500, BAT_MAX: 100, BAT_DRAIN: 0.04 };
+        let GAME = { state: 'boot', seed: "0000", walls: [], doors: {}, generators: [], items: [], lights: [], exit: {x:0,y:0,r:50,active:false}, isScanning: false, isRebooting: false, empTimer: 0, pings: [], particles: [] };
+        
+        // Hacking Minigame
+        let hackNode = null, hackCode = "", hackTimer = null;
+
+        // Varlıklar
+        let PL = { x:0, y:0, r:12, vx:0, vy:0, st:100, ex:false, bat:100, fOn:true, spdB:4.2, spdS:7.5, spdE:2.0, accB:0.6, accS:1.2, accE:0.3 };
+        let AI = { x:0, y:0, r:14, vx:0, vy:0, state:'patrol', aggro:0, maxS:2.5, stunT:0, saboT:0, decoyT:0, patT:0, tDoor:null, detect:350 };
+        let SHADOW = { x:0, y:0, r:12, vx:0, vy:0, speed: 1.5, isFrozen: false };
+        let OP = { pX: -100, pY: -100, pEx: false, eX: -100, eY: -100, eSt: 'patrol', sX: -100, sY: -100, sFz: false };
+        let CAM = { x:0, y:0, shake:0 }, KEYS = {}, MOUSE = {x:0,y:0}, FEAR = 0;
+
+        // ==========================================
+        // 2. AUDIO & TV STATIC ENGINE
+        // ==========================================
+        let audioCtx, radioCtx, radioGain, staticGain, isRadioActive = false;
+        
+        function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
+
+        const SFX = {
+            beep: (f=600, t='sine', d=0.1, v=0.1) => { if(!audioCtx)return; let o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type=t; o.frequency.value=f; g.gain.value=v; g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+d); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+d); },
+            heartbeat: () => { if(!audioCtx)return; let o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='sine'; o.frequency.setValueAtTime(45,audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(10,audioCtx.currentTime+0.3); g.gain.setValueAtTime(0.6,audioCtx.currentTime); g.gain.linearRampToValueAtTime(0,audioCtx.currentTime+0.3); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.3); },
+            crash: () => { if(!audioCtx)return; let bs=audioCtx.sampleRate*0.5, b=audioCtx.createBuffer(1,bs,audioCtx.sampleRate), d=b.getChannelData(0); for(let i=0;i<bs;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(bs/3)); let n=audioCtx.createBufferSource(); n.buffer=b; let f=audioCtx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1000; let g=audioCtx.createGain(); g.gain.value=0.8; n.connect(f); f.connect(g); g.connect(audioCtx.destination); n.start(); },
+            alarm: () => { SFX.beep(800,'square',0.4,0.1); setTimeout(()=>SFX.beep(1200,'square',0.4,0.1),200); },
+            emp: () => { if(!audioCtx)return; let o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(1500,audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(10,audioCtx.currentTime+1.5); g.gain.setValueAtTime(1.0,audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+2.0); o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+2.0); }
+        };
+
+        function setupRadioVoice(stream) {
+            if(!radioCtx) radioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let src = radioCtx.createMediaStreamSource(stream), bp = radioCtx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 0.8;
+            radioGain = radioCtx.createGain(); radioGain.gain.value = 1.0;
+            
+            let bs = radioCtx.sampleRate*2, nb = radioCtx.createBuffer(1,bs,radioCtx.sampleRate), nd = nb.getChannelData(0);
+            for (let i=0; i<bs; i++) nd[i] = Math.random()*2-1;
+            let nSrc = radioCtx.createBufferSource(); nSrc.buffer = nb; nSrc.loop = true;
+            let nFlt = radioCtx.createBiquadFilter(); nFlt.type = 'highpass'; nFlt.frequency.value = 2500;
+            staticGain = radioCtx.createGain(); staticGain.gain.value = 0.0;
+
+            src.connect(bp); bp.connect(radioGain); radioGain.connect(radioCtx.destination);
+            nSrc.connect(nFlt); nFlt.connect(staticGain); staticGain.connect(radioCtx.destination); nSrc.start();
+            isRadioActive = true; if(radioCtx.state==='suspended') radioCtx.resume();
+        }
+
+        const staticCanvas = document.getElementById('bodycam-static');
+        const staticCtx = staticCanvas ? staticCanvas.getContext('2d') : null;
+        if(staticCanvas){ staticCanvas.width = 280; staticCanvas.height = 180; }
+        
+        function drawTVStatic(ctx, w, h) {
+            if(!ctx) return; let id = ctx.createImageData(w,h), b = new Uint32Array(id.data.buffer);
+            for(let i=0; i<b.length; i++) { let s = Math.random()>0.5?255:0; b[i] = (255<<24)|(s<<16)|(s<<8)|s; }
+            ctx.putImageData(id, 0, 0);
+        }
+
+        // ==========================================
+        // 3. MATEMATİK & PRNG
+        // ==========================================
+        let MathGen = {
+            w: 123456789, z: 987654321, m: 0xffffffff,
+            seed: function(s) { let h=0; for(let i=0;i<s.length;i++) h=s.charCodeAt(i)+((h<<5)-h); this.w=h; this.z=987654321; },
+            random: function() { this.z=(36969*(this.z&65535)+(this.z>>16))&this.m; this.w=(18000*(this.w&65535)+(this.w>>16))&this.m; let r=(((this.z<<16)+this.w)&this.m)/4294967296; return r+0.5; },
+            randInt: function(min,max) { return Math.floor(this.random()*(max-min+1))+min; },
+            dist: (x1,y1,x2,y2) => Math.sqrt((x2-x1)**2 + (y2-y1)**2)
+        };
+
+        function getIntersection(ray, seg) {
+            let rdx=ray.b.x-ray.a.x, rdy=ray.b.y-ray.a.y, sdx=seg.x2-seg.x1, sdy=seg.y2-seg.y1, T2=rdx*sdy-rdy*sdx;
+            if(T2===0) return null;
+            let T=((seg.x1-ray.a.x)*sdy-(seg.y1-ray.a.y)*sdx)/T2, U=((seg.x1-ray.a.x)*rdy-(seg.y1-ray.a.y)*rdx)/T2;
+            if(T>0 && U>0 && U<1) return {x:ray.a.x+rdx*T, y:ray.a.y+rdy*T, p:T}; return null;
+        }
+
+        class Particle {
+            constructor(x,y,c,s) { this.x=x; this.y=y; this.vx=(Math.random()-0.5)*s; this.vy=(Math.random()-0.5)*s; this.life=1.0; this.c=c; }
+            update(dt) { this.x+=this.vx; this.y+=this.vy; this.life-=0.02; }
+            draw(ctx) { ctx.globalAlpha=Math.max(0,this.life); ctx.fillStyle=this.c; ctx.fillRect(this.x,this.y,4,4); ctx.globalAlpha=1; }
+        }
+        function emitParticles(x,y,c,cnt,spd) { for(let i=0;i<cnt;i++) GAME.particles.push(new Particle(x,y,c,spd)); }
+
+        // ==========================================
+        // 4. WEBRTC & UI YÖNETİMİ
+        // ==========================================
+        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        let pc = new RTCPeerConnection(servers), dataChannel, role = null, localStream, remoteStream;
+        const ui = { setup: document.getElementById('setup-screen'), op: document.getElementById('operator-screen'), f: document.getElementById('field-screen'), tLog: document.getElementById('terminal-log'), cmd: document.getElementById('cmd-input'), rCan: document.getElementById('radarCanvas'), gCan: document.getElementById('gameCanvas') };
+        const ctx = ui.gCan.getContext('2d'), rCtx = ui.rCan ? ui.rCan.getContext('2d') : null;
+
+        async function getMediaStreams() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+                if (role === 'field') { let cStream = ui.gCan.captureStream(15); localStream.addTrack(cStream.getVideoTracks()[0]); }
+                localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+            } catch (err) { termPrint("SİSTEM: MİKROFON/KAMERA ERİŞİMİ YOK.", 'error'); }
+        }
+
+        pc.ontrack = (event) => {
+            remoteStream = event.streams[0];
+            if (remoteStream.getAudioTracks().length > 0) setupRadioVoice(remoteStream);
+            if (role === 'operator' && remoteStream.getVideoTracks().length > 0) {
+                document.getElementById('op-bodycam').srcObject = remoteStream;
+                termPrint("[BAŞARILI] SAHA KAMERA BAĞLANTISI KURULDU.", 'info');
+            }
+        };
+
+        document.getElementById('btn-host').addEventListener('click', async () => {
+            initAudio(); role = 'operator'; await getMediaStreams();
+            dataChannel = pc.createDataChannel('bus'); setupChannel(dataChannel);
+            const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+            pc.onicecandidate = e => { if (!e.candidate) document.getElementById('host-token').value = btoa(JSON.stringify(pc.localDescription)); };
+        });
+        document.getElementById('btn-connect-host').addEventListener('click', async () => { await pc.setRemoteDescription(JSON.parse(atob(document.getElementById('client-response').value))); });
+        
+        document.getElementById('btn-client').addEventListener('click', async () => {
+            initAudio(); role = 'field'; await getMediaStreams();
+            pc.ondatachannel = e => { dataChannel = e.channel; setupChannel(dataChannel); };
+            await pc.setRemoteDescription(JSON.parse(atob(document.getElementById('host-offer').value)));
+            const answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
+            pc.onicecandidate = e => { if (!e.candidate) document.getElementById('client-token').value = btoa(JSON.stringify(pc.localDescription)); };
+        });
+
+        function setupChannel(channel) {
+            channel.onopen = () => {
+                ui.setup.style.display = 'none';
+                if(role === 'operator') {
+                    ui.op.style.display = 'block'; ui.cmd.focus();
+                    const seed = Math.random().toString(16).substr(2,8).toUpperCase(); generateMap(seed);
+                    setTimeout(() => { netSend({type:'sys_init', seed:seed}); termPrint(`[P2P KURULDU] SEED: ${seed}`, 'warn'); SFX.beep(1000,'sine',0.5); }, 200);
+                    window.addEventListener('resize', resizeRadar); resizeRadar(); requestAnimationFrame(radarLoop);
+                } else {
+                    ui.f.style.display = 'block'; window.addEventListener('resize', resizeCanvas); resizeCanvas();
+                }
+            };
+            channel.onmessage = e => { let data=JSON.parse(e.data); role==='operator'?handleOpMsg(data):handleFieldMsg(data); };
+        }
+        function netSend(obj) { if(dataChannel?.readyState==='open') dataChannel.send(JSON.stringify(obj)); }
+
+        // ==========================================
+        // 5. PROCEDURAL GENERATION (HARİTA)
+        // ==========================================
+        function generateMap(s) {
+            MathGen.seed(s); GAME.seed = s; GAME.walls = []; GAME.doors = {}; GAME.generators = []; GAME.items = []; GAME.lights = [];
+            const W = CONST.COLS*CONST.TILE, H = CONST.ROWS*CONST.TILE;
+            GAME.walls.push({x1:0,y1:0,x2:W,y2:0},{x1:W,y1:0,x2:W,y2:H},{x1:W,y1:H,x2:0,y2:H},{x1:0,y1:H,x2:0,y2:0});
+
+            let dId = 1;
+            for(let c=1; c<CONST.COLS; c++){
+                for(let r=1; r<CONST.ROWS; r++){
+                    let x = c*CONST.TILE, y = r*CONST.TILE;
+                    if(MathGen.random() < 0.45) {
+                        let isH = MathGen.random()>0.5, seg = {x1:x, y1:y, x2:x+(isH?CONST.TILE:0), y2:y+(isH?0:CONST.TILE)};
+                        if(MathGen.random()<0.3) GAME.doors[`door_${dId<10?'0':''}${dId++}`] = { isClosed:true, isBroken:false, p:0, spd:0.03, seg:seg };
+                        else GAME.walls.push(seg);
+                    }
+                    let cx = x-CONST.TILE/2, cy = y-CONST.TILE/2, roll = MathGen.random();
+                    if(roll<0.05 && GAME.generators.length<4) GAME.generators.push({id:`GEN_0${GAME.generators.length+1}`, active:false, x:cx, y:cy, r:18, hex:"0x"+Math.floor(MathGen.random()*65535).toString(16).toUpperCase().padStart(4,'0')});
+                    else if(roll<0.12) GAME.items.push({type:'bat', x:cx, y:cy, active:true});
+                    else if(roll>0.9) GAME.lights.push({x:cx, y:cy, c:'#f00', i:0.5, blink:MathGen.random()*100});
+                }
+            }
+            GAME.exit.x = W-CONST.TILE; GAME.exit.y = H-CONST.TILE; GAME.exit.active = false;
+            if(role === 'field') { PL.x=CONST.TILE; PL.y=CONST.TILE; AI.x=W-CONST.TILE; AI.y=H-CONST.TILE*2; SHADOW.x=CONST.TILE; SHADOW.y=H-CONST.TILE; }
+        }
+        function getActiveSegs() {
+            let s = [...GAME.walls];
+            for(let id in GAME.doors) { let d=GAME.doors[id]; if(d.p<0.99) s.push({x1:d.seg.x1, y1:d.seg.y1, x2:d.seg.x2-(d.seg.x2-d.seg.x1)*d.p, y2:d.seg.y2-(d.seg.y2-d.seg.y1)*d.p}); } return s;
+        }
+
+        // ==========================================
+        // 6. OPERATÖR TERMİNALİ VE RADAR
+        // ==========================================
+        function termPrint(txt, type='info') {
+            let col = type==='error'?'var(--term-red)':(type==='warn'?'var(--hex-gold)':'var(--term-green)');
+            ui.tLog.innerHTML += `<br><span style="color:${col}">> ${txt}</span>`; ui.tLog.scrollTop = ui.tLog.scrollHeight;
+        }
+
+        ui.cmd.addEventListener('keypress', e => {
+            if(e.key === 'Enter' && ui.cmd.value.trim()) {
+                let inp = ui.cmd.value.trim().toLowerCase(), args = inp.split(/\s+/), cmd = args[0];
+                termPrint(`$ ${inp}`, 'info'); ui.cmd.value = '';
+                
+                if(GAME.isRebooting) { termPrint("SİSTEM REBOOT EDİLİYOR.", 'error'); SFX.beep(200,'sawtooth',0.2); return; }
+                
+                // Hacking Minigame
+                if(hackNode) {
+                    clearTimeout(hackTimer);
+                    if(inp === hackCode) {
+                        termPrint(`[BAŞARILI] GÜVENLİK AŞILDI. ${hackNode} ÇEVRİMİÇİ.`, 'info'); SFX.beep(1200,'square',0.5); netSend({act:'extract', tgt:hackNode});
+                    } else {
+                        termPrint(`[HATA] YANLIŞ KOD! SİNYAL İFŞA OLDU!`, 'error'); SFX.crash(); netSend({act:'hack_fail', tgt:hackNode});
+                    }
+                    hackNode = null; return;
+                }
+
+                switch(cmd){
+                    case 'help': 
+                        termPrint(" override [door], reboot [door], decoy [door], extract [hex], scan -full, emp", 'warn'); break;
+                    case 'clear': ui.tLog.innerHTML = "> EKRAN TEMİZLENDİ.<br>"; break;
+                    case 'override': case 'decoy': case 'reboot':
+                        if(!args[1] || !args[1].startsWith('door_')) { termPrint("HATA: Hedef ID gerekli.", 'error'); break; }
+                        if(cmd==='reboot') { termPrint(`[İŞLEM] ONARILIYOR...`, 'warn'); setTimeout(()=> { netSend({act:cmd, tgt:args[1]}); termPrint(`[OK] ONARILDI.`, 'info'); SFX.beep(); }, 3000); } 
+                        else { netSend({act:cmd, tgt:args[1]}); termPrint(`KOMUT İLETİLDİ.`, 'info'); SFX.beep(); } break;
+                    case 'extract':
+                        let hex = args[1]?.toUpperCase(), gen = GAME.generators.find(g => g.hex === hex);
+                        if(gen) {
+                            if(gen.active) termPrint("HATA: Düğüm zaten aktif.", 'error');
+                            else {
+                                hackNode = gen.id; hackCode = ""; const c = "abcdef123456789"; for(let i=0;i<5;i++) hackCode+=c.charAt(Math.floor(Math.random()*c.length));
+                                termPrint(`>>> ${gen.id} TESPİT EDİLDİ. 8 SANİYE İÇİNDE ONAY KODUNU GİRİN: [ ${hackCode.toUpperCase()} ] <<<`, 'warn'); SFX.alarm();
+                                hackTimer = setTimeout(() => { if(hackNode){ termPrint(`[ZAMAN AŞIMI] SİSTEM ALARMI DEVREDE!`, 'error'); SFX.crash(); netSend({act:'hack_fail', tgt:hackNode}); hackNode=null; } }, 8000);
+                            }
+                        } else termPrint(`HATA: Geçersiz kod.`, 'error'); break;
+                    case 'scan':
+                        if(args[1]!=='-full') { termPrint("HATA: scan -full", 'error'); break; }
+                        GAME.isScanning = true; termPrint("!!! TAM TARAMA AKTİF !!!", 'warn'); SFX.alarm(); netSend({act:'scan'});
+                        setTimeout(() => { GAME.isScanning = false; GAME.isRebooting = true; termPrint("KRİTİK GÜÇ AŞIMI. REBOOT...", 'error'); SFX.crash(); setTimeout(()=> { GAME.isRebooting = false; termPrint("SİSTEM ÇEVRİMİÇİ.", 'info'); SFX.beep(); }, 7000); }, 2000); break;
+                    case 'emp':
+                        termPrint("!!! ELEKTROMANYETİK ŞOK (EMP) DEVREYE GİRİYOR !!! 3 SANİYE KÖR UÇUŞ.", 'warn'); SFX.emp(); netSend({act: 'emp'}); GAME.empTimer = 3000; break;
+                    default: termPrint(`Geçersiz komut.`, 'error'); SFX.beep(200,'sawtooth',0.2);
+                }
+            }
+        });
+
+        function handleOpMsg(data) {
+            if(data.type==='state') { OP.pX=data.px; OP.pY=data.py; OP.pEx=data.ex; OP.eX=data.exy; OP.eY=data.eyy; OP.eSt=data.est; OP.sX=data.sx; OP.sY=data.sy; OP.sFz=data.sfz; }
+            if(data.type==='end_alert') { termPrint("!!! DİKKAT: TÜM DÜĞÜMLER AKTİF. TAHLİYE KAPISI AÇILIYOR !!!", 'warn'); SFX.alarm(); }
+            if(data.type==='end') { GAME.state=data.res; document.body.classList.add('glitch-active'); SFX.crash(); termPrint("=========================================", 'error'); termPrint(data.res==='victory'?">>> TAHLİYE BAŞARILI. <<<":"!!! KRİTİK ÇÖKÜŞ !!!", 'error'); }
+        }
+
+        function resizeRadar() { if(rCtx){ ui.rCan.width = ui.rCan.parentElement.clientWidth; ui.rCan.height = ui.rCan.parentElement.clientHeight; } }
+
+        let lastOpT = 0;
+        function radarLoop(time) {
+            if(role!=='operator') return;
+            let dt = time-lastOpT; lastOpT = time;
+            
+            if(GAME.empTimer>0) { GAME.empTimer-=dt; rCtx.fillStyle='#010102'; rCtx.fillRect(0,0,ui.rCan.width,ui.rCan.height); if(Math.random()<0.2){ rCtx.fillStyle='#00f'; rCtx.fillRect(Math.random()*ui.rCan.width, Math.random()*ui.rCan.height,5,5); } rCtx.fillStyle='rgba(0,100,255,0.5)'; rCtx.font="bold 20px Courier"; rCtx.fillText("EMP ŞOKU AKTİF - SENSÖRLER KÖR",30,50); requestAnimationFrame(radarLoop); return; }
+            if(GAME.isRebooting) { rCtx.fillStyle='#050505'; rCtx.fillRect(0,0,ui.rCan.width,ui.rCan.height); rCtx.fillStyle=(Date.now()%1000<500)?'var(--term-red)':'#300'; rCtx.font="bold 28px Courier"; rCtx.fillText("OFFLINE: REBOOTING...", 30, 50); requestAnimationFrame(radarLoop); return; }
+
+            rCtx.fillStyle='rgba(0,10,0,0.15)'; rCtx.fillRect(0,0,ui.rCan.width,ui.rCan.height); rCtx.save();
+            let zm = 0.35; rCtx.translate(ui.rCan.width/2 - OP.pX*zm, ui.rCan.height/2 - OP.pY*zm); rCtx.scale(zm,zm);
+            
+            rCtx.strokeStyle='rgba(0,150,0,0.5)'; rCtx.lineWidth=8; rCtx.lineCap="round"; GAME.walls.forEach(sg=>{ rCtx.beginPath(); rCtx.moveTo(sg.x1,sg.y1); rCtx.lineTo(sg.x2,sg.y2); rCtx.stroke(); });
+            for(let id in GAME.doors) { let d=GAME.doors[id], p=d.p, sx=d.seg.x1, sy=d.seg.y1, ex=d.seg.x2, ey=d.seg.y2; if(p<0.99) { rCtx.beginPath(); rCtx.moveTo(sx, sy); rCtx.lineTo(ex-(ex-sx)*p, ey-(ey-sy)*p); rCtx.stroke(); } rCtx.fillStyle=d.isBroken?'var(--term-red)':'var(--hex-gold)'; rCtx.font="24px Courier"; rCtx.fillText(id+(d.isBroken?" [ERR]":""), sx, sy-10); }
+            GAME.generators.forEach(g => { rCtx.beginPath(); rCtx.arc(g.x, g.y, 16, 0, Math.PI*2); rCtx.fillStyle=g.active?'#0fa':'rgba(50,50,50,0.5)'; rCtx.fill(); rCtx.fillStyle=g.active?'#0fa':'#ccc'; rCtx.font="20px Courier"; rCtx.fillText(g.id, g.x+20, g.y+5); });
+            GAME.items.forEach(i => { if(i.active) { rCtx.fillStyle='#0cf'; rCtx.fillRect(i.x-5,i.y-5,10,10); } });
+            if(GAME.exit.active) { rCtx.fillStyle='#0f6'; rCtx.font="bold 30px Courier"; rCtx.fillText(">> EXTRACT <<", GAME.exit.x-90, GAME.exit.y); }
+
+            // Yaratık Sinyalleri
+            if(GAME.isScanning) { rCtx.beginPath(); rCtx.arc(OP.eX, OP.eY, 30, 0, Math.PI*2); rCtx.fillStyle='#fff'; rCtx.shadowBlur=50; rCtx.shadowColor='#0ff'; rCtx.fill(); rCtx.shadowBlur=0; rCtx.beginPath(); rCtx.arc(OP.sX, OP.sY, 20, 0, Math.PI*2); rCtx.fillStyle='#a0f'; rCtx.shadowBlur=30; rCtx.shadowColor='#a0f'; rCtx.fill(); rCtx.shadowBlur=0; } 
+            else {
+                // Avcı
+                if(OP.eSt==='sabotage') { rCtx.beginPath(); rCtx.arc(OP.eX, OP.eY, 18, 0, Math.PI*2); rCtx.fillStyle=(Date.now()%200<100)?'#f90':'#c00'; rCtx.fill(); } 
+                else if(OP.eSt==='hunt') { let th=Date.now()/150; rCtx.beginPath(); rCtx.arc(OP.eX, OP.eY, 20+Math.sin(th)*5, 0, Math.PI*2); rCtx.fillStyle='var(--term-red)'; rCtx.shadowBlur=25; rCtx.shadowColor='red'; rCtx.fill(); rCtx.shadowBlur=0; [th, th*1.5, -th*0.8].forEach((a,i)=>{ rCtx.beginPath(); rCtx.arc(OP.eX+Math.cos(a)*(120+i*50), OP.eY+Math.sin(a)*(120+i*50), 16, 0, Math.PI*2); rCtx.fillStyle=i===1?'#f33':'#c00'; rCtx.fill(); }); } 
+                else if(OP.eSt==='patrol') { rCtx.beginPath(); rCtx.arc(OP.eX, OP.eY, 14, 0, Math.PI*2); rCtx.fillStyle='rgba(200,0,0,0.4)'; rCtx.fill(); }
+                // Gölge
+                rCtx.beginPath(); rCtx.arc(OP.sX, OP.sY, 12, 0, Math.PI*2); if(OP.sFz) { rCtx.fillStyle='#a0f'; rCtx.lineWidth=2; rCtx.strokeStyle='#fff'; rCtx.stroke(); } else { rCtx.fillStyle='rgba(100,0,255,0.4)'; } rCtx.fill();
+            }
+
+            rCtx.beginPath(); rCtx.arc(OP.pX, OP.pY, OP.pEx?22:16, 0, Math.PI*2); rCtx.fillStyle=OP.pEx?'var(--term-red)':'var(--term-green)'; rCtx.shadowBlur=OP.pEx?40:15; rCtx.shadowColor=rCtx.fillStyle; rCtx.fill(); rCtx.shadowBlur=0; rCtx.restore();
+
+            // Interference
+            if (isRadioActive) {
+                let distToThreat = Math.min(MathGen.dist(OP.pX,OP.pY,OP.eX,OP.eY), MathGen.dist(OP.pX,OP.pY,OP.sX,OP.sY));
+                let intf = 0; if (distToThreat<400) intf = 1.0 - (distToThreat/400);
+                radioGain.gain.setTargetAtTime(1.0-(intf*0.8), radioCtx.currentTime, 0.1); staticGain.gain.setTargetAtTime(intf*0.4, radioCtx.currentTime, 0.1);
+                
+                let vEl = document.getElementById('op-bodycam');
+                if(vEl && staticCanvas) {
+                    if (intf>0.05) {
+                        drawTVStatic(staticCtx, staticCanvas.width, staticCanvas.height);
+                        staticCanvas.style.opacity = Math.min(0.9, intf*1.5);
+                        vEl.style.opacity = 1.0 - (intf*0.5);
+                        if(intf>0.7) vEl.style.filter = `grayscale(100%) contrast(200%) brightness(50%) sepia(50%) hue-rotate(${Math.random()*360}deg)`;
+                    } else { staticCanvas.style.opacity = 0; vEl.style.opacity = 1.0; vEl.style.filter = "grayscale(100%) contrast(150%) brightness(80%) sepia(20%) hue-rotate(180deg)"; }
+                }
+                if(OP.pEx) { rCtx.fillStyle='rgba(255,0,0,0.1)'; rCtx.fillRect(0,0,ui.rCan.width,40); rCtx.fillStyle='var(--term-red)'; rCtx.fillText("! KARDİYO KRİZİ !", 20, 28); }
+            }
+            requestAnimationFrame(radarLoop);
+        }
+
+        // ==========================================
+        // 7. SAHA (FIELD) FİZİK VE RENDER MOTORU
+        // ==========================================
+        window.addEventListener('keydown', e => { KEYS[e.key.toLowerCase()] = true; if(e.key.toLowerCase()==='f') { if(GAME.empTimer>0) SFX.beep(150,'sawtooth',0.2); else PL.fOn=!PL.fOn; } });
+        window.addEventListener('keyup', e => KEYS[e.key.toLowerCase()] = false);
+        ui.gCan.addEventListener('mousemove', e => { MOUSE.x = e.clientX + CAM.x; MOUSE.y = e.clientY + CAM.y; });
+        function resizeCanvas() { ui.gCan.width=window.innerWidth; ui.gCan.height=window.innerHeight; }
+
+        function handleFieldMsg(data) {
+            if(data.type==='sys_init') { generateMap(data.seed); requestAnimationFrame(gameLoop); }
+            if(data.act==='override' && GAME.doors[data.tgt] && !GAME.doors[data.tgt].isBroken) { GAME.doors[data.tgt].isClosed = !GAME.doors[data.tgt].isClosed; SFX.beep(200,'sawtooth',0.2); }
+            if(data.act==='reboot' && GAME.doors[data.tgt]) { let d=GAME.doors[data.tgt]; d.isBroken=false; d.isClosed=true; d.p=1; SFX.beep(600,'sine',0.2); }
+            if(data.act==='extract') { 
+                let g = GAME.generators.find(x=>x.id===data.tgt); if(g) { g.active = true; GAME.pings.push({x:g.x,y:g.y,r:0,a:1,s:25,c:'#0fa'}); SFX.alarm(); }
+                if(GAME.generators.every(x=>x.active)) { GAME.exit.active=true; AI.aggro=5; AI.state='hunt'; AI.target={x:GAME.exit.x, y:GAME.exit.y}; GAME.pings.push({x:GAME.exit.x,y:GAME.exit.y,r:0,a:1,s:40,c:'#0f6'}); netSend({type:'end_alert'}); }
+            }
+            if(data.act==='hack_fail') { let g = GAME.generators.find(x=>x.id===data.tgt); if(g) { GAME.pings.push({x:g.x,y:g.y,r:0,a:1,s:30,c:'var(--term-red)'}); CAM.shake=20; SFX.crash(); AI.aggro=Math.min(AI.aggro+2, 5); AI.state='hunt'; AI.target={x:g.x,y:g.y}; SHADOW.isFrozen=false; } }
+            if(data.act==='scan') { GAME.pings.push({x:PL.x,y:PL.y,r:0,a:1,s:60,c:'#0ff'}); AI.aggro=Math.min(AI.aggro+1.5,5); SFX.crash(); }
+            if(data.act==='decoy' && GAME.doors[data.tgt]) { let d=GAME.doors[data.tgt], cx=(d.seg.x1+d.seg.x2)/2, cy=(d.seg.y1+d.seg.y2)/2; GAME.pings.push({x:cx,y:cy,r:0,a:1,s:15,c:'#fc0'}); AI.state='hunt'; AI.target={x:cx,y:cy}; AI.decoyT=6000; AI.aggro+=0.5; SFX.alarm(); }
+            if(data.act==='emp') { GAME.empTimer=3000; PL.fOn=false; SFX.emp(); GAME.pings.push({x:PL.x,y:PL.y,r:0,a:1,s:80,c:'#00f'}); }
+        }
+
+        let lastT = 0, netT = 0, beatT = 0;
+        function gameLoop(time) {
+            let dt = time-lastT; lastT = time;
+            if(GAME.state === 'playing' && time-netT > 50) {
+                netSend({type:'state', px:Math.round(PL.x), py:Math.round(PL.y), ex:PL.ex, exy:Math.round(AI.x), eyy:Math.round(AI.y), est:AI.state, sx:Math.round(SHADOW.x), sy:Math.round(SHADOW.y), sfz:SHADOW.isFrozen}); netT = time;
+            }
+            for(let id in GAME.doors) { let d=GAME.doors[id]; d.p = d.isClosed ? Math.max(0, d.p-d.spd) : Math.min(1, d.p+d.spd); }
+            let segments = getActiveSegs();
+
+            if(GAME.state === 'playing') {
+                if(PL.fOn) { PL.bat-=CONST.BAT_DRAIN; if(PL.bat<=0) { PL.bat=0; PL.fOn=false; SFX.beep(150,'sawtooth',0.3); } }
+                GAME.items.forEach(i => { if(i.active && MathGen.dist(PL.x,PL.y,i.x,i.y)<PL.r+15) { i.active=false; PL.bat=Math.min(CONST.BAT_MAX, PL.bat+25); SFX.beep(900,'sine',0.1); GAME.pings.push({x:PL.x,y:PL.y,r:0,a:0.8,s:10,c:'#0cf'}); } });
+                
+                let isS = KEYS['shift'] && !PL.ex && (KEYS['w']||KEYS['a']||KEYS['s']||KEYS['d']);
+                if(isS) { PL.st-=1.5; if(PL.st<=0) { PL.st=0; PL.ex=true; SFX.heartbeat(); } } else { PL.st=Math.min(100, PL.st+0.5); if(PL.ex && PL.st>35) PL.ex=false; }
+                let acc = PL.ex?PL.accE:(isS?PL.accS:PL.accB), max = PL.ex?PL.spdE:(isS?PL.spdS:PL.spdB);
+                if(KEYS['a']) PL.vx-=acc; if(KEYS['d']) PL.vx+=acc; if(KEYS['w']) PL.vy-=acc; if(KEYS['s']) PL.vy+=acc;
+                PL.vx*=0.82; PL.vy*=0.82; let pSpd = Math.sqrt(PL.vx**2+PL.vy**2); if(pSpd>max) { PL.vx*=max/pSpd; PL.vy*=max/pSpd; }
+
+                let nx=PL.x+PL.vx, ny=PL.y+PL.vy;
+                for(let seg of segments){
+                    let dx=seg.x2-seg.x1, dy=seg.y2-seg.y1, len=dx*dx+dy*dy; if(len===0) continue;
+                    let t = Math.max(0,Math.min(1,((nx-seg.x1)*dx+(ny-seg.y1)*dy)/len)), cx=seg.x1+t*dx, cy=seg.y1+t*dy, dist=MathGen.dist(nx,ny,cx,cy);
+                    if(dist<PL.r){ if(dist===0)dist=0.1; let over=PL.r-dist, rx=(nx-cx)/dist, ry=(ny-cy)/dist; nx+=rx*over; ny+=ry*over; let dot=PL.vx*rx+PL.vy*ry; PL.vx-=dot*rx; PL.vy-=dot*ry; }
+                } PL.x=nx; PL.y=ny;
+
+                if(GAME.empTimer>0) {
+                    GAME.empTimer-=dt; AI.vx=0; AI.vy=0; SHADOW.vx=0; SHADOW.vy=0;
+                    if(Math.random()<0.3) emitParticles(AI.x,AI.y,'#0ff',2,5); if(Math.random()<0.3) emitParticles(SHADOW.x,SHADOW.y,'#0ff',2,5);
+                } else {
+                    let mAng = Math.atan2(MOUSE.y-PL.y, MOUSE.x-PL.x), distToE = MathGen.dist(PL.x,PL.y,AI.x,AI.y), eInLight = false, distToS = MathGen.dist(PL.x,PL.y,SHADOW.x,SHADOW.y); SHADOW.isFrozen = false;
+                    
+                    if(PL.fOn) {
+                        let cL = (tx, ty) => { let a = Math.atan2(ty-PL.y, tx-PL.x), df = a-mAng; while(df<=-Math.PI) df+=Math.PI*2; while(df>Math.PI) df-=Math.PI*2;
+                            if(Math.abs(df)<CONST.FOV/2) { let h=false; for(let s of segments) if(getIntersection({a:{x:PL.x,y:PL.y},b:{x:tx,y:ty}},s)?.p<1) h=true; return !h; } return false; 
+                        };
+                        if(distToE<CONST.SIGHT) eInLight = cL(AI.x, AI.y);
+                        if(distToS<CONST.SIGHT) SHADOW.isFrozen = cL(SHADOW.x, SHADOW.y);
+                    }
+
+                    if(AI.decoyT>0) { AI.decoyT-=dt; if(eInLight && AI.state!=='stun') { AI.stunT=2000; AI.state='stun'; AI.decoyT=0; SFX.crash(); } }
+                    if(AI.stunT>0) { AI.stunT-=dt; AI.state='stun'; AI.vx=(Math.random()-0.5)*2; AI.vy=(Math.random()-0.5)*2; }
+                    else if(AI.decoyT<=0) {
+                        if(eInLight && AI.state!=='stun') { AI.stunT=1500; AI.state='stun'; AI.aggro=Math.min(AI.aggro+1.5,5); AI.vx=Math.cos(mAng)*6; AI.vy=Math.sin(mAng)*6; emitParticles(AI.x,AI.y,'#fff',20,5); SFX.crash(); }
+                        else {
+                            if((AI.state==='hunt'||AI.state==='patrol') && AI.saboT<=0){
+                                for(let id in GAME.doors) { let d=GAME.doors[id]; if(d.isClosed && d.p<0.2 && MathGen.dist(AI.x,AI.y,(d.seg.x1+d.seg.x2)/2,(d.seg.y1+d.seg.y2)/2)<50){ AI.state='sabotage'; AI.tDoor=id; AI.saboT=3000; AI.vx=0; AI.vy=0; break; } }
+                            }
+                            if(AI.state==='sabotage') {
+                                AI.saboT-=dt; AI.vx=(Math.random()-0.5)*3; AI.vy=(Math.random()-0.5)*3; let tD=GAME.doors[AI.tDoor];
+                                if(!tD || !tD.isClosed) { AI.state='hunt'; AI.saboT=0; }
+                                else if(AI.saboT<=0) { tD.isClosed=false; tD.isBroken=true; tD.p=1; AI.state='hunt'; CAM.shake=MathGen.dist(PL.x,PL.y,(tD.seg.x1+tD.seg.x2)/2,(tD.seg.y1+tD.seg.y2)/2)<400?30:10; GAME.pings.push({x:(tD.seg.x1+tD.seg.x2)/2, y:(tD.seg.y1+tD.seg.y2)/2, r:0, a:1, s:20, c:'#f00'}); emitParticles((tD.seg.x1+tD.seg.x2)/2, (tD.seg.y1+tD.seg.y2)/2, '#fc0', 30, 8); SFX.crash(); }
+                            } else if(AI.state!=='ambush'){
+                                let det = PL.ex ? AI.detect*2.5 : AI.detect;
+                                if(distToE<det) { AI.state='hunt'; AI.target={x:PL.x,y:PL.y}; AI.maxS=(PL.ex?4.2:3.0)+(AI.aggro*0.5); AI.patT=0; } else { AI.state='patrol'; AI.maxS=1.8; if(AI.aggro>0) AI.aggro-=0.005; AI.patT+=dt; }
+                            }
+                            if(AI.state==='patrol' && AI.patT>20000){ AI.state='ambush'; AI.patT=0; let rg=GAME.generators[MathGen.randInt(0,GAME.generators.length-1)]; if(MathGen.dist(PL.x,PL.y,rg.x,rg.y)>400) { AI.x=rg.x; AI.y=rg.y; } }
+                            if(AI.state==='ambush') { AI.vx=0; AI.vy=0; if(distToE<(AI.detect*0.8) || eInLight){ AI.state='hunt'; AI.aggro+=1; CAM.shake=15; SFX.alarm(); } }
+                        }
+                    }
+
+                    if(AI.state!=='stun' && AI.state!=='sabotage' && AI.state!=='ambush'){
+                        let td = MathGen.dist(AI.target.x,AI.target.y, AI.x,AI.y); if(td>10){ AI.vx+=((AI.target.x-AI.x)/td)*AI.accelB; AI.vy+=((AI.target.y-AI.y)/td)*0.25; }
+                    }
+                    AI.vx*=0.88; AI.vy*=0.88; let eSpd=Math.sqrt(AI.vx**2+AI.vy**2); if(eSpd>AI.maxS){ AI.vx*=AI.maxS/eSpd; AI.vy*=AI.maxS/eSpd; }
+
+                    if(!SHADOW.isFrozen && distToS>10) { SHADOW.vx=((PL.x-SHADOW.x)/distToS)*SHADOW.speed; SHADOW.vy=((PL.y-SHADOW.y)/distToS)*SHADOW.speed; } else { SHADOW.vx=0; SHADOW.vy=0; }
+
+                    let doCol = (O) => { let nx=O.x+O.vx, ny=O.y+O.vy; for(let seg of segments){ let dx=seg.x2-seg.x1, dy=seg.y2-seg.y1, len=dx*dx+dy*dy; if(len===0) continue; let t=Math.max(0,Math.min(1,((nx-seg.x1)*dx+(ny-seg.y1)*dy)/len)), cx=seg.x1+t*dx, cy=seg.y1+t*dy, dist=MathGen.dist(nx,ny,cx,cy); if(dist<O.r){ if(dist===0)dist=0.1; let over=O.r-dist, rx=(nx-cx)/dist, ry=(ny-cy)/dist; nx+=rx*over; ny+=ry*over; let dot=O.vx*rx+O.vy*ry; O.vx-=dot*rx; O.vy-=dot*ry; } } O.x=nx; O.y=ny; };
+                    doCol(AI); doCol(SHADOW);
+                } // EMP bitiş
+
+                if(MathGen.dist(PL.x,PL.y, AI.x,AI.y) < (PL.r+AI.r) || MathGen.dist(PL.x,PL.y, SHADOW.x,SHADOW.y) < (PL.r+SHADOW.r)){
+                    GAME.state='gameover'; CAM.shake=50; SFX.crash(); document.body.classList.add('glitch-active'); netSend({type:'end', res:'gameover'});
+                }
+                if(GAME.exit.active && MathGen.dist(PL.x,PL.y, GAME.exit.x,GAME.exit.y) < (PL.r+GAME.exit.r)){ GAME.state='victory'; netSend({type:'end', res:'victory'}); }
+                
+                if(isRadioActive) {
+                    let dToThr = Math.min(MathGen.dist(PL.x,PL.y,AI.x,AI.y), MathGen.dist(PL.x,PL.y,SHADOW.x,SHADOW.y)), inf=0;
+                    if(dToThr<400) inf=1.0-(dToThr/400); if(GAME.empTimer>0) inf=1.0;
+                    radioGain.gain.setTargetAtTime(1.0-(inf*0.8), radioCtx.currentTime, 0.1); staticGain.gain.setTargetAtTime(inf*0.4, radioCtx.currentTime, 0.1);
+                }
+                if(time - beatT > (PL.ex?400:(1000 - FEAR*600))) { SFX.heartbeat(); beatT = time; }
+            }
+
+            // --- RENDER ---
+            CAM.x = PL.x - ui.gCan.width/2; CAM.y = PL.y - ui.gCan.height/2;
+            if(CAM.shake>0) { CAM.x+=(Math.random()-0.5)*CAM.shake; CAM.y+=(Math.random()-0.5)*CAM.shake; CAM.shake*=0.9; if(CAM.shake<0.5) CAM.shake=0; }
+            
+            ctx.fillStyle='#020202'; ctx.fillRect(0,0,ui.gCan.width,ui.gCan.height); ctx.save(); ctx.translate(-CAM.x, -CAM.y);
+            
+            GAME.lights.forEach(l => { if(GAME.empTimer<=0 && Date.now()%l.blink < l.blink/2) { let grd = ctx.createRadialGradient(l.x,l.y,0, l.x,l.y,150); grd.addColorStop(0, `rgba(255,0,0,${l.i})`); grd.addColorStop(1, 'rgba(255,0,0,0)'); ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(l.x,l.y,150,0,Math.PI*2); ctx.fill(); } });
+            ctx.strokeStyle='#321'; ctx.lineWidth=6; ctx.lineCap="round"; segments.forEach(s=>{ ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke(); });
+
+            GAME.generators.forEach(g => { ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, Math.PI*2); ctx.fillStyle=g.active?'#0fa':'#111'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle=g.active?'#fff':'var(--hex-gold)'; ctx.stroke(); if(!g.active && MathGen.dist(PL.x,PL.y,g.x,g.y)<150) { ctx.fillStyle='var(--hex-gold)'; ctx.font="bold 22px Courier"; ctx.fillText(g.hexCode, g.x-35, g.y-25); } });
+            GAME.items.forEach(i => { if(i.active) { ctx.fillStyle='#0cf'; ctx.fillRect(i.x-6,i.y-6,12,12); ctx.strokeStyle='#fff'; ctx.strokeRect(i.x-6,i.y-6,12,12); }});
+            if(GAME.exit.active){ ctx.beginPath(); ctx.arc(GAME.exit.x, GAME.exit.y, GAME.exit.r, 0, Math.PI*2); ctx.fillStyle=`rgba(0,255,100,${0.2+Math.abs(Math.sin(Date.now()/200))*0.4})`; ctx.fill(); ctx.lineWidth=4; ctx.strokeStyle='#0f6'; ctx.setLineDash([15,15]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle='#0f6'; ctx.font="bold 24px Courier"; ctx.fillText(">> EXTRACT <<", GAME.exit.x-75, GAME.exit.y); }
+
+            if(AI.state!=='ambush'){ ctx.beginPath(); ctx.arc(AI.x, AI.y, AI.r, 0, Math.PI*2); if(AI.state==='stun') { ctx.fillStyle='#fff'; ctx.strokeStyle='#ff0'; } else if(AI.state==='hunt') { ctx.fillStyle=`rgb(${Math.min(150+AI.aggro*20, 255)},0,0)`; ctx.strokeStyle='#f00'; } else { ctx.fillStyle='#400'; ctx.strokeStyle='#800'; } ctx.fill(); ctx.lineWidth=2; ctx.stroke(); }
+            ctx.beginPath(); ctx.arc(SHADOW.x, SHADOW.y, SHADOW.r, 0, Math.PI*2); if(SHADOW.isFrozen) { ctx.fillStyle='#000'; ctx.strokeStyle=(Date.now()%100<50)?'#a0f':'#fff'; ctx.fill(); ctx.lineWidth=3; ctx.stroke(); } else { ctx.fillStyle='#000'; ctx.strokeStyle='#111'; ctx.fill(); ctx.lineWidth=1; ctx.stroke(); }
+
+            for(let i=GAME.particles.length-1; i>=0; i--) { let p=GAME.particles[i]; p.update(dt); p.draw(ctx); if(p.life<=0) GAME.particles.splice(i,1); }
+            for(let i=GAME.pings.length-1; i>=0; i--) { let p=GAME.pings[i]; p.r+=p.s; p.a-=0.015; if(p.a<=0) { GAME.pings.splice(i,1); continue; } ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.strokeStyle=p.c; ctx.globalAlpha=p.a; ctx.lineWidth=5; ctx.stroke(); ctx.globalAlpha=1; }
+
+            if(PL.fOn) {
+                let pts = [{x:PL.x,y:PL.y}], mAng=Math.atan2(MOUSE.y-PL.y, MOUSE.x-PL.x);
+                for(let i=0; i<=CONST.RAYS; i++) { let rA=(mAng-CONST.FOV/2)+(i/CONST.RAYS)*CONST.FOV, r={a:{x:PL.x,y:PL.y}, b:{x:PL.x+Math.cos(rA)*CONST.SIGHT, y:PL.y+Math.sin(rA)*CONST.SIGHT}}, cI=null; for(let s of segments) { let x=getIntersection(r,s); if(x&&x.p<1&&(!cI||x.p<cI.p)) cI=x; } pts.push(cI?cI:r.b); }
+                const mC = document.createElement('canvas'); mC.width=ui.gCan.width; mC.height=ui.gCan.height; const mCtx = mC.getContext('2d');
+                mCtx.translate(-CAM.x, -CAM.y); mCtx.fillStyle='#020202'; mCtx.fillRect(CAM.x,CAM.y,ui.gCan.width,ui.gCan.height); mCtx.globalCompositeOperation='destination-out';
+                let gr = mCtx.createRadialGradient(PL.x,PL.y,0, PL.x,PL.y,CONST.SIGHT); gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(0.8,`rgba(255,255,255,${0.5+(PL.bat/200)})`); gr.addColorStop(1,'rgba(255,255,255,0)');
+                mCtx.fillStyle=gr; mCtx.beginPath(); mCtx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) mCtx.lineTo(pts[i].x,pts[i].y); mCtx.closePath(); mCtx.fill();
+                ctx.restore(); ctx.drawImage(mC,0,0);
+            } else { ctx.restore(); ctx.fillStyle='rgba(5,5,5,0.95)'; ctx.fillRect(0,0,ui.gCan.width,ui.gCan.height); }
+
+            ctx.beginPath(); ctx.arc(ui.gCan.width/2, ui.gCan.height/2, PL.r, 0, Math.PI*2); ctx.fillStyle='#0cf'; ctx.fill();
+
+            let fT = (MathGen.dist(PL.x,PL.y,AI.x,AI.y)<350 && AI.state!=='ambush') ? 1.0-(MathGen.dist(PL.x,PL.y,AI.x,AI.y)/350) : 0; if(AI.state==='hunt') fT*=1.5; if(PL.ex) fT*=1.5; fT=Math.min(fT,1); FEAR+=(fT-FEAR)*0.08;
+            if(FEAR>0.05) { let fa = Math.min((FEAR*0.7)+Math.abs(Math.sin(Date.now()/150))*0.3, 0.95), vg = ctx.createRadialGradient(ui.gCan.width/2,ui.gCan.height/2,ui.gCan.height*0.2, ui.gCan.width/2,ui.gCan.height/2,ui.gCan.height*0.9); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,`rgba(${AI.state==='hunt'?200:0},0,0,${fa})`); ctx.fillStyle=vg; ctx.fillRect(0,0,ui.gCan.width,ui.gCan.height); }
+
+            ctx.fillStyle='rgba(20,20,20,0.8)'; ctx.fillRect(30,ui.gCan.height-50,250,12);
+            ctx.fillStyle=PL.ex?`rgba(220,20,20,${0.4+Math.abs(Math.sin(Date.now()/150))*0.6})`:'#0cf'; ctx.fillRect(30,ui.gCan.height-50,250*(PL.st/100),12);
+            ctx.fillStyle='rgba(20,20,20,0.8)'; ctx.fillRect(30,ui.gCan.height-30,150,8);
+            ctx.fillStyle=(PL.bat<20 && Date.now()%500<250)?'#f00':'#fc0'; ctx.fillRect(30,ui.gCan.height-30,150*(PL.bat/100),8);
+            ctx.fillStyle='#fff'; ctx.font="14px Courier"; ctx.fillText(`BATTERY [F]`, 30, ui.gCan.height-10);
+
+            if(GAME.state==='gameover') { ctx.fillStyle='rgba(150,0,0,0.9)'; ctx.fillRect(0,0,ui.gCan.width,ui.gCan.height); ctx.fillStyle='#fff'; ctx.font="bold 60px Courier"; ctx.textAlign="center"; ctx.fillText("SİSTEM ÇÖKTÜ", ui.gCan.width/2, ui.gCan.height/2); } 
+            else if(GAME.state==='victory') { ctx.fillStyle='rgba(0,40,60,0.95)'; ctx.fillRect(0,0,ui.gCan.width,ui.gCan.height); ctx.fillStyle='#0fa'; ctx.font="bold 60px Courier"; ctx.textAlign="center"; ctx.fillText("TAHLİYE BAŞARILI", ui.gCan.width/2, ui.gCan.height/2); }
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
