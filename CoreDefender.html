@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Defenders (Final Sürüm)</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #030305; color: #fff; font-family: 'Courier New', Courier, monospace; user-select: none; }
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+        .overlay-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(5, 5, 15, 0.9); padding: 30px; border-radius: 8px; backdrop-filter: blur(15px); border: 2px solid #1a1a3a; text-align: center; box-shadow: 0 0 50px rgba(0, 255, 255, 0.15); z-index: 10; width: 420px; }
+        
+        /* LOGO CSS */
+        .logo-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; position: relative; }
+        .cd-logo { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at center, #111 5%, #ddd 15%, #b1dae7 25%, #dae1e3 40%, #7db9e8 60%, #444 80%, #222 100%); box-shadow: inset 0 0 15px rgba(255,255,255,0.7), 0 0 25px #00ffff; display: flex; align-items: center; justify-content: center; position: relative; border: 3px solid #00ffff; animation: spin 10s linear infinite; }
+        .cd-logo::after { content: ''; width: 22px; height: 22px; background: #030305; border-radius: 50%; position: absolute; border: 2px solid #666; box-shadow: inset 0 0 5px #000; }
+        .cd-text { position: absolute; font-size: 38px; font-weight: 900; color: #ff003c; text-shadow: 2px 2px 0 #000, 0 0 15px #ff003c; z-index: 2; letter-spacing: -3px; margin-right: 4px; font-family: Impact, sans-serif; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .title-text { margin: 15px 0 5px 0; font-size: 28px; text-shadow: 0 0 15px #00ffff; color: #00ffff; font-weight: bold; letter-spacing: 1px; }
+        .version-text { font-size: 14px; color: #ff003c; letter-spacing: 4px; font-weight: bold; background: rgba(255,0,60,0.1); padding: 2px 10px; border-radius: 4px; border: 1px solid rgba(255,0,60,0.3); }
+
+        .btn { background: #00ffff; color: #000; border: none; padding: 12px 20px; margin: 10px 0; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; transition: all 0.2s; text-transform: uppercase; }
+        .btn:hover:not(:disabled) { background: #fff; box-shadow: 0 0 15px #fff; transform: scale(1.02); }
+        .btn:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; border: 1px solid #444; }
+        .btn-small { padding: 8px 12px; font-size: 14px; width: auto; margin: 0; }
+        input { background: rgba(0, 0, 0, 0.7); color: #fff; border: 1px solid #1a1a3a; padding: 12px; width: calc(100% - 26px); border-radius: 4px; margin-bottom: 10px; font-size: 16px; text-align: center; outline: none; font-family: monospace; }
+        
+        #room-code-display { font-size: 18px; color: #ffea00; margin: 15px 0; user-select: text; background: rgba(0,0,0,0.5); padding: 10px; border: 1px dashed #ffea00; }
+        #ui { position: absolute; top: 20px; left: 20px; font-size: 18px; display: none; z-index: 5; line-height: 1.4; pointer-events: none; }
+        .stat-val { color: #00ffff; font-weight: bold; }
+        .core-healthy { color: #00ff87; }
+        .core-dead { color: #ff003c; text-decoration: line-through; }
+        
+        #boss-ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 600px; text-align: center; display: none; z-index: 5; }
+        #boss-name { font-size: 20px; font-weight: bold; color: #ff003c; text-shadow: 0 0 10px #ff003c; margin-bottom: 5px; letter-spacing: 2px; }
+        #boss-bar-bg { background: rgba(255, 0, 0, 0.2); border: 2px solid #ff003c; height: 20px; width: 100%; border-radius: 10px; overflow: hidden; }
+        #boss-bar-fill { background: linear-gradient(90deg, #ff003c, #ff8800); height: 100%; width: 100%; transition: width 0.1s; }
+        
+        #skill-tree-screen, #stats-screen { display: none; width: 500px; }
+        .skill-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.5); padding: 15px; margin-bottom: 10px; border: 1px solid #333; border-radius: 5px; }
+        .skill-info { text-align: left; }
+        .skill-name { color: #ffea00; font-weight: bold; font-size: 16px; }
+        .skill-desc { color: #aaa; font-size: 12px; margin-top: 4px; }
+        
+        #upgrade-screen { display: none; width: 800px; padding: 20px; background: rgba(10, 10, 20, 0.95); border: 2px solid #00ffff; border-radius: 10px; z-index: 20; }
+        .upgrade-container { display: flex; justify-content: space-between; gap: 20px; margin-top: 20px; }
+        .player-panel { flex: 1; border: 1px solid #333; padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.5); }
+        .card-row { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        .upgrade-card { background: #111; border: 2px solid #444; padding: 10px; border-radius: 5px; width: 100px; cursor: pointer; transition: 0.2s; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px; }
+        .upgrade-card.type-shot { border-color: #ffea00; }
+        .upgrade-card.type-stat { border-color: #00ff87; }
+        .upgrade-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(255,255,255,0.2); }
+        .upgrade-card.selected { background: #222; border-color: #00ffff; box-shadow: 0 0 15px #00ffff; }
+        
+        #game-over-screen, #warning-msg, #zone-warning { display: none; }
+        #warning-msg { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; color: #ff003c; text-shadow: 0 0 20px #ff003c; font-weight: bold; z-index: 5; text-align: center;}
+        #zone-warning { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #ff00ff; text-shadow: 0 0 15px #ff00ff; font-weight: bold; z-index: 5; text-align: center;}
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div>Faz: <span id="wave-display" class="stat-val">DALGA 1</span> | XP: <span id="score-display" class="stat-val">0</span></div>
+        <div>Sürüm: <span id="level-display" class="stat-val">Sentinel v1.0</span></div>
+        <div style="margin-top:5px;">
+            [ <span id="core-0-ui" class="core-healthy">Alpha</span> ] 
+            [ <span id="core-1-ui" class="core-healthy">Beta</span> ] 
+            [ <span id="core-2-ui" class="core-healthy">Gamma</span> ]
+        </div>
+    </div>
+
+    <div id="boss-ui">
+        <div id="boss-name">PROTO-DEVOURER</div>
+        <div id="boss-bar-bg"><div id="boss-bar-fill"></div></div>
+    </div>
+    <div id="warning-msg">⚠ BOSS DALGASI ⚠</div>
+    <div id="zone-warning">⚠ KUANTUM DARALMASI ⚠<br><span style="font-size:18px; color:#aaa;">Güvenli alana ilerleyin!</span></div>
+
+    <!-- MAIN MENU -->
+    <div id="menu" class="overlay-screen">
+        <div class="logo-container">
+            <div class="cd-logo"><div class="cd-text">CD</div></div>
+            <div class="title-text">CORE DEFENDERS</div>
+            <div class="version-text">FİNAL SÜRÜM</div>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <button class="btn" style="background:#ffea00; flex:1;" onclick="openSkillTree()">Yetenekler</button>
+            <button class="btn" style="background:#00ff87; flex:1;" onclick="openStats()">İstatistikler</button>
+        </div>
+        <div style="font-size:12px; color:#aaa; margin-bottom: 10px;">Mevcut XP: <span id="menu-xp-display" class="stat-val">0</span></div>
+
+        <hr style="border:1px solid #333; margin:20px 0;">
+        <div id="host-panel">
+            <button class="btn" id="btn-host">Koruma Ağı Kur (Host)</button>
+            <div id="room-code-container" style="display:none;">
+                <p style="margin-bottom: 5px; font-size: 12px; color: #aaa;">Bağlantı Kodu:</p>
+                <div id="room-code-display">KOD OLUŞTURULUYOR...</div>
+            </div>
+        </div>
+        <div id="join-panel" style="margin-top: 10px;">
+            <input type="text" id="join-code" placeholder="Bağlantı Kodunu Gir" autocomplete="off">
+            <button class="btn" id="btn-join">Ağa Katıl (Client)</button>
+        </div>
+    </div>
+
+    <div id="skill-tree-screen" class="overlay-screen">
+        <h2 style="color:#ffea00; margin-top:0;">KALICI YÜKSELTMELER</h2>
+        <p>Mevcut Veri: <span id="tree-xp-display" class="stat-val">0</span> xp</p>
+        <div class="skill-row"><div class="skill-info"><div class="skill-name">Gövde Zırhı (HP) [<span id="lvl-hp">0</span>/3]</div><div class="skill-desc">Başlangıç canınızı kalıcı olarak 20 artırır.</div></div><button id="btn-upg-hp" class="btn btn-small" onclick="buySkill('hp')">Satın Al</button></div>
+        <div class="skill-row"><div class="skill-info"><div class="skill-name">Aşırı Hız (Speed) [<span id="lvl-speed">0</span>/3]</div><div class="skill-desc">Hareket hızınızı kalıcı olarak %10 artırır.</div></div><button id="btn-upg-speed" class="btn btn-small" onclick="buySkill('speed')">Satın Al</button></div>
+        <div class="skill-row"><div class="skill-info"><div class="skill-name">Ağır Çekirdek (Dmg) [<span id="lvl-dmg">0</span>/3]</div><div class="skill-desc">Tüm hasarlarınızı kalıcı olarak %15 artırır.</div></div><button id="btn-upg-dmg" class="btn btn-small" onclick="buySkill('dmg')">Satın Al</button></div>
+        <button class="btn" style="background:#555; color:#fff;" onclick="closeScreens()">Ana Menüye Dön</button>
+    </div>
+
+    <div id="stats-screen" class="overlay-screen">
+        <h2 style="color:#00ff87; margin-top:0;">SİSTEM İSTATİSTİKLERİ</h2>
+        <div class="skill-row"><div class="skill-info"><div class="skill-name">En Yüksek Dalga</div><div class="skill-desc">Ulaştığınız en yüksek seviye.</div></div><div class="stat-val" style="font-size:24px;" id="stat-wave">1</div></div>
+        <div class="skill-row"><div class="skill-info"><div class="skill-name">Yok Edilen Boss'lar</div><div class="skill-desc">Mağlup edilen Boss sayısı.</div></div><div class="stat-val" style="font-size:24px;" id="stat-bosses">0</div></div>
+        <div class="skill-row"><div class="skill-info"><div class="skill-name">Kümülatif Veri (XP)</div><div class="skill-desc">Kazanılan tüm XP.</div></div><div class="stat-val" style="font-size:24px;" id="stat-total-xp">0</div></div>
+        <button class="btn" style="background:#555; color:#fff;" onclick="closeScreens()">Ana Menüye Dön</button>
+    </div>
+
+    <div id="upgrade-screen" class="overlay-screen">
+        <h1>&gt; GÜNCELLEME HAZIR</h1>
+        <div class="upgrade-container">
+            <div class="player-panel" id="panel-p1"><h3 style="color:#00ffff;">Mavi Sentinel</h3><div class="card-row" id="cards-p1"></div><div class="player-status" id="status-p1">Bekliyor...</div></div>
+            <div class="player-panel" id="panel-p2"><h3 style="color:#00ff87;">Yeşil Sentinel</h3><div class="card-row" id="cards-p2"></div><div class="player-status" id="status-p2">Bekliyor...</div></div>
+        </div>
+        <button class="btn" id="btn-ready-upgrade" style="margin-top:20px;" disabled>Seçimi Onayla</button>
+    </div>
+
+    <div id="game-over-screen" class="overlay-screen">
+        <h2>!!! SİSTEM ÇÖKTÜ !!!</h2>
+        <p>Kazanılan Veri: +<span id="earned-xp" class="stat-val">0</span> xp</p>
+        <p>Mevcut Veri: <span id="total-xp-end" class="stat-val">0</span> xp</p>
+        <button class="btn" onclick="location.reload()">Sistemi Yeniden Başlat</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // --- 8-BIT SES MOTORU ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        const SoundEngine = {
+            init: function() { if(!audioCtx) audioCtx = new AudioContext(); if(audioCtx.state === 'suspended') audioCtx.resume(); },
+            play: function(type) {
+                if(!audioCtx) return;
+                const osc = audioCtx.createOscillator(), gainNode = audioCtx.createGain();
+                osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+                if (type === 'click') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.1); osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'shoot') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(880, now); osc.frequency.exponentialRampToValueAtTime(110, now + 0.1); gainNode.gain.setValueAtTime(0.025, now); gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.1); osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'hit') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.2); gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.exponentialRampToValueAtTime(0.005, now + 0.2); osc.start(now); osc.stop(now + 0.2);
+                } else if (type === 'levelup') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now + 0.1); osc.frequency.setValueAtTime(659, now + 0.2); gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.4); osc.start(now); osc.stop(now + 0.4);
+                } else if (type === 'powerup') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.1); osc.frequency.linearRampToValueAtTime(1200, now + 0.2); gainNode.gain.setValueAtTime(0.05, now); gainNode.gain.linearRampToValueAtTime(0, now + 0.2); osc.start(now); osc.stop(now + 0.2);
+                }
+            }
+        };
+        document.querySelectorAll('.btn').forEach(btn => { btn.addEventListener('click', () => { SoundEngine.init(); SoundEngine.play('click'); }); });
+
+        // --- MAP VE FİZİK (COLLISION) SİSTEMİ ---
+        const LOGICAL_WIDTH = 1280; const LOGICAL_HEIGHT = 720;
+        
+        // Simetrik 4 köşeli L tipi siperler
+        const MAP_WALLS = [
+            // Sol Üst
+            { x: 150, y: 150, w: 200, h: 40 }, { x: 150, y: 190, w: 40, h: 100 },
+            // Sağ Üst
+            { x: LOGICAL_WIDTH - 350, y: 150, w: 200, h: 40 }, { x: LOGICAL_WIDTH - 190, y: 190, w: 40, h: 100 },
+            // Sol Alt
+            { x: 150, y: LOGICAL_HEIGHT - 190, w: 200, h: 40 }, { x: 150, y: LOGICAL_HEIGHT - 290, w: 40, h: 100 },
+            // Sağ Alt
+            { x: LOGICAL_WIDTH - 350, y: LOGICAL_HEIGHT - 190, w: 200, h: 40 }, { x: LOGICAL_WIDTH - 190, y: LOGICAL_HEIGHT - 290, w: 40, h: 100 }
+        ];
+
+        // Daire - Dikdörtgen Çarpışma Testi
+        function circleRectCollide(cx, cy, r, rx, ry, rw, rh) {
+            let testX = cx; let testY = cy;
+            if (cx < rx) testX = rx; else if (cx > rx + rw) testX = rx + rw;
+            if (cy < ry) testY = ry; else if (cy > ry + rh) testY = ry + rh;
+            let distX = cx - testX; let distY = cy - testY;
+            return (distX*distX + distY*distY) <= r*r;
+        }
+
+        // Entity Hareket Fonksiyonu (Duvarlardan Kayma Özelliği)
+        function moveEntity(ent, radius, dx, dy) {
+            ent.x += dx;
+            for(let w of MAP_WALLS) { if(circleRectCollide(ent.x, ent.y, radius, w.x, w.y, w.w, w.h)) { ent.x -= dx; break; } }
+            ent.y += dy;
+            for(let w of MAP_WALLS) { if(circleRectCollide(ent.x, ent.y, radius, w.x, w.y, w.w, w.h)) { ent.y -= dy; break; } }
+            ent.x = Math.max(radius, Math.min(LOGICAL_WIDTH - radius, ent.x));
+            ent.y = Math.max(radius, Math.min(LOGICAL_HEIGHT - radius, ent.y));
+        }
+
+        // --- META SYSTEM ---
+        let metaData = JSON.parse(localStorage.getItem('coreDefendersMeta')) || { xp: 0, skills: { hp: 0, speed: 0, dmg: 0 }, stats: { highestWave: 1, bossesKilled: 0, totalXpEarned: 0 } };
+        if(!metaData.stats) metaData.stats = { highestWave: 1, bossesKilled: 0, totalXpEarned: 0 };
+        const SKILL_COSTS = [200, 500, 1000];
+        
+        function saveMeta() { localStorage.setItem('coreDefendersMeta', JSON.stringify(metaData)); updateMenuXP(); }
+        function updateMenuXP() { 
+            document.getElementById('menu-xp-display').innerText = metaData.xp; document.getElementById('tree-xp-display').innerText = metaData.xp;
+            ['hp', 'speed', 'dmg'].forEach(k => {
+                let lvl = metaData.skills[k]; document.getElementById(`lvl-${k}`).innerText = lvl;
+                let btn = document.getElementById(`btn-upg-${k}`);
+                if (lvl >= 3) { btn.innerText = "MAKSIMUM"; btn.disabled = true; } else { btn.innerText = `${SKILL_COSTS[lvl]} XP`; btn.disabled = metaData.xp < SKILL_COSTS[lvl]; }
+            });
+            document.getElementById('stat-wave').innerText = metaData.stats.highestWave; document.getElementById('stat-bosses').innerText = metaData.stats.bossesKilled; document.getElementById('stat-total-xp').innerText = metaData.stats.totalXpEarned;
+        }
+
+        function buySkill(type) { let lvl = metaData.skills[type]; if(lvl < 3 && metaData.xp >= SKILL_COSTS[lvl]) { metaData.xp -= SKILL_COSTS[lvl]; metaData.skills[type]++; saveMeta(); } }
+        function openSkillTree() { document.getElementById('menu').style.display = 'none'; document.getElementById('skill-tree-screen').style.display = 'block'; updateMenuXP(); }
+        function openStats() { document.getElementById('menu').style.display = 'none'; document.getElementById('stats-screen').style.display = 'block'; updateMenuXP(); }
+        function closeScreens() { document.getElementById('skill-tree-screen').style.display = 'none'; document.getElementById('stats-screen').style.display = 'none'; document.getElementById('menu').style.display = 'block'; }
+        updateMenuXP();
+
+        // --- ENGINE SETTINGS ---
+        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
+        let isHost = false, isGameRunning = false, peer = null, connection = null, xpSaved = false;
+
+        const EVOLUTIONS = [
+            { wave: 1, name: "Sentinel v1.0", color: null, baseSpeed: 4, baseRate: 350 }, { wave: 5, name: "Scanner v2.1", color: "#ffea00", baseSpeed: 5, baseRate: 250 },
+            { wave: 9, name: "Premium AI v3.0", color: "#ffffff", baseSpeed: 6.5, baseRate: 150 }, { wave: 13, name: "Quantum Firewall", color: "#ff00ff", baseSpeed: 8, baseRate: 100 }
+        ];
+
+        const UPGRADE_POOL = {
+            shot: [ { id: 'twin', name: "Twin Barrel", desc: "Çift mermi." }, { id: 'spread', name: "Spread", desc: "Üçlü atış." }, { id: 'plasma', name: "Plasma", desc: "Yavaşlatır." }, { id: 'heavy', name: "Heavy Code", desc: "2x Hasar." } ],
+            stat: [ { id: 'speed', name: "Overclock", desc: "Hız +." }, { id: 'fire_rate', name: "Cooling", desc: "Atış Hızı +." }, { id: 'heal', name: "Patch", desc: "Core +30 HP." }, { id: 'pierce', name: "Piercing", desc: "Mermi deler." } ]
+        };
+
+        let gameState = {
+            phase: 'menu', wave: 1, score: 0, sessionBossKills: 0, bossActive: false, bossHp: 0, bossMaxHp: 1, bossName: "", zone: { active: false, radius: 1000 },
+            cores: [ { x: LOGICAL_WIDTH/2, y: LOGICAL_HEIGHT/2 - 80, hp: 100, maxHp: 100 }, { x: LOGICAL_WIDTH/2 - 80, y: LOGICAL_HEIGHT/2 + 50, hp: 100, maxHp: 100 }, { x: LOGICAL_WIDTH/2 + 80, y: LOGICAL_HEIGHT/2 + 50, hp: 100, maxHp: 100 } ],
+            p1: { x: LOGICAL_WIDTH/2 - 150, y: LOGICAL_HEIGHT/2, hp: 100, maxHp: 100, rebootTimer: 0, color: "#00ffff", mods: { shot: 'normal', speedBonus: 0, rateBonus: 0, dmgMult: 1, pierce: false }, meta: { speed: 0, dmg: 0 }, buffs: { shield: 0, rapid: 0, speed: 0 }, evIdx: 0, upgradeReady: false },
+            p2: { x: LOGICAL_WIDTH/2 + 150, y: LOGICAL_HEIGHT/2, hp: 100, maxHp: 100, rebootTimer: 0, color: "#00ff87", mods: { shot: 'normal', speedBonus: 0, rateBonus: 0, dmgMult: 1, pierce: false }, meta: { speed: 0, dmg: 0 }, buffs: { shield: 0, rapid: 0, speed: 0 }, evIdx: 0, upgradeReady: false },
+            bullets: [], enemies: [], powerups: [], waveConfig: { spawnsLeft: 0, pool: [] }
+        };
+
+        function applyMetaToPlayer(playerObj, skills) { playerObj.maxHp = 100 + (skills.hp * 20); playerObj.hp = playerObj.maxHp; playerObj.meta.speed = skills.speed * 0.4; playerObj.meta.dmg = 1 + (skills.dmg * 0.15); }
+
+        let inputs = { w: false, a: false, s: false, d: false, mouseX: 0, mouseY: 0, mouseDown: false }; let clientInputs = { w: false, a: false, s: false, d: false, mouseX: 0, mouseY: 0, mouseDown: false };
+        let clientLastShoot = 0; let p1LastShoot = 0; let p2LastShoot = 0; let hostFrameCount = 0;
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } window.addEventListener('resize', resize); resize();
+        function getMousePos(evt) { const s = Math.min(canvas.width/LOGICAL_WIDTH, canvas.height/LOGICAL_HEIGHT); return { x: (evt.clientX - (canvas.width - LOGICAL_WIDTH*s)/2)/s, y: (evt.clientY - (canvas.height - LOGICAL_HEIGHT*s)/2)/s }; }
+        
+        const keys = { w:'w', W:'w', ArrowUp:'w', s:'s', S:'s', ArrowDown:'s', a:'a', A:'a', ArrowLeft:'a', d:'d', D:'d', ArrowRight:'d' };
+        window.addEventListener('keydown', e => { if(keys[e.key]) inputs[keys[e.key]] = true; }); window.addEventListener('keyup', e => { if(keys[e.key]) inputs[keys[e.key]] = false; });
+        window.addEventListener('mousemove', e => { const p = getMousePos(e); inputs.mouseX = p.x; inputs.mouseY = p.y; });
+        window.addEventListener('mousedown', () => inputs.mouseDown = true); window.addEventListener('mouseup', () => inputs.mouseDown = false);
+
+        // --- NETWORK ---
+        function initNetwork(onOpen) { peer = new Peer(null, { debug: 0 }); peer.on('open', onOpen); peer.on('error', err => { alert("Ağ Hatası!"); location.reload(); }); }
+        
+        function startGame() {
+            document.getElementById('menu').style.display = 'none'; document.getElementById('skill-tree-screen').style.display = 'none'; document.getElementById('stats-screen').style.display = 'none';
+            document.getElementById('ui').style.display = 'block'; isGameRunning = true;
+            if (isHost) { applyMetaToPlayer(gameState.p1, metaData.skills); gameState.phase = 'playing'; startWaveHost(); hostGameLoop(); } 
+            else { if(connection) connection.send({ type: 'init_meta', payload: metaData.skills }); clientSendLoop(); }
+            requestAnimationFrame(renderLoop);
+        }
+
+        document.getElementById('btn-host').addEventListener('click', () => {
+            document.getElementById('btn-host').style.display = 'none'; document.getElementById('join-panel').style.display = 'none'; document.getElementById('room-code-container').style.display = 'block';
+            initNetwork(id => document.getElementById('room-code-display').innerText = id);
+            peer.on('connection', conn => {
+                connection = conn;
+                connection.on('open', () => {
+                    isHost = true; startGame();
+                    connection.on('data', data => {
+                        if (data.type === 'init_meta') applyMetaToPlayer(gameState.p2, data.payload);
+                        if (data.type === 'input') clientInputs = data.payload;
+                        if (data.type === 'upgrade_select') gameState.p2.selectedCard = data.payload;
+                        if (data.type === 'upgrade_ready') gameState.p2.upgradeReady = true;
+                        if (data.type === 'play_sound') SoundEngine.play(data.payload);
+                    });
+                });
+            });
+        });
+
+        document.getElementById('btn-join').addEventListener('click', () => {
+            const code = document.getElementById('join-code').value.trim(); if(!code) return;
+            document.getElementById('btn-join').innerText = "Bağlanıyor...";
+            initNetwork(() => {
+                connection = peer.connect(code, { reliable: true });
+                connection.on('open', () => {
+                    isHost = false; startGame();
+                    connection.on('data', data => {
+                        if (data.type === 'state') {
+                            const oldPhase = gameState.phase; gameState = data.payload;
+                            if (oldPhase !== 'upgrade' && gameState.phase === 'upgrade') { SoundEngine.play('levelup'); openUpgradeScreen(); }
+                            if (oldPhase === 'upgrade' && gameState.phase === 'playing') closeUpgradeScreen();
+                            if (gameState.phase === 'upgrade') syncUpgradeUIClient();
+                            if (gameState.phase === 'gameover' && !xpSaved) handleGameOverClient(gameState.score, gameState.sessionBossKills, gameState.wave);
+                            if(gameState.wave === 20 && !document.getElementById('zone-warning').style.display || document.getElementById('zone-warning').style.display === 'none') {
+                                if(gameState.zone.active) { const zw = document.getElementById('zone-warning'); zw.style.display = 'block'; setTimeout(() => zw.style.display = 'none', 4000); SoundEngine.play('hit'); }
+                            }
+                        }
+                        if (data.type === 'play_sound') SoundEngine.play(data.payload);
+                    });
+                });
+            });
+        });
+
+        function fireBullet(p, tx, ty, isP1) {
+            if(p.hp <= 0) return;
+            const ev = EVOLUTIONS[p.evIdx]; const angle = Math.atan2(ty - p.y, tx - p.x); const speed = 15; const dmg = (1 + p.evIdx) * p.mods.dmgMult * p.meta.dmg;
+            let bases = [];
+            if (p.mods.shot === 'twin') {
+                const nx = Math.cos(angle + Math.PI/2)*5, ny = Math.sin(angle + Math.PI/2)*5;
+                bases.push({ x: p.x + nx, y: p.y + ny, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed });
+                bases.push({ x: p.x - nx, y: p.y - ny, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed });
+            } else if (p.mods.shot === 'spread') {
+                bases.push({ x: p.x, y: p.y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed });
+                bases.push({ x: p.x, y: p.y, vx: Math.cos(angle-0.2)*speed, vy: Math.sin(angle-0.2)*speed });
+                bases.push({ x: p.x, y: p.y, vx: Math.cos(angle+0.2)*speed, vy: Math.sin(angle+0.2)*speed });
+            } else { bases.push({ x: p.x, y: p.y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed }); }
+
+            bases.forEach(b => gameState.bullets.push({ ...b, color: ev.color || p.color, damage: dmg, type: p.mods.shot, pierce: p.mods.pierce ? 1 : 0 }));
+        }
+
+        function startWaveHost() {
+            gameState.waveConfig.pool = []; gameState.bossActive = false;
+            if (gameState.wave >= 20 && !gameState.zone.active) {
+                gameState.zone.active = true; gameState.zone.radius = 900;
+                const zw = document.getElementById('zone-warning'); zw.style.display = 'block'; setTimeout(() => zw.style.display = 'none', 4000); SoundEngine.play('hit');
+            }
+            if (gameState.wave > 0 && gameState.wave % 4 === 0) {
+                gameState.bossActive = true; let bHp = 400 + (gameState.wave * 150);
+                gameState.bossMaxHp = bHp; gameState.bossHp = bHp; gameState.bossName = `PROTO-DEVOURER v${gameState.wave/4}.0`;
+                gameState.enemies.push({ x: LOGICAL_WIDTH/2, y: -100, type: 'boss', hp: bHp, maxHp: bHp, speed: 0.3, size: 50, color: "#ff003c", state: 'normal', angle: 0, timer: 0 });
+                for(let i=0; i<10; i++) gameState.waveConfig.pool.push('glitch');
+            } else {
+                let count = 15 + (gameState.wave * 5);
+                for(let i=0; i<count; i++) {
+                    let t = 'glitch', r = Math.random();
+                    if(gameState.wave > 1 && r > 0.7) t = 'mimic'; if(gameState.wave > 2 && r > 0.85) t = 'adware';
+                    if(gameState.wave > 3 && r > 0.8 && t==='glitch') t = 'fusion_base'; if(gameState.wave > 5 && r > 0.9) t = 'trojan';
+                    if(gameState.wave > 6 && r > 0.95) t = 'rootkit'; gameState.waveConfig.pool.push(t);
+                }
+            }
+            gameState.waveConfig.spawnsLeft = gameState.waveConfig.pool.length;
+        }
+
+        function generateUpgrades() {
+            const getRand = (a, c) => [...a].sort(() => 0.5 - Math.random()).slice(0, c);
+            const gen = () => [{...getRand(UPGRADE_POOL.shot,1)[0], type:'shot'}, ...getRand(UPGRADE_POOL.stat,2).map(x=>({...x,type:'stat'}))];
+            gameState.p1.upgradeChoices = gen(); gameState.p2.upgradeChoices = gen();
+            gameState.p1.upgradeReady = false; gameState.p2.upgradeReady = false;
+            gameState.p1.selectedCard = null; gameState.p2.selectedCard = null;
+        }
+
+        function applyUpgradeHost(p, choice) {
+            if(!choice) return;
+            if(['twin', 'spread', 'plasma'].includes(choice.id)) p.mods.shot = choice.id;
+            if(choice.id === 'heavy') p.mods.dmgMult = 2; if(choice.id === 'speed') p.mods.speedBonus += 1.5;
+            if(choice.id === 'fire_rate') p.mods.rateBonus += 50; if(choice.id === 'pierce') p.mods.pierce = true;
+            if(choice.id === 'heal') gameState.cores.forEach(c => c.hp = Math.min(c.maxHp, c.hp + 30));
+        }
+
+        function hostGameLoop() {
+            setInterval(() => {
+                if(gameState.phase === 'gameover') return;
+                let playHitSound = false; let playPowerupSound = false;
+
+                if (gameState.phase === 'upgrade') {
+                    if (gameState.p1.upgradeReady && gameState.p2.upgradeReady) {
+                        applyUpgradeHost(gameState.p1, gameState.p1.selectedCard); applyUpgradeHost(gameState.p2, gameState.p2.selectedCard);
+                        gameState.p1.hp = gameState.p1.maxHp; gameState.p2.hp = gameState.p2.maxHp;
+                        gameState.wave++; let nEv = EVOLUTIONS.slice().reverse().find(e => gameState.wave >= e.wave);
+                        gameState.p1.evIdx = EVOLUTIONS.indexOf(nEv); gameState.p2.evIdx = EVOLUTIONS.indexOf(nEv);
+                        gameState.phase = 'playing'; startWaveHost();
+                    }
+                    if(connection) connection.send({ type: 'state', payload: gameState }); return;
+                }
+
+                if (gameState.phase === 'playing') {
+                    hostFrameCount++; const now = Date.now(); let bossAlive = false;
+
+                    if (gameState.zone.active && gameState.zone.radius > 250) { gameState.zone.radius -= 0.08; }
+
+                    if (Math.random() < 0.002 && gameState.powerups.length < 3) {
+                        const pTypes = ['shield', 'rapid', 'speed'];
+                        let px, py, safe;
+                        do {
+                            safe = true; px = 50 + Math.random()*(LOGICAL_WIDTH-100); py = 50 + Math.random()*(LOGICAL_HEIGHT-100);
+                            for(let w of MAP_WALLS) { if (px > w.x-20 && px < w.x+w.w+20 && py > w.y-20 && py < w.y+w.h+20) { safe = false; break; } }
+                        } while(!safe);
+                        gameState.powerups.push({ x: px, y: py, type: pTypes[Math.floor(Math.random() * pTypes.length)], timer: 600 });
+                    }
+                    for (let i = gameState.powerups.length - 1; i >= 0; i--) {
+                        gameState.powerups[i].timer--; if (gameState.powerups[i].timer <= 0) gameState.powerups.splice(i, 1);
+                    }
+
+                    const updatePlayer = (p, inp, lastS, isP1) => {
+                        if (p.buffs.shield > 0) p.buffs.shield--; if (p.buffs.rapid > 0) p.buffs.rapid--; if (p.buffs.speed > 0) p.buffs.speed--;
+                        for (let i = gameState.powerups.length - 1; i >= 0; i--) {
+                            if (Math.hypot(p.x - gameState.powerups[i].x, p.y - gameState.powerups[i].y) < 25) { p.buffs[gameState.powerups[i].type] = 300; gameState.powerups.splice(i, 1); playPowerupSound = true; }
+                        }
+
+                        if (gameState.zone.active && p.hp > 0 && p.buffs.shield <= 0) {
+                            if (Math.hypot(p.x - LOGICAL_WIDTH/2, p.y - LOGICAL_HEIGHT/2) > gameState.zone.radius) { p.hp -= 0.15; if(hostFrameCount % 60 === 0) playHitSound = true; }
+                        }
+
+                        if(p.hp <= 0) { p.rebootTimer++; if(p.rebootTimer > 180) { p.hp = p.maxHp; p.rebootTimer = 0; } return lastS; }
+                        
+                        const ev = EVOLUTIONS[p.evIdx];
+                        let speed = ev.baseSpeed + p.mods.speedBonus + p.meta.speed; if (p.buffs.speed > 0) speed *= 1.8; 
+                        let fDelay = Math.max(50, ev.baseRate - p.mods.rateBonus); if (p.buffs.rapid > 0) fDelay = 25; 
+
+                        let dx = 0, dy = 0;
+                        if(inp.w) dy -= speed; if(inp.s) dy += speed; if(inp.a) dx -= speed; if(inp.d) dx += speed;
+                        if(dx !== 0 || dy !== 0) moveEntity(p, 16, dx, dy);
+
+                        if(inp.mouseDown && now - lastS > fDelay) { fireBullet(p, inp.mouseX, inp.mouseY, isP1); if(isP1) SoundEngine.play('shoot'); return now; }
+                        return lastS;
+                    };
+                    p1LastShoot = updatePlayer(gameState.p1, inputs, p1LastShoot, true);
+                    p2LastShoot = updatePlayer(gameState.p2, clientInputs, p2LastShoot, false);
+
+                    for(let i = gameState.bullets.length - 1; i >= 0; i--) {
+                        let b = gameState.bullets[i]; b.x += b.vx; b.y += b.vy;
+                        let hitW = false;
+                        for(let w of MAP_WALLS) { if(b.x > w.x && b.x < w.x+w.w && b.y > w.y && b.y < w.y+w.h) { hitW = true; break; } }
+                        if(hitW || b.x < 0 || b.x > LOGICAL_WIDTH || b.y < 0 || b.y > LOGICAL_HEIGHT) gameState.bullets.splice(i, 1);
+                    }
+
+                    let sInt = Math.max(30, 90 - (gameState.wave * 4));
+                    if(gameState.waveConfig.spawnsLeft > 0 && hostFrameCount % sInt === 0) {
+                        let t = gameState.waveConfig.pool.pop(); gameState.waveConfig.spawnsLeft--;
+                        let sd = Math.floor(Math.random()*4), ex, ey;
+                        if(sd===0){ex=Math.random()*LOGICAL_WIDTH;ey=-30;} else if(sd===1){ex=LOGICAL_WIDTH+30;ey=Math.random()*LOGICAL_HEIGHT;}
+                        else if(sd===2){ex=Math.random()*LOGICAL_WIDTH;ey=LOGICAL_HEIGHT+30;} else {ex=-30;ey=Math.random()*LOGICAL_HEIGHT;}
+                        let e = { x:ex, y:ey, type:t, hp:1, maxHp:1, speed:2, size:12, color:"#ff003c", state:'normal', angle:0, alpha:1 };
+                        if(t==='mimic'){ e.hp=2; e.speed=1.5; e.size=16; e.color=(Math.random()>0.5)?gameState.p1.color:gameState.p2.color; }
+                        if(t==='fusion_base'){ e.hp=4; e.speed=1.2; e.size=16; e.color="#ff8800"; }
+                        if(t==='trojan'){ e.hp=6; e.speed=1.0; e.size=20; e.color="#00ff00"; }
+                        if(t==='rootkit'){ e.hp=3; e.speed=1.8; e.size=14; e.color="#444"; e.alpha=0.1; }
+                        if(t==='adware'){ e.hp=1; e.speed=2.5; e.size=10; e.color="#ff00ff"; }
+                        gameState.enemies.push(e);
+                    }
+
+                    for(let i = gameState.enemies.length - 1; i >= 0; i--) {
+                        let e = gameState.enemies[i];
+                        if (gameState.zone.active) { if (Math.hypot(e.x - LOGICAL_WIDTH/2, e.y - LOGICAL_HEIGHT/2) > gameState.zone.radius) { e.hp -= 0.5; if(e.hp <= 0) { gameState.enemies.splice(i, 1); continue; } } }
+
+                        if (e.type === 'boss') {
+                            bossAlive = true; gameState.bossHp = e.hp; e.timer++;
+                            if (e.timer % 150 === 0) { for(let k=0; k<3; k++) gameState.enemies.push({ x: e.x+(Math.random()*60-30), y: e.y+(Math.random()*60-30), type:'payload', hp:1, maxHp:1, speed:4, size:8, color:"#aaffaa", state:'normal', angle:0, alpha:1 }); }
+                        }
+
+                        let tgt = null, mD = 9999;
+                        gameState.cores.forEach(c => { if(c.hp > 0) { let d = Math.hypot(c.x-e.x, c.y-e.y); if(d<mD){ mD=d; tgt=c; } }});
+                        if(!tgt) tgt = {x: LOGICAL_WIDTH/2, y: LOGICAL_HEIGHT/2}; 
+
+                        e.angle = Math.atan2(tgt.y - e.y, tgt.x - e.x);
+                        if(e.type === 'mimic' && mD < 150) { e.color = "#ff003c"; e.speed = 3.5; }
+                        if(e.type === 'rootkit' && (mD < 200 || e.hp < e.maxHp)) e.alpha = 1;
+                        
+                        let mx = Math.cos(e.angle)*e.speed, my = Math.sin(e.angle)*e.speed;
+                        if(e.type === 'adware') { mx += Math.cos(hostFrameCount*0.1)*3; my += Math.sin(hostFrameCount*0.1)*3; }
+                        
+                        // Düşman Duvar Çarpışması
+                        moveEntity(e, e.size, mx, my);
+
+                        [gameState.p1, gameState.p2].forEach(p => {
+                            if(p.hp > 0 && Math.hypot(p.x-e.x, p.y-e.y) < e.size + 14) { 
+                                if (p.buffs.shield <= 0) { p.hp -= (e.type==='boss'?100:20); playHitSound = true; } e.hp -= 20; 
+                            }
+                        });
+                        if(e.hp <= 0) { gameState.enemies.splice(i, 1); continue; }
+
+                        if(mD < e.size + 15) { tgt.hp -= (e.type==='fused'?30:e.type==='boss'?100:5); gameState.enemies.splice(i, 1); playHitSound = true; continue; }
+
+                        let dead = false;
+                        for(let j = gameState.bullets.length - 1; j >= 0; j--) {
+                            let b = gameState.bullets[j];
+                            if(Math.hypot(e.x-b.x, e.y-b.y) < e.size + 4) {
+                                e.hp -= (e.type === 'boss' && b.type === 'normal') ? b.damage*0.5 : b.damage;
+                                if(b.type === 'plasma') e.speed = Math.max(0.1, e.speed*0.8);
+                                if(b.pierce > 0 && e.type !== 'boss') { b.pierce--; } else { gameState.bullets.splice(j, 1); }
+                                playHitSound = true;
+                                if(e.hp <= 0) {
+                                    if(e.type === 'trojan') { for(let k=0;k<3;k++) gameState.enemies.push({x:e.x, y:e.y, type:'payload', hp:1, maxHp:1, speed:3.5, size:8, color:"#aaffaa", state:'normal', angle:0, alpha:1}); }
+                                    if(e.type === 'boss') { gameState.sessionBossKills++; }
+                                    gameState.enemies.splice(i, 1); gameState.score += (e.type==='boss'?500:10); dead = true; break;
+                                }
+                            }
+                        }
+                        if(dead) continue;
+
+                        if(e.type === 'fusion_base') {
+                            for(let k = 0; k < gameState.enemies.length; k++) {
+                                if(i !== k && gameState.enemies[k].type === 'fusion_base' && Math.hypot(e.x-gameState.enemies[k].x, e.y-gameState.enemies[k].y) < 30) {
+                                    let nx = (e.x+gameState.enemies[k].x)/2, ny = (e.y+gameState.enemies[k].y)/2;
+                                    gameState.enemies.splice(Math.max(i,k), 1); gameState.enemies.splice(Math.min(i,k), 1);
+                                    gameState.enemies.push({ x:nx, y:ny, type:'fused', hp:20, maxHp:20, speed:0.8, color:"#ffffff", size:28, state:'normal', angle:0, alpha:1 }); break;
+                                }
+                            }
+                        }
+                    }
+
+                    if(gameState.bossActive && !bossAlive) gameState.bossActive = false;
+
+                    if(gameState.cores.every(c => c.hp <= 0)) {
+                        gameState.phase = 'gameover';
+                        if(!xpSaved) { 
+                            metaData.xp += gameState.score; metaData.stats.totalXpEarned += gameState.score;
+                            metaData.stats.highestWave = Math.max(metaData.stats.highestWave, gameState.wave);
+                            metaData.stats.bossesKilled += gameState.sessionBossKills;
+                            saveMeta(); xpSaved = true; 
+                        }
+                    } else if(gameState.waveConfig.spawnsLeft === 0 && gameState.enemies.length === 0) {
+                        if (gameState.wave % 2 === 0) { generateUpgrades(); gameState.phase = 'upgrade'; openUpgradeScreen(); SoundEngine.play('levelup'); }
+                        else {
+                            gameState.wave++; let nEv = EVOLUTIONS.slice().reverse().find(e => gameState.wave >= e.wave);
+                            gameState.p1.evIdx = EVOLUTIONS.indexOf(nEv); gameState.p2.evIdx = EVOLUTIONS.indexOf(nEv); startWaveHost();
+                        }
+                    }
+
+                    if(connection) {
+                        connection.send({ type: 'state', payload: gameState });
+                        if(playHitSound) { SoundEngine.play('hit'); connection.send({ type: 'play_sound', payload: 'hit' }); }
+                        if(playPowerupSound) { SoundEngine.play('powerup'); connection.send({ type: 'play_sound', payload: 'powerup' }); }
+                    } else {
+                        if(playHitSound) SoundEngine.play('hit'); if(playPowerupSound) SoundEngine.play('powerup');
+                    }
+                }
+            }, 1000 / 60);
+        }
+
+        function clientSendLoop() {
+            setInterval(() => { 
+                if(connection && connection.open && gameState.phase === 'playing') {
+                    connection.send({ type: 'input', payload: inputs }); 
+                    if (inputs.mouseDown && gameState.p2 && gameState.p2.hp > 0) {
+                        const ev = EVOLUTIONS[gameState.p2.evIdx];
+                        let fDelay = Math.max(50, ev.baseRate - gameState.p2.mods.rateBonus);
+                        if (gameState.p2.buffs.rapid > 0) fDelay = 25;
+                        if (Date.now() - clientLastShoot > fDelay) { SoundEngine.play('shoot'); clientLastShoot = Date.now(); }
+                    }
+                }
+            }, 1000 / 60);
+        }
+
+        function handleGameOverClient(score, bossKills, wave) {
+            if(!xpSaved) { 
+                metaData.xp += score; metaData.stats.totalXpEarned += score;
+                metaData.stats.highestWave = Math.max(metaData.stats.highestWave, wave);
+                metaData.stats.bossesKilled += bossKills;
+                saveMeta(); xpSaved = true; 
+            }
+        }
+
+        const upgScreen = document.getElementById('upgrade-screen'); const btnReady = document.getElementById('btn-ready-upgrade');
+        function openUpgradeScreen() {
+            document.getElementById('ui').style.display = 'none'; document.getElementById('boss-ui').style.display = 'none';
+            upgScreen.style.display = 'block'; btnReady.disabled = true; btnReady.innerText = "Seçimi Onayla";
+            const myChoices = isHost ? gameState.p1.upgradeChoices : gameState.p2.upgradeChoices;
+            const myCards = isHost ? document.getElementById('cards-p1') : document.getElementById('cards-p2');
+            myCards.innerHTML = '';
+            myChoices.forEach((ch, idx) => {
+                let div = document.createElement('div'); div.className = `upgrade-card type-${ch.type}`;
+                div.innerHTML = `<strong style="color:${ch.type==='shot'?'#ffea00':'#00ff87'}">${ch.name}</strong><br><span style="margin-top:5px; text-align:center;">${ch.desc}</span>`;
+                div.onclick = () => {
+                    SoundEngine.play('click');
+                    if((isHost && gameState.p1.upgradeReady) || (!isHost && gameState.p2.upgradeReady)) return;
+                    for(let i=0; i<div.parentElement.children.length; i++) div.parentElement.children[i].classList.remove('selected');
+                    div.classList.add('selected'); btnReady.disabled = false;
+                    if(isHost) gameState.p1.selectedCard = ch; else connection.send({type: 'upgrade_select', payload: ch});
+                };
+                myCards.appendChild(div);
+            });
+            syncUpgradeUIClient();
+        }
+        function closeUpgradeScreen() {
+            upgScreen.style.display = 'none'; document.getElementById('ui').style.display = 'block';
+            if (gameState.wave % 4 === 0) { const warn = document.getElementById('warning-msg'); warn.style.display = 'block'; setTimeout(() => warn.style.display = 'none', 3500); }
+        }
+        btnReady.onclick = () => { btnReady.disabled = true; btnReady.innerText = "BEKLENİYOR..."; if(isHost) gameState.p1.upgradeReady = true; else connection.send({type: 'upgrade_ready'}); };
+        function syncUpgradeUIClient() {
+            if(gameState.phase !== 'upgrade') return;
+            const renOther = (pId, sId, st) => {
+                const s = document.getElementById(sId), c = document.getElementById(pId);
+                if (st.upgradeReady) { s.innerText = " HAZIR!"; s.style.color = "#00ff87"; }
+                else if (st.selectedCard) { s.innerText = " İncelemede..."; s.style.color = "#ffea00"; }
+                else { s.innerText = " Bekleniyor..."; s.style.color = "#888"; }
+                c.innerHTML = st.selectedCard ? `<div class="upgrade-card type-${st.selectedCard.type} selected" style="cursor:default;"><strong>${st.selectedCard.name}</strong></div>` : `<div style="padding:20px; color:#555;">Düşünüyor...</div>`;
+            };
+            if(isHost) { renOther('cards-p2', 'status-p2', gameState.p2); if(gameState.p1.upgradeReady) document.getElementById('status-p1').innerText = " HAZIR!"; }
+            else { renOther('cards-p1', 'status-p1', gameState.p1); if(gameState.p2.upgradeReady) document.getElementById('status-p2').innerText = " HAZIR!"; }
+        }
+
+        // --- RENDER ---
+        function renderLoop() {
+            if(!isGameRunning) return;
+            ctx.fillStyle = '#030305'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            const s = Math.min(canvas.width/LOGICAL_WIDTH, canvas.height/LOGICAL_HEIGHT);
+            ctx.translate((canvas.width-LOGICAL_WIDTH*s)/2, (canvas.height-LOGICAL_HEIGHT*s)/2); ctx.scale(s, s);
+
+            let gridColor = gameState.bossActive ? `rgba(255, 0, 60, ${0.05 + Math.sin(Date.now()*0.005)*0.02})` : "rgba(0, 255, 255, 0.03)";
+            ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
+            for(let i=0; i<LOGICAL_WIDTH; i+=100) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,LOGICAL_HEIGHT); ctx.stroke(); }
+            for(let i=0; i<LOGICAL_HEIGHT; i+=100) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(LOGICAL_WIDTH,i); ctx.stroke(); }
+            
+            // Duvarlar (Map)
+            ctx.shadowBlur = 10; ctx.shadowColor = "#00ffff"; ctx.fillStyle = "rgba(10, 15, 30, 0.8)"; ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 2;
+            for(let w of MAP_WALLS) { ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeRect(w.x, w.y, w.w, w.h); }
+            ctx.shadowBlur = 0;
+
+            if (gameState.zone.active) {
+                ctx.save(); ctx.beginPath(); ctx.rect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT); ctx.arc(LOGICAL_WIDTH/2, LOGICAL_HEIGHT/2, gameState.zone.radius, 0, Math.PI*2, true);
+                ctx.fillStyle = "rgba(255, 0, 60, 0.2)"; ctx.fill();
+                ctx.beginPath(); ctx.arc(LOGICAL_WIDTH/2, LOGICAL_HEIGHT/2, gameState.zone.radius, 0, Math.PI*2);
+                ctx.strokeStyle = "#ff003c"; ctx.lineWidth = 3; ctx.setLineDash([10, 10]); ctx.stroke(); ctx.restore();
+            }
+
+            gameState.powerups.forEach(pu => {
+                ctx.save(); let color = pu.type === 'shield' ? '#00ffff' : pu.type === 'rapid' ? '#ffea00' : '#00ff87';
+                ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.fillStyle = color;
+                if (pu.timer < 180 && Math.floor(Date.now() / 100) % 2 === 0) ctx.globalAlpha = 0.3;
+                ctx.beginPath(); ctx.moveTo(pu.x, pu.y - 12); ctx.lineTo(pu.x + 12, pu.y); ctx.lineTo(pu.x, pu.y + 12); ctx.lineTo(pu.x - 12, pu.y); ctx.closePath(); ctx.fill(); ctx.restore();
+            });
+
+            gameState.cores.forEach((c, idx) => {
+                const uiEl = document.getElementById(`core-${idx}-ui`);
+                if(c.hp > 0) {
+                    ctx.shadowBlur = 15; ctx.shadowColor = "#00ff87"; ctx.fillStyle = "#00ff87";
+                    ctx.beginPath(); ctx.moveTo(c.x, c.y-20); ctx.lineTo(c.x+20, c.y+15); ctx.lineTo(c.x-20, c.y+15); ctx.fill();
+                    ctx.shadowBlur = 0; ctx.fillStyle = "rgba(255,0,0,0.5)"; ctx.fillRect(c.x-20, c.y+25, 40, 4);
+                    ctx.fillStyle = "#00ff87"; ctx.fillRect(c.x-20, c.y+25, 40 * (c.hp/c.maxHp), 4);
+                    if(uiEl) uiEl.className = "core-healthy";
+                } else {
+                    ctx.shadowBlur = 0; ctx.fillStyle = "#222"; ctx.beginPath(); ctx.moveTo(c.x, c.y-20); ctx.lineTo(c.x+20, c.y+15); ctx.lineTo(c.x-20, c.y+15); ctx.fill();
+                    if(uiEl) uiEl.className = "core-dead";
+                }
+            });
+
+            ctx.shadowBlur = 8;
+            gameState.bullets.forEach(b => {
+                ctx.shadowColor = b.color; ctx.fillStyle = b.color; ctx.beginPath();
+                if(b.type === 'plasma') { ctx.arc(b.x, b.y, 6, 0, Math.PI*2); } else if(b.type === 'heavy') { ctx.rect(b.x-3, b.y-3, 6, 6); } else { ctx.arc(b.x, b.y, 3, 0, Math.PI*2); } ctx.fill();
+            });
+
+            gameState.enemies.forEach(e => {
+                ctx.save(); ctx.globalAlpha = e.alpha || 1; ctx.shadowBlur = 15; ctx.shadowColor = e.color; ctx.fillStyle = e.color;
+                if (e.type === 'boss') {
+                    ctx.beginPath();
+                    for(let k=0; k<8; k++) { let a = k*Math.PI/4 + (e.timer*0.02); let px = e.x+Math.cos(a)*e.size, py = e.y+Math.sin(a)*e.size; if(k===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+                    ctx.closePath(); ctx.fill(); ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(e.x, e.y, e.size/3 + Math.sin(e.timer*0.1)*5, 0, Math.PI*2); ctx.fill();
+                } else if(e.type === 'trojan' || e.type === 'fused') {
+                    if(e.type === 'fused') { ctx.shadowColor = "#fff"; ctx.fillStyle = "#fff"; } ctx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+                } else { ctx.beginPath(); ctx.arc(e.x, e.y, e.size, 0, Math.PI*2); ctx.fill(); }
+                ctx.restore();
+            });
+
+            const drawPlayer = (p, isP1) => {
+                if(p.hp <= 0) {
+                    ctx.shadowBlur = 0; ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; ctx.font = "14px monospace"; ctx.fillText("REBOOTING...", p.x - 40, p.y);
+                    ctx.fillRect(p.x - 20, p.y + 10, 40, 5); ctx.fillStyle = "#fff"; ctx.fillRect(p.x - 20, p.y + 10, 40 * (p.rebootTimer / 180), 5); return;
+                }
+                const ev = EVOLUTIONS[p.evIdx];
+                if(ev.color) { ctx.shadowBlur = 25; ctx.shadowColor = ev.color; ctx.strokeStyle = ev.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 22, 0, Math.PI*2); ctx.stroke(); }
+                ctx.shadowBlur = 10; ctx.shadowColor = p.color; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 16, 0, Math.PI*2); ctx.fill();
+                
+                if (p.buffs.shield > 0) { ctx.shadowBlur = 0; ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(p.x, p.y, 28 + Math.sin(Date.now()*0.01)*2, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]); }
+                
+                ctx.shadowBlur = 0; ctx.fillStyle = "rgba(255,0,0,0.5)"; ctx.fillRect(p.x-15, p.y+25, 30, 4); ctx.fillStyle = "#00ff87"; ctx.fillRect(p.x-15, p.y+25, 30 * (p.hp/p.maxHp), 4);
+                const inp = isP1 ? inputs : clientInputs; const angle = Math.atan2(inp.mouseY - p.y, inp.mouseX - p.x);
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x + Math.cos(angle)*10, p.y + Math.sin(angle)*10); ctx.lineTo(p.x + Math.cos(angle)*25, p.y + Math.sin(angle)*25); ctx.stroke();
+            };
+            drawPlayer(gameState.p1, true); drawPlayer(gameState.p2, false);
+
+            if(gameState.phase === 'playing') {
+                ctx.shadowBlur=0; ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.beginPath(); ctx.arc(inputs.mouseX, inputs.mouseY, 4, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle="rgba(255,255,255,0.3)"; ctx.beginPath(); ctx.arc(inputs.mouseX, inputs.mouseY, 12, 0, Math.PI*2); ctx.stroke();
+            }
+            ctx.restore();
+
+            if(gameState.phase === 'playing' || gameState.phase === 'upgrade') {
+                document.getElementById('wave-display').innerText = "DALGA " + gameState.wave; document.getElementById('score-display').innerText = gameState.score;
+                let myP = isHost ? gameState.p1 : gameState.p2; document.getElementById('level-display').innerText = EVOLUTIONS[myP.evIdx].name;
+            }
+
+            const bossUI = document.getElementById('boss-ui');
+            if (gameState.bossActive && gameState.phase === 'playing') { bossUI.style.display = 'block'; document.getElementById('boss-name').innerText = gameState.bossName; document.getElementById('boss-bar-fill').style.width = (gameState.bossHp / gameState.bossMaxHp * 100) + "%"; } else { bossUI.style.display = 'none'; }
+
+            if (gameState.phase === 'gameover') {
+                isGameRunning = false; document.getElementById('ui').style.display = 'none'; bossUI.style.display = 'none'; document.getElementById('game-over-screen').style.display = 'block'; document.getElementById('zone-warning').style.display = 'none';
+                document.getElementById('earned-xp').innerText = gameState.score; document.getElementById('total-xp-end').innerText = metaData.xp; return;
+            }
+            requestAnimationFrame(renderLoop);
+        }
+    </script>
+</body>
+</html>
