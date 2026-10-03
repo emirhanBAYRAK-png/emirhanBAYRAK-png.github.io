@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIGSI - Crimson Terminal [REMASTERED]</title>
+    <!-- Profesyonel İkonlar -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+
+        :root {
+            --neon-red: #ff2a2a;
+            --neon-glow: rgba(255, 42, 42, 0.6);
+            --dark-red: #140000;
+            --bg-dark: #070303;
+            --border-color: rgba(255, 42, 42, 0.35);
+            --panel-bg: rgba(12, 3, 3, 0.85);
+            --text-main: #f0f0f0;
+            --text-muted: #888888;
+            --cyan-accent: #00e5ff;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg-dark); color: var(--text-main); font-family: 'Rajdhani', sans-serif;
+            margin: 0; padding: 0; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* YENİLENMİŞ CRT SCANLINES & NOISE */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.25));
+            background-size: 100% 4px; pointer-events: none; z-index: 9999; opacity: 0.3;
+        }
+        
+        #matrix-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9997; pointer-events: none; display: none; opacity: 1; transition: opacity 1s; }
+
+        @keyframes shakeScreen { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 10%, 30%, 50%, 70%, 90% { transform: translate(-4px, -4px) rotate(-1deg); } 20%, 40%, 60%, 80% { transform: translate(4px, 4px) rotate(1deg); } }
+        .shaking { animation: shakeScreen 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        
+        #nudge-flash { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 0, 0, 0.25); z-index: 9998; pointer-events: none; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .nudge-text { font-family: 'Orbitron', sans-serif; font-size: 6rem; color: #fff; text-shadow: 0 0 40px var(--neon-red), 0 0 80px var(--neon-red); font-weight: 900; letter-spacing: 15px;}
+
+        @keyframes glitch { 0%, 14%, 100% { text-shadow: 0.05em 0 0 var(--neon-red), -0.025em -0.025em 0 var(--cyan-accent); } 15%, 49% { text-shadow: -0.05em -0.025em 0 var(--neon-red), 0.025em 0.025em 0 var(--cyan-accent); } 50%, 99% { text-shadow: 0.025em 0.05em 0 var(--neon-red), 0.05em 0 0 var(--cyan-accent); } }
+        .glitch-anim { animation: glitch 3s infinite linear alternate-reverse; }
+
+        /* OVERLAYS */
+        #roulette-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(3, 1, 1, 0.95); z-index: 9999; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(15px);
+        }
+        .roulette-title { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--neon-red); margin-bottom: 20px; letter-spacing: 5px;}
+        #roulette-name { font-family: 'Orbitron', sans-serif; font-size: 5rem; color: #fff; font-weight: 900; text-transform: uppercase; text-shadow: 0 0 20px rgba(255,255,255,0.5);}
+        .roulette-winner { color: var(--neon-red) !important; text-shadow: 0 0 50px var(--neon-glow), 0 0 100px var(--neon-glow) !important; transform: scale(1.2); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+
+        #tea-overlay {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;
+            background: rgba(15, 3, 3, 0.95); border: 1px solid var(--neon-red); border-radius: 16px;
+            padding: 40px 70px; text-align: center; box-shadow: 0 0 80px rgba(255, 42, 42, 0.4);
+            display: none; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px);
+        }
+        @keyframes teaPop { 0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5); } 15%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -70%) scale(0.8); } }
+        .tea-icon { font-size: 5rem; color: var(--neon-red); margin-bottom: 15px; filter: drop-shadow(0 0 15px var(--neon-glow));}
+        .tea-text { font-family: 'Rajdhani', sans-serif; font-size: 2rem; color: #fff; font-weight: bold; text-shadow: 0 0 15px var(--neon-red);}
+
+        .floating-emoji { position: absolute; bottom: 90px; right: 50px; font-size: 2.5rem; pointer-events: none; z-index: 100; animation: floatUp 2.5s forwards cubic-bezier(0.2, 0.8, 0.2, 1); filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)); }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(0.8); } 50% { transform: translateY(-100px) scale(1.2); } 100% { opacity: 0; transform: translateY(-200px) scale(1.5); } }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #4a0000; border-radius: 4px; border: 1px solid #220000; transition: 0.3s;}
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-red); }
+
+        /* MODERN GİRİŞ EKRANI */
+        #login-screen {
+            background: linear-gradient(135deg, rgba(20,5,5,0.9), rgba(5,1,1,0.95)); backdrop-filter: blur(25px); 
+            border: 1px solid var(--border-color); padding: 50px; border-radius: 20px; text-align: center; width: 420px; 
+            box-shadow: 0 25px 70px rgba(0,0,0,0.9), 0 0 30px rgba(255,42,42,0.1), inset 0 1px 1px rgba(255,255,255,0.1);
+        }
+        .logo { font-family: 'Orbitron', sans-serif; font-size: 3.8rem; color: var(--neon-red); margin: 0 0 5px 0; letter-spacing: 12px; text-shadow: 0 0 25px var(--neon-glow); }
+        .sub-logo { color: var(--text-muted); font-size: 1.1rem; letter-spacing: 6px; margin-bottom: 45px; text-transform: uppercase; font-weight: bold;}
+        
+        input.styled-input {
+            width: 100%; padding: 18px; margin-bottom: 22px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 42, 42, 0.2);
+            color: var(--text-main); font-family: 'Orbitron', sans-serif; font-size: 1.1rem; text-align: center; border-radius: 12px; outline: none; transition: all 0.3s ease;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.9);
+        }
+        input.styled-input:focus { border-color: var(--neon-red); box-shadow: 0 0 25px rgba(255,42,42,0.2), inset 0 3px 6px rgba(0,0,0,0.9); background: rgba(20,0,0,0.8); color: var(--neon-red);}
+        
+        .btn {
+            background: linear-gradient(to bottom, #7a0000, #3a0000); color: #fff; border: 1px solid var(--neon-red); padding: 18px; width: 100%;
+            font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1.2rem; border-radius: 12px; cursor: pointer; transition: 0.3s; letter-spacing: 2px;
+            display: flex; justify-content: center; align-items: center; gap: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+        .btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 35px rgba(255,42,42,0.5); transform: translateY(-3px);}
+        .btn:active { transform: translateY(1px); box-shadow: inset 0 4px 10px rgba(0,0,0,0.8); }
+        
+        #error-msg { background: rgba(255,0,0,0.1); border: 1px solid var(--neon-red); color: #fff; display: none; margin-top: 25px; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1.05rem; box-shadow: 0 0 15px rgba(255,0,0,0.3);}
+
+        /* ANA EKRAN */
+        #app-screen { display: none; width: 100%; height: 100vh; background: radial-gradient(circle at top, #0f0404 0%, var(--bg-dark) 100%); }
+        
+        #sidebar {
+            width: 340px; background: var(--panel-bg); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; height: 100%; box-shadow: 15px 0 40px rgba(0,0,0,0.95); z-index: 10; backdrop-filter: blur(10px);
+        }
+        .sidebar-header { padding: 35px 20px; text-align: center; border-bottom: 1px solid rgba(255,42,42,0.15); background: rgba(0,0,0,0.6); box-shadow: inset 0 -5px 20px rgba(0,0,0,0.6);}
+        .sidebar-header .logo { font-size: 2.8rem; letter-spacing: 8px; margin: 0;}
+        
+        #users-list { flex: 1; padding: 25px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+        
+        .user-item {
+            background: linear-gradient(145deg, #160606, #090202); border: 1px solid #220a0a; border-left: 5px solid #4a0000;
+            border-radius: 12px; padding: 18px; display: flex; flex-direction: column; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.03);
+        }
+        .user-item:hover { transform: translateX(8px); border-color: rgba(255,42,42,0.5); border-left-color: var(--neon-red); background: linear-gradient(145deg, #1f0808, #0c0202);}
+        .user-item.me { border-left-color: var(--cyan-accent); background: linear-gradient(145deg, #0a111a, #02050a); border-color: rgba(0, 229, 255, 0.2); }
+        .user-item.me:hover { border-left-color: var(--cyan-accent); border-color: rgba(0, 229, 255, 0.5); }
+        
+        .action-bar-top { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; opacity: 0; transition: 0.3s ease; }
+        .user-item:hover .action-bar-top { opacity: 1; }
+        
+        .mini-btn {
+            background: linear-gradient(to bottom, #1a0505, #0a0000); border: 1px solid #4a0000; color: var(--text-muted); 
+            cursor: pointer; font-size: 1rem; border-radius: 8px; padding: 8px 12px; transition: 0.3s; box-shadow: 0 4px 8px rgba(0,0,0,0.7);
+        }
+        .mini-btn:hover { background: var(--neon-red); color: #000; border-color: var(--neon-red); box-shadow: 0 0 15px var(--neon-red); transform: scale(1.15);}
+        .mini-btn.disabled { opacity: 0.4 !important; cursor: not-allowed !important; pointer-events: none !important; filter: grayscale(100%); }
+
+        .user-info { display: flex; align-items: center; gap: 16px; }
+        .avatar {
+            width: 48px; height: 48px; background: linear-gradient(135deg, #1a1a1a, #000); border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: #999; border: 2px solid #333; transition: 0.3s; box-shadow: 0 5px 12px rgba(0,0,0,0.8);
+        }
+        .user-item.me .avatar { border-color: var(--cyan-accent); color: var(--cyan-accent); box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); }
+        .user-name { font-weight: bold; font-size: 1.3rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; letter-spacing: 0.5px;}
+        
+        .afk-badge { display: none; background: var(--neon-red); color: #000; font-size: 0.75rem; padding: 4px 10px; border-radius: 6px; font-weight: bold; box-shadow: 0 0 10px var(--neon-red); letter-spacing: 1px;}
+        .user-item.afk { opacity: 0.5; filter: grayscale(100%); border-left-color: #444;}
+        .user-item.afk .afk-badge { display: inline-block; }
+        
+        @keyframes pulseAudio { 0% { box-shadow: 0 0 0 0 rgba(255, 42, 42, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 42, 42, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 42, 42, 0); } }
+        @keyframes pulseAudioMe { 0% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(0, 229, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 229, 255, 0); } }
+        
+        .user-item.speaking { border-left-color: var(--neon-red); }
+        .user-item.speaking .avatar { border-color: var(--neon-red); color: #fff; animation: pulseAudio 1.2s infinite; background: rgba(255,42,42,0.2); text-shadow: 0 0 10px var(--neon-red);}
+        .user-item.me.speaking { border-left-color: var(--cyan-accent); }
+        .user-item.me.speaking .avatar { border-color: var(--cyan-accent); color: #fff; animation: pulseAudioMe 1.2s infinite; background: rgba(0,229,255,0.2); text-shadow: 0 0 10px var(--cyan-accent);}
+        
+        .vol-slider { -webkit-appearance: none; width: 100%; height: 6px; background: #111; outline: none; margin-top: 18px; border-radius: 3px; border: 1px solid #222; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);}
+        .vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #888; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 6px rgba(0,0,0,0.9);}
+        .vol-slider::-webkit-slider-thumb:hover { background: var(--neon-red); box-shadow: 0 0 12px var(--neon-red); transform: scale(1.3);}
+
+        #my-controls {
+            padding: 25px 20px; border-top: 1px solid rgba(255,42,42,0.15); background: rgba(0,0,0,0.8); display: flex; justify-content: space-between; gap: 14px;
+            box-shadow: inset 0 5px 20px rgba(0,0,0,0.9);
+        }
+        .ctrl-btn {
+            flex: 1; background: linear-gradient(to bottom, #1f0505, #0a0000); border: 1px solid #4a0000; color: var(--text-muted); padding: 16px 0;
+            border-radius: 10px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.05);
+        }
+        .ctrl-btn:hover { background: linear-gradient(to bottom, #330505, #140000); color: var(--neon-red); border-color: var(--neon-red); box-shadow: 0 8px 20px rgba(255,0,0,0.2);}
+        .ctrl-btn:active { box-shadow: inset 0 4px 8px rgba(0,0,0,0.9); transform: translateY(2px); }
+        .ctrl-btn.active-red { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255,42,42,0.15); box-shadow: inset 0 0 20px rgba(255,42,42,0.4);}
+        .ctrl-btn.active-blue { color: var(--cyan-accent); border-color: var(--cyan-accent); background: rgba(0,229,255,0.15); box-shadow: inset 0 0 20px rgba(0,229,255,0.4);}
+
+        /* SAĞ PANEL / CHAT */
+        #main-area { flex: 1; display: flex; flex-direction: column; background: transparent; position: relative;}
+
+        #floating-hud-btn {
+            position: absolute; top: 30px; right: 40px; z-index: 100;
+            background: rgba(15, 3, 3, 0.85); border: 1px solid var(--neon-red);
+            color: var(--neon-red); font-family: 'Orbitron', sans-serif; font-size: 0.95rem;
+            padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 0 20px rgba(255,42,42,0.2); font-weight: bold; letter-spacing: 2px;
+            backdrop-filter: blur(8px); display: flex; align-items: center; gap: 10px; text-transform: uppercase;
+        }
+        #floating-hud-btn:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 30px var(--neon-glow); transform: translateY(-3px);}
+        #floating-hud-btn.active { background: var(--neon-red); color: #000; box-shadow: 0 0 30px var(--neon-glow); }
+        
+        #screen-view-container {
+            display: none; background: #000; border-bottom: 1px solid var(--border-color);
+            padding: 25px; align-items: center; justify-content: center; height: 65%; box-shadow: inset 0 0 100px rgba(255,42,42,0.1);
+        }
+        #shared-screen { max-width: 100%; max-height: 100%; border: 2px solid var(--neon-red); border-radius: 12px; box-shadow: 0 0 50px rgba(255,42,42,0.3); }
+
+        #chat-section { flex: 1; display: flex; flex-direction: column; padding: 30px 45px; min-height: 0; position: relative; }
+        
+        #chat-section::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-image: linear-gradient(rgba(255, 42, 42, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 42, 42, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px; z-index: -1; pointer-events: none;
+        }
+
+        #chat-box { flex: 1; overflow-y: auto; padding-right: 25px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth;}
+        
+        @keyframes slideInMsg { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+        
+        .chat-msg { 
+            background: linear-gradient(135deg, rgba(20, 5, 5, 0.9), rgba(5, 1, 1, 0.95)); border: 1px solid rgba(255,42,42,0.2); padding: 16px 24px; 
+            border-radius: 16px; font-size: 1.2rem; animation: slideInMsg 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8); backdrop-filter: blur(10px); width: fit-content; max-width: 80%;
+            border-left: 4px solid #555; line-height: 1.5; color: #eee;
+        }
+        .chat-msg.me-msg { border-left-color: var(--cyan-accent); align-self: flex-start; background: linear-gradient(135deg, rgba(5, 15, 25, 0.9), rgba(1, 5, 10, 0.95)); border-color: rgba(0,229,255,0.15);}
+        .chat-msg.system-msg { background: rgba(0,229,255,0.05); border-color: rgba(0,229,255,0.2); border-left-color: var(--cyan-accent); color: var(--cyan-accent); font-size: 1.05rem; align-self: center; border-radius: 30px; padding: 10px 25px; font-family: 'Orbitron', sans-serif;}
+        .chat-msg.system-msg i { margin-right: 8px;}
+        
+        .chat-name { font-weight: bold; color: #aaa; margin-right: 10px; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1.5px; font-family: 'Orbitron', sans-serif;}
+        .chat-name.me { color: var(--cyan-accent); text-shadow: 0 0 10px rgba(0,229,255,0.4);}
+        .chat-img { max-width: 400px; border-radius: 10px; margin-top: 15px; border: 2px solid #444; transition: 0.3s; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.9);}
+        .chat-img:hover { border-color: var(--neon-red); box-shadow: 0 0 25px rgba(255,42,42,0.6); transform: scale(1.03);}
+
+        .tools-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        .sfx-btn { background: #080303; border: 1px solid #4a0000; color: #999; font-size: 1rem; font-family: 'Orbitron', sans-serif; font-weight: bold; padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.7);}
+        .sfx-btn:hover { background: rgba(255,42,42,0.15); border-color: var(--neon-red); color: var(--neon-red); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,0,0,0.3);}
+        .sfx-btn.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(100%); pointer-events: none;}
+
+        #reaction-bar { display: flex; gap: 12px; }
+        .react-btn { background: rgba(0,0,0,0.7); border: 1px solid #444; color: #fff; font-size: 1.3rem; padding: 8px 20px; border-radius: 25px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.6);}
+        .react-btn:hover { background: rgba(255,42,42,0.2); border-color: var(--neon-red); transform: translateY(-4px) scale(1.15); box-shadow: 0 8px 15px rgba(255,42,42,0.4);}
+
+        #chat-input-area { display: flex; gap: 18px; background: rgba(8,2,2,0.95); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,42,42,0.2); box-shadow: 0 15px 40px rgba(0,0,0,0.95), inset 0 1px 1px rgba(255,255,255,0.05); backdrop-filter: blur(10px);}
+        #chat-input { flex: 1; background: transparent; border: none; color: #fff; padding: 12px 18px; font-family: 'Rajdhani', sans-serif; font-size: 1.25rem; outline: none; }
+        #chat-input::placeholder { color: #666; }
+        
+        .action-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0 20px; font-size: 1.6rem; transition: 0.3s; border-radius: 10px; display: flex; align-items: center; justify-content: center;}
+        .action-btn:hover { color: var(--cyan-accent); background: rgba(0,229,255,0.1); }
+        .action-btn.send { background: linear-gradient(135deg, #5a0000, #2a0000); color: #fff; font-family: 'Orbitron', sans-serif; font-size: 1.2rem; border: 1px solid var(--neon-red); padding: 0 35px; letter-spacing: 2px; box-shadow: 0 6px 15px rgba(0,0,0,0.7);}
+        .action-btn.send:hover { background: var(--neon-red); color: #000; box-shadow: 0 0 25px var(--neon-glow); transform: translateX(3px);}
+        
+    </style>
+</head>
+<body>
+    
+    <div class="scanlines"></div>
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- KADER ÇARKI -->
+    <div id="roulette-overlay">
+        <div class="roulette-title glitch-anim"><i class="fa-solid fa-dharmachakra"></i> KADER ÇARKI</div>
+        <div id="roulette-name">BEKLENİYOR...</div>
+    </div>
+
+    <!-- DÜRTME & ÇAY -->
+    <div id="nudge-flash"><div class="nudge-text glitch-anim">UYARI ALINDI!</div></div>
+    <div id="tea-overlay"><i class="fa-solid fa-mug-hot tea-icon"></i><div class="tea-text" id="tea-msg">...</div></div>
+
+    <!-- ULTRA-MİNİMAL HUD CANVAS -->
+    <canvas id="pip-canvas" width="120" height="100" style="display:none;"></canvas>
+    <video id="pip-video" style="display:none;" autoplay muted playsinline></video>
+
+    <!-- GİRİŞ -->
+    <div id="login-screen">
+        <h1 class="logo glitch-anim" style="animation-duration: 4s;"><i class="fa-solid fa-shield-halved" style="font-size: 3rem; vertical-align: middle; margin-right: 15px;"></i>NIGSI</h1>
+        <div class="sub-logo">Terminal v.Remastered</div>
+        <input type="text" id="username" class="styled-input" placeholder="Operatör ID" maxlength="15" autocomplete="off">
+        <input type="password" id="password" class="styled-input" placeholder="Şifreleme Anahtarı">
+        <button class="btn" onclick="startSystem()"><i class="fa-solid fa-satellite-dish"></i> SİSTEME GİR</button>
+        <div id="error-msg"><i class="fa-solid fa-triangle-exclamation"></i> <span id="error-text">Erişim Reddedildi!</span></div>
+    </div>
+
+    <!-- ANA EKRAN -->
+    <div id="app-screen">
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo glitch-anim" style="font-size: 2.8rem; animation-duration: 5s;">NIGSI</h1>
+            </div>
+            <div id="users-list"></div>
+            
+            <div id="my-controls">
+                <button class="ctrl-btn" id="mic-btn" onclick="toggleMute()" title="Mikrofon"><i class="fa-solid fa-microphone"></i></button>
+                <button class="ctrl-btn" id="afk-btn" onclick="toggleAFK()" title="AFK Modu"><i class="fa-solid fa-moon"></i></button>
+                <button class="ctrl-btn" id="screen-btn" onclick="toggleScreenShare()" title="Ekran Paylaş (Yayın)"><i class="fa-solid fa-desktop"></i></button>
+                <button class="ctrl-btn" onclick="window.location.reload()" title="Bağlantıyı Kes"><i class="fa-solid fa-power-off"></i></button>
+            </div>
+        </div>
+
+        <div id="main-area">
+            
+            <button id="floating-hud-btn" onclick="startPIP()" title="Oyun İçi HUD Aç">
+                <i class="fa-solid fa-layer-group"></i> HUD
+            </button>
+
+            <div id="screen-view-container">
+                <video id="shared-screen" autoplay playsinline></video>
+            </div>
+            <div id="chat-section">
+                <div id="chat-box"></div>
+                
+                <div class="tools-bar">
+                    <button class="sfx-btn" id="roulette-btn" onclick="startRoulette()" title="Kader Çarkını Çevir (8 Dk Limit)"><i class="fa-solid fa-dharmachakra"></i> ÇARK</button>
+                    <div id="reaction-bar">
+                        <button class="react-btn" onclick="sendReaction('❤️')">❤️</button>
+                        <button class="react-btn" onclick="sendReaction('🔥')">🔥</button>
+                        <button class="react-btn" onclick="sendReaction('👏')">👏</button>
+                        <button class="react-btn" onclick="sendReaction('💀')">💀</button>
+                    </div>
+                </div>
+
+                <div id="chat-input-area">
+                    <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                    <button class="action-btn" onclick="document.getElementById('image-input').click()" title="Görsel Yükle"><i class="fa-solid fa-image"></i></button>
+                    <input type="text" id="chat-input" placeholder="Ağa mesaj ilet..." onkeypress="handleEnter(event)">
+                    <button class="action-btn send" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ODA_SIFRESI = "nigıbigı30";
+        const ODA_PREFIX = "nigsi-revere-slot-";
+        
+        let localStream = null, screenStream = null, peer = null;
+        let mySlot = 0, myName = "", audioContext = null;
+        let dataConnections = {}, isAFK = false, isMuted = false, screenCalls = [];
+        let actionCooldowns = {}; 
+        
+        const pipCanvas = document.getElementById('pip-canvas'); const pipCtx = pipCanvas.getContext('2d');
+        const pipVideo = document.getElementById('pip-video');
+
+        const tabLockChannel = new BroadcastChannel('nigsi_tab_lock');
+        let isActiveInThisTab = false; 
+        
+        tabLockChannel.onmessage = (e) => {
+            if (e.data === 'ping' && isActiveInThisTab) tabLockChannel.postMessage('pong');
+            if (e.data === 'pong') window.anotherTabIsActive = true;
+        };
+        tabLockChannel.postMessage('ping');
+
+        window.addEventListener('beforeunload', () => { if (peer) peer.destroy(); });
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
+
+        // Arayüz içi hata gösterimi
+        function showError(msg) {
+            document.getElementById("app-screen").style.display = "none";
+            document.getElementById("login-screen").style.display = "block";
+            document.getElementById("error-text").innerText = msg;
+            document.getElementById("error-msg").style.display = "block";
+        }
+
+        function canDoAction(userId, actionType, customMinutes = 10) {
+            const now = Date.now(); const key = userId + '_' + actionType; const lastTime = actionCooldowns[key] || 0; const cooldownTime = customMinutes * 60 * 1000; 
+            if (now - lastTime < cooldownTime) {
+                alert(`Sistem Limiti: Bu eylem için ${Math.ceil((cooldownTime - (now - lastTime)) / 60000)} dakika beklemelisiniz.`);
+                return false;
+            }
+            actionCooldowns[key] = now; return true;
+        }
+
+        function playSfx(type) {
+            if (!audioContext) return;
+            const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
+            osc.connect(gain); gain.connect(audioContext.destination); const now = audioContext.currentTime;
+            
+            if (type === 'join') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            } else if (type === 'leave') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            } else if (type === 'msg') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now); gain.gain.setValueAtTime(0.02, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            } else if (type === 'nudge') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(900, now + 0.1); osc.frequency.setValueAtTime(300, now + 0.2);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                osc.start(now); osc.stop(now + 0.5); return;
+            } else if (type === 'tea') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.start(now); osc.stop(now + 0.4); return;
+            } else if (type === 'easter') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(1000, now + 2);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+                osc.start(now); osc.stop(now + 2.1); return;
+            } else if (type === 'roulette_tick') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(1200, now);
+                gain.gain.setValueAtTime(0.03, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now); osc.stop(now + 0.05); return;
+            } else if (type === 'roulette_win') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(880, now + 0.2); 
+                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                osc.start(now); osc.stop(now + 0.8); return;
+            }
+            osc.start(now); osc.stop(now + 0.1);
+        }
+
+        function triggerEasterEgg() {
+            playSfx('easter');
+            const c = document.getElementById('matrix-canvas'); const ctx = c.getContext('2d');
+            c.width = window.innerWidth; c.height = window.innerHeight; c.style.display = 'block'; c.style.opacity = '1';
+            
+            const chars = 'NIGSI REVERE GAMES 01010101'; const drops = [];
+            const fontSize = 16; const columns = c.width / fontSize;
+            for(let x = 0; x < columns; x++) drops[x] = 1;
+            
+            const interval = setInterval(() => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'; ctx.fillRect(0, 0, c.width, c.height);
+                ctx.fillStyle = '#00e5ff'; ctx.font = fontSize + 'px Orbitron';
+                for(let i = 0; i < drops.length; i++) {
+                    const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if(drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }, 35);
+            setTimeout(() => { c.style.opacity = '0'; setTimeout(() => { clearInterval(interval); c.style.display = 'none'; }, 1000); }, 5000);
+        }
+
+        async function startSystem() {
+            if (window.anotherTabIsActive) { showError("Sistem başka sekmede açık!"); return; }
+
+            myName = document.getElementById("username").value.trim();
+            const pass = document.getElementById("password").value;
+
+            if (pass !== ODA_SIFRESI) { showError("Şifre Hatalı!"); return; }
+            if (!myName) return alert("Lütfen Operatör ID girin.");
+
+            const forbiddenNames = ["bağlanıyor", "baglaniyor", "bağlandı", "baglandi", "sistem", "admin", "system", "null", "undefined"];
+            if (forbiddenNames.some(word => myName.toLowerCase().includes(word))) { showError("Bu Operatör ID rezerve edilmiştir!"); return; }
+
+            myName = escapeHTML(myName);
+            document.getElementById("login-screen").style.display = "none";
+            document.getElementById("app-screen").style.display = "flex";
+
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)(); audioContext.resume();
+                connectToFreeSlot(1);
+            } catch (err) { 
+                showError("Mikrofon erişimi reddedildi veya bulunamadı.");
+            }
+        }
+
+        function connectToFreeSlot(slotNum) {
+            if (slotNum > 5) { showError("Ağ şu anda dolu (5/5 Limit)."); return; }
+            
+            const myId = ODA_PREFIX + slotNum;
+            const tempPeer = new Peer(myId);
+
+            tempPeer.on('open', (id) => {
+                peer = tempPeer; mySlot = slotNum; isActiveInThisTab = true; 
+                createCard(myId, myName, true); analyzeMyVoice(myId, localStream);
+                callOtherSlots(); listenForIncomingConnections(); playSfx('join');
+                
+                pipVideo.srcObject = pipCanvas.captureStream(30); drawPIPHUD();
+            });
+            
+            // Hata yakalama bloğu (Güncellendi)
+            tempPeer.on('error', (err) => { 
+                console.warn("PeerJS Hatası:", err.type);
+                if (err.type === 'unavailable-id') {
+                    connectToFreeSlot(slotNum + 1); 
+                } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'browser-incompatible') {
+                    showError("Sinyal sunucusu ile iletişim kurulamadı. (" + err.type + ")");
+                } else if (err.type === 'peer-unavailable') {
+                    // Boş slotlara bağlanmaya çalışırken fırlatılır. 
+                    // Bu sistemin doğası gereği normaldir, kullanıcıyı ana ekrana atma.
+                    console.log("Boş slota sinyal gönderildi, sorun yok.");
+                } else {
+                    showError("Beklenmeyen ağ hatası: " + err.type);
+                }
+            });
+
+            // Beklenmedik kopmalarda temizlik
+            tempPeer.on('disconnected', () => { displaySystemMessage(`<i class="fa-solid fa-triangle-exclamation"></i> Sinyal sunucusundan koptunuz.`); });
+        }
+
+        function listenForIncomingConnections() {
+            peer.on('call', (call) => {
+                if (call.metadata && call.metadata.isScreen) {
+                    call.answer();
+                    call.on('stream', stream => { document.getElementById('shared-screen').srcObject = stream; document.getElementById('screen-view-container').style.display = 'flex'; });
+                    call.on('close', () => { document.getElementById('screen-view-container').style.display = 'none'; });
+                } else {
+                    call.answer(localStream);
+                    call.on('stream', (stream) => { handleRemoteUser(call.peer, stream); });
+                    call.on('close', () => removeUser(call.peer));
+                    call.on('error', () => removeUser(call.peer));
+                }
+            });
+
+            peer.on('connection', (conn) => {
+                conn.on('open', () => { dataConnections[conn.peer] = conn; conn.send({ type: 'name_update', name: myName, afk: isAFK }); });
+                conn.on('data', (data) => processData(conn.peer, data));
+                conn.on('close', () => { delete dataConnections[conn.peer]; removeUser(conn.peer); });
+                conn.on('error', () => { delete dataConnections[conn.peer]; removeUser(conn.peer); });
+            });
+        }
+
+        function callOtherSlots() {
+            for (let i = 1; i <= 5; i++) {
+                if (i === mySlot) continue;
+                const targetId = ODA_PREFIX + i;
+                const call = peer.call(targetId, localStream);
+                if (call) { 
+                    call.on('stream', (stream) => handleRemoteUser(targetId, stream)); 
+                    call.on('close', () => removeUser(targetId));
+                    call.on('error', () => removeUser(targetId));
+                }
+                const conn = peer.connect(targetId);
+                if (conn) {
+                    conn.on('open', () => { dataConnections[targetId] = conn; conn.send({ type: 'name_update', name: myName, afk: isAFK }); });
+                    conn.on('data', (data) => processData(targetId, data));
+                    conn.on('close', () => { delete dataConnections[targetId]; removeUser(targetId); });
+                    conn.on('error', () => { delete dataConnections[targetId]; removeUser(targetId); });
+                }
+            }
+        }
+
+        function processData(userId, data) {
+            if (data.name && !data.name.toLowerCase().includes("bağlanıyor")) updateCardName(userId, escapeHTML(data.name));
+            
+            if (data.type === 'name_update') { updateAFKUI(userId, data.afk); } 
+            else if (data.type === 'chat') { displayChatMessage(data.name, data.message, false); } 
+            else if (data.type === 'image') { displayImageMessage(data.name, data.image, false); } 
+            else if (data.type === 'afk_status') { updateAFKUI(userId, data.status); } 
+            else if (data.type === 'nudge') { if (data.target === (ODA_PREFIX + mySlot)) triggerNudgeEffect(); }
+            else if (data.type === 'tea') { showTeaAnimation(data.from, data.toName); }
+            else if (data.type === 'reaction') { showFloatingEmoji(data.emoji); }
+            else if (data.type === 'easter_egg') { triggerEasterEgg(); }
+            else if (data.type === 'roulette') { showRouletteAnim(data.winner); }
+        }
+
+        // --- ULTRA-MİNİMAL HUD ÇİZİMİ ---
+        async function startPIP() {
+            try {
+                const btn = document.getElementById('floating-hud-btn');
+                if (document.pictureInPictureElement) { await document.exitPictureInPicture(); btn.classList.remove('active'); } 
+                else { pipVideo.play(); await pipVideo.requestPictureInPicture(); btn.classList.add('active'); displaySystemMessage(`<i class="fa-solid fa-layer-group"></i> Oyun İçi HUD Aktif.`); }
+            } catch (error) { alert("Tarayıcınız HUD özelliğini desteklemiyor."); }
+        }
+
+        function drawPIPHUD() {
+            pipCtx.fillStyle = '#070303';
+            pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+            
+            const activeUsers = [{id: ODA_PREFIX+mySlot, name: myName}];
+            Object.keys(dataConnections).forEach(k => { const el = document.getElementById(`name-${k}`); if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({id: k, name: el.innerText}); });
+            
+            pipCtx.textAlign = 'left';
+            let y = 18; 
+            
+            activeUsers.forEach(u => {
+                const card = document.getElementById(`card-${u.id}`); 
+                const isSpeaking = card && card.classList.contains('speaking');
+                
+                pipCtx.globalAlpha = isSpeaking ? 1.0 : 0.4;
+                
+                if (isSpeaking) {
+                    pipCtx.shadowColor = (u.id === ODA_PREFIX+mySlot) ? '#00e5ff' : '#ff2a2a'; 
+                    pipCtx.shadowBlur = 6; 
+                    pipCtx.fillStyle = (u.id === ODA_PREFIX+mySlot) ? '#00e5ff' : '#ff2a2a';
+                } else {
+                    pipCtx.shadowBlur = 0; pipCtx.fillStyle = '#555555';
+                }
+
+                pipCtx.beginPath(); pipCtx.arc(10, y - 4, isSpeaking ? 4 : 2, 0, 2 * Math.PI); pipCtx.fill();
+                
+                pipCtx.shadowBlur = isSpeaking ? 5 : 0;
+                pipCtx.font = isSpeaking ? 'bold 11px Orbitron' : '10px Orbitron'; 
+                pipCtx.fillStyle = isSpeaking ? '#ffffff' : '#888888'; 
+                pipCtx.fillText(u.name.toUpperCase().substring(0, 10), 20, y); 
+                
+                pipCtx.globalAlpha = 1.0;
+                y += 20; 
+            });
+            requestAnimationFrame(drawPIPHUD);
+        }
+
+        function startRoulette() {
+            if (!canDoAction(myName, 'roulette', 8)) return;
+            const btn = document.getElementById('roulette-btn');
+            btn.classList.add('disabled'); setTimeout(() => { btn.classList.remove('disabled'); }, 480000);
+
+            const activeUsers = [{name: myName}];
+            Object.keys(dataConnections).forEach(k => { const el = document.getElementById(`name-${k}`); if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({name: el.innerText}); });
+            if (activeUsers.length < 2) {
+                actionCooldowns[myName + '_roulette'] = 0; btn.classList.remove('disabled');
+                return alert("Çarkı çevirmek için en az 2 kişi olmalı!");
+            }
+            
+            const winner = activeUsers[Math.floor(Math.random() * activeUsers.length)].name;
+            broadcastData({ type: 'roulette', winner: winner }); showRouletteAnim(winner);
+        }
+
+        function showRouletteAnim(winnerName) {
+            const overlay = document.getElementById('roulette-overlay'); const nameDisplay = document.getElementById('roulette-name');
+            overlay.style.display = 'flex'; nameDisplay.classList.remove('roulette-winner');
+            
+            const activeUsers = [{name: myName}];
+            Object.keys(dataConnections).forEach(k => { const el = document.getElementById(`name-${k}`); if(el && el.innerText !== "Bağlanıyor...") activeUsers.push({name: el.innerText}); });
+
+            let ticks = 0; const maxTicks = 30;
+            const interval = setInterval(() => {
+                playSfx('roulette_tick'); nameDisplay.innerText = activeUsers[ticks % activeUsers.length].name; ticks++;
+                if (ticks >= maxTicks) {
+                    clearInterval(interval); nameDisplay.innerText = winnerName; nameDisplay.classList.add('roulette-winner'); playSfx('roulette_win');
+                    setTimeout(() => { overlay.style.display = 'none'; }, 4000);
+                    displaySystemMessage(`<i class="fa-solid fa-dharmachakra"></i> Kader Çarkı Sonucu: <strong style="color:var(--neon-red); font-size:1.2rem;">${winnerName}</strong>`);
+                }
+            }, 100);
+        }
+
+        function sendTea(userId, targetName) {
+            if (!canDoAction(userId, 'tea', 10)) return;
+            const btn = document.getElementById(`tea-btn-${userId}`);
+            if(btn) { btn.classList.add('disabled'); setTimeout(() => { btn.classList.remove('disabled'); }, 600000); }
+            broadcastData({ type: 'tea', from: myName, toName: targetName }); showTeaAnimation(myName, targetName);
+            displaySystemMessage(`<i class="fa-solid fa-mug-hot"></i> <span style="color:var(--cyan-accent);">${myName}</span>, ${targetName} adlı operatöre çay gönderdi!`);
+        }
+
+        function showTeaAnimation(from, to) {
+            playSfx('tea'); const overlay = document.getElementById('tea-overlay'); const msg = document.getElementById('tea-msg');
+            msg.innerHTML = `<span style="color:var(--cyan-accent);">${from}</span>, ${to} kişisine çay gönderdi!`;
+            overlay.style.display = 'flex'; overlay.style.animation = 'none'; void overlay.offsetWidth; overlay.style.animation = 'teaPop 3s forwards';
+            setTimeout(() => { overlay.style.display = 'none'; }, 3000);
+        }
+
+        function nudgeUser(userId) {
+            if (!canDoAction(userId, 'nudge', 10)) return;
+            const btn = document.getElementById(`nudge-btn-${userId}`);
+            if(btn) { btn.classList.add('disabled'); setTimeout(() => { btn.classList.remove('disabled'); }, 600000); }
+            if(dataConnections[userId]) dataConnections[userId].send({ type: 'nudge', target: userId, from: myName });
+            displaySystemMessage(`<i class="fa-solid fa-bolt"></i> <span style="color:var(--cyan-accent);">${myName}</span>, bir operatörü dürttü.`);
+        }
+
+        function triggerNudgeEffect() {
+            playSfx('nudge'); document.body.classList.add('shaking');
+            const flash = document.getElementById('nudge-flash'); flash.style.display = 'flex';
+            setTimeout(() => { document.body.classList.remove('shaking'); flash.style.display = 'none'; }, 500);
+        }
+
+        function sendReaction(emoji) { showFloatingEmoji(emoji); broadcastData({ type: 'reaction', emoji: emoji }); }
+        function showFloatingEmoji(emoji) {
+            const chatSec = document.getElementById('chat-section'); const el = document.createElement('div');
+            el.className = 'floating-emoji'; el.innerText = emoji; el.style.right = Math.floor(Math.random() * 60 + 20) + 'px';
+            chatSec.appendChild(el); setTimeout(() => el.remove(), 2500);
+        }
+
+        function broadcastData(payload) { Object.values(dataConnections).forEach(conn => { if (conn && conn.open) conn.send(payload); }); }
+        function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input'); const text = input.value.trim(); if (!text) return;
+            if (text.toLowerCase() === '/revere') {
+                triggerEasterEgg(); broadcastData({ type: 'easter_egg' });
+                displaySystemMessage(`<i class="fa-solid fa-user-secret"></i> GİZLİ PROTOKOL AKTİF: RevereGames Ağına Bağlanıldı.`);
+                input.value = ""; return;
+            }
+            const safeText = escapeHTML(text); displayChatMessage(myName, safeText, true);
+            broadcastData({ type: 'chat', name: myName, message: safeText }); input.value = "";
+        }
+
+        function displaySystemMessage(htmlText) {
+            const box = document.getElementById('chat-box'); box.innerHTML += `<div class="chat-msg system-msg">${htmlText}</div>`;
+            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
+        }
+
+        function displayChatMessage(senderName, messageText, isMe) {
+            if(!isMe) playSfx('msg'); const box = document.getElementById('chat-box'); const safeName = escapeHTML(senderName);
+            const msgClass = isMe ? "chat-msg me-msg" : "chat-msg"; const nameClass = isMe ? "chat-name me" : "chat-name";
+            box.innerHTML += `<div class="${msgClass}"><span class="${nameClass}">${safeName}:</span> <span class="chat-text">${messageText}</span></div>`;
+            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 50);
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = function(e) { displayImageMessage(myName, e.target.result, true); broadcastData({ type: 'image', name: myName, image: e.target.result }); };
+            reader.readAsDataURL(file); event.target.value = ''; 
+        }
+
+        function displayImageMessage(senderName, imgData, isMe) {
+            if(!isMe) playSfx('msg'); const box = document.getElementById('chat-box'); const safeName = escapeHTML(senderName);
+            const msgClass = isMe ? "chat-msg me-msg" : "chat-msg";
+            box.innerHTML += `<div class="${msgClass}"><span class="chat-name ${isMe ? 'me' : ''}">${safeName}:</span><br><img src="${imgData}" class="chat-img" onclick="window.open('${imgData}')"></div>`;
+            setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
+        }
+
+        function handleRemoteUser(userId, stream) {
+            removeUser(userId); const audioEl = document.createElement('audio'); audioEl.id = 'audio-' + userId; audioEl.srcObject = stream; audioEl.autoplay = true;
+            if(isAFK) audioEl.muted = true; document.body.appendChild(audioEl);
+            createCard(userId, "Bağlanıyor...", false); analyzeRemoteVoice(userId, stream); playSfx('join');
+            setTimeout(() => { const nameEl = document.getElementById(`name-${userId}`); if (nameEl && nameEl.innerText === "Bağlanıyor...") removeUser(userId); }, 4000);
+        }
+
+        function removeUser(userId) {
+            const oldAudio = document.getElementById('audio-' + userId); if (oldAudio) oldAudio.remove();
+            const oldCard = document.getElementById('card-' + userId); if (oldCard) { oldCard.remove(); playSfx('leave'); }
+        }
+
+        function createCard(userId, name, isMe) {
+            if(document.getElementById('card-' + userId)) return;
+            const list = document.getElementById('users-list'); const safeName = escapeHTML(name);
+            
+            let actionBarHTML = '';
+            if (!isMe) {
+                actionBarHTML += `<div class="action-bar-top">`;
+                actionBarHTML += `<button class="mini-btn" id="tea-btn-${userId}" onclick="sendTea('${userId}', '${safeName}')" title="Çay Gönder (10dk Limit)"><i class="fa-solid fa-mug-hot"></i></button>`;
+                actionBarHTML += `<button class="mini-btn" id="nudge-btn-${userId}" onclick="nudgeUser('${userId}')" title="Dürt (10dk Limit)"><i class="fa-solid fa-bolt"></i></button>`;
+                // Kick sistemi tamamen kaldırıldı
+                actionBarHTML += `</div>`;
+            }
+
+            let html = `<div class="user-item ${isMe ? 'me' : ''}" id="card-${userId}">${actionBarHTML}
+                        <div class="user-info"><div class="avatar" id="avatar-${userId}">${safeName.charAt(0).toUpperCase()}</div>
+                        <div class="user-name" id="name-${userId}">${safeName}</div><div class="afk-badge">AFK</div></div>`;
+            if (!isMe) html += `<input type="range" class="vol-slider" min="0" max="1" step="0.1" value="1" oninput="changeVol('${userId}', this.value)">`;
+            html += `</div>`;
+            list.insertAdjacentHTML('beforeend', html);
+        }
+
+        function updateCardName(userId, name) {
+            const n = document.getElementById(`name-${userId}`); const a = document.getElementById(`avatar-${userId}`); const safeName = escapeHTML(name);
+            if (n) n.innerText = safeName; if (a) a.innerText = safeName.charAt(0).toUpperCase();
+            const card = document.getElementById(`card-${userId}`);
+            if (card && safeName !== "Bağlanıyor...") { const teaBtn = card.querySelector('button[title="Çay Gönder (10dk Limit)"]'); if(teaBtn) teaBtn.setAttribute('onclick', `sendTea('${userId}', '${safeName}')`); }
+        }
+
+        function changeVol(userId, val) { const a = document.getElementById(`audio-${userId}`); if (a && !isAFK) a.volume = parseFloat(val); }
+        
+        function toggleMute() {
+            isMuted = !isMuted; const btn = document.getElementById('mic-btn');
+            if (localStream && !isAFK) localStream.getAudioTracks()[0].enabled = !isMuted;
+            if (isMuted) { btn.classList.add('active-red'); btn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i>'; } 
+            else { btn.classList.remove('active-red'); btn.innerHTML = '<i class="fa-solid fa-microphone"></i>'; }
+        }
+
+        async function toggleScreenShare() {
+            const btn = document.getElementById('screen-btn');
+            if (screenStream) {
+                screenStream.getTracks().forEach(t => t.stop()); screenStream = null; document.getElementById('screen-view-container').style.display = 'none';
+                screenCalls.forEach(call => call.close()); screenCalls = []; btn.classList.remove('active-blue'); return;
+            }
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
+                document.getElementById('shared-screen').srcObject = screenStream; document.getElementById('screen-view-container').style.display = 'flex';
+                btn.classList.add('active-blue');
+                for (let i = 1; i <= 5; i++) { if (i === mySlot) continue; const call = peer.call(ODA_PREFIX + i, screenStream, { metadata: { isScreen: true } }); if(call) screenCalls.push(call); }
+                screenStream.getVideoTracks()[0].onended = () => toggleScreenShare();
+            } catch(err) {}
+        }
+
+        function toggleAFK() {
+            isAFK = !isAFK; const btn = document.getElementById('afk-btn'); const myCard = document.getElementById(`card-${ODA_PREFIX}${mySlot}`);
+            if (localStream && !isMuted) localStream.getAudioTracks()[0].enabled = !isAFK; document.querySelectorAll('audio').forEach(a => { a.muted = isAFK; });
+            if (isAFK) { btn.classList.add('active-red'); if(myCard) myCard.classList.add('afk'); } else { btn.classList.remove('active-red'); if(myCard) myCard.classList.remove('afk'); }
+            broadcastData({ type: 'afk_status', status: isAFK });
+        }
+
+        function updateAFKUI(userId, status) { const card = document.getElementById(`card-${userId}`); if(card) { if(status) card.classList.add('afk'); else card.classList.remove('afk'); } }
+
+        // Performans odaklı Ses Analizörü (DOM Caching uygulandı)
+        function analyzeRemoteVoice(userId, stream) {
+            const src = audioContext.createMediaStreamSource(stream); const anl = audioContext.createAnalyser(); src.connect(anl); anl.fftSize = 256; const data = new Uint8Array(anl.frequencyBinCount);
+            let cardElement = null;
+            function check() {
+                if(!cardElement) cardElement = document.getElementById(`card-${userId}`);
+                if(!cardElement) { requestAnimationFrame(check); return; } // Henüz oluşturulmadıysa bekle
+                
+                anl.getByteFrequencyData(data);
+                let sum = 0; for(let i=0; i<data.length; i++) sum += data[i]; let avg = sum / data.length; 
+                
+                if (!cardElement.classList.contains('afk')) { if (avg > 10) cardElement.classList.add('speaking'); else cardElement.classList.remove('speaking'); } 
+                requestAnimationFrame(check);
+            } check();
+        }
+
+        // Performans odaklı kendi ses Analizörümüz
+        function analyzeMyVoice(myId, stream) {
+            const src = audioContext.createMediaStreamSource(stream); const anl = audioContext.createAnalyser(); src.connect(anl); anl.fftSize = 256; const data = new Uint8Array(anl.frequencyBinCount);
+            let cardElement = null;
+            function check() {
+                if(!cardElement) cardElement = document.getElementById(`card-${myId}`);
+                
+                if(localStream && !localStream.getAudioTracks()[0].enabled) { 
+                    if(cardElement) cardElement.classList.remove('speaking'); 
+                    requestAnimationFrame(check); return; 
+                }
+                
+                anl.getByteFrequencyData(data); let sum = 0; for(let i=0; i<data.length; i++) sum += data[i]; let avg = sum / data.length; 
+                
+                if (cardElement && !cardElement.classList.contains('afk')) { if (avg > 10) cardElement.classList.add('speaking'); else cardElement.classList.remove('speaking'); } 
+                requestAnimationFrame(check);
+            } check();
+        }
+    </script>
+</body>
+</html>
