@@ -455,7 +455,7 @@
                 pipVideo.srcObject = pipCanvas.captureStream(30); drawPIPHUD();
             });
             
-            // Hata yakalama bloğu (Güncellendi)
+            // Hata yakalama bloğu
             tempPeer.on('error', (err) => { 
                 console.warn("PeerJS Hatası:", err.type);
                 if (err.type === 'unavailable-id') {
@@ -479,7 +479,7 @@
             peer.on('call', (call) => {
                 if (call.metadata && call.metadata.isScreen) {
                     call.answer();
-                    call.on('stream', stream => { document.getElementById('shared-screen').srcObject = stream; document.getElementById('screen-view-container').style.display = 'flex'; });
+                    call.on('stream', stream => { document.getElementById('shared-screen').srcObject = stream; document.getElementById('shared-screen').muted = false; document.getElementById('screen-view-container').style.display = 'flex'; });
                     call.on('close', () => { document.getElementById('screen-view-container').style.display = 'none'; });
                 } else {
                     call.answer(localStream);
@@ -743,7 +743,7 @@
             }
             try {
                 screenStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
-                document.getElementById('shared-screen').srcObject = screenStream; document.getElementById('screen-view-container').style.display = 'flex';
+                document.getElementById('shared-screen').srcObject = screenStream; document.getElementById('shared-screen').muted = true; document.getElementById('screen-view-container').style.display = 'flex';
                 btn.classList.add('active-blue');
                 for (let i = 1; i <= 5; i++) { if (i === mySlot) continue; const call = peer.call(ODA_PREFIX + i, screenStream, { metadata: { isScreen: true } }); if(call) screenCalls.push(call); }
                 screenStream.getVideoTracks()[0].onended = () => toggleScreenShare();
