@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DEĞMECANA II</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #030604;
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+        }
+        .font-baslik {
+            font-family: 'Oswald', sans-serif;
+        }
+        #oyunAlani3D {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+            z-index: 1;
+        }
+        .panel-karanlik {
+            background: linear-gradient(180deg, rgba(8, 13, 10, 0.92) 0%, rgba(4, 7, 5, 0.96) 100%);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+        }
+        .buton-birincil {
+            background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+            border: 1px solid rgba(125, 211, 252, 0.35);
+            transition: all 0.18s ease;
+        }
+        .buton-birincil:hover {
+            background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+            border-color: rgba(186, 230, 253, 0.65);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(2, 132, 199, 0.35);
+        }
+        .buton-ikincil {
+            background: rgba(15, 23, 18, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            transition: all 0.18s ease;
+        }
+        .buton-ikincil:hover {
+            background: rgba(30, 41, 35, 0.95);
+            border-color: rgba(148, 163, 184, 0.45);
+            transform: translateY(-1px);
+        }
+        .vinyet-katmani {
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 55%, rgba(0, 0, 0, 0.82) 100%);
+        }
+        @keyframes acilisSolma {
+            0% { opacity: 1; }
+            75% { opacity: 1; }
+            100% { opacity: 0; pointer-events: none; }
+        }
+        .acilis-perde {
+            animation: acilisSolma 2.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full overflow-hidden">
+
+    <!-- 3D WebGL Sahnesi -->
+    <canvas id="oyunAlani3D"></canvas>
+
+    <!-- Sinematik Vinyet ve Hasar Katmanı -->
+    <div class="fixed inset-0 z-10 vinyet-katmani"></div>
+    <div id="ekranFlasi" class="fixed inset-0 z-10 pointer-events-none opacity-0 transition-opacity duration-300 bg-red-900/40"></div>
+
+    <!-- Açılış Sinematik Siyah Perde (Sayfa İlk Açıldığında) -->
+    <div id="acilisPerdesi" class="fixed inset-0 z-50 bg-[#020403] flex flex-col items-center justify-center acilis-perde">
+        <div class="text-[11px] tracking-[0.45em] text-slate-500 uppercase mb-2">REVERE YAPIM</div>
+        <div class="font-baslik text-4xl sm:text-5xl tracking-[0.2em] text-slate-200 font-bold">DEĞMECANA II</div>
+        <div class="w-24 h-[1px] bg-sky-500/50 mt-4"></div>
+    </div>
+
+    <!-- Sinematik Kamera Giriş Yazısı (Oyun Başlarken 2.2sn) -->
+    <div id="sinematikGirisBand" class="fixed inset-x-0 top-14 z-20 pointer-events-none hidden flex-col items-center">
+        <div class="text-[11px] tracking-[0.4em] text-sky-400/90 uppercase font-semibold">ORMAN DERİNLİKLERİ</div>
+        <div id="sinematikAltYazi" class="font-baslik text-2xl sm:text-3xl tracking-[0.15em] text-white uppercase mt-1">DEĞDİKLERİ AN BİTERSİN</div>
+    </div>
+
+    <!-- Özel Minimalist Nişangah -->
+    <div id="ozelNisangah" class="fixed pointer-events-none z-30 hidden" style="transform: translate(-50%, -50%);">
+        <div id="nisangahHalka" class="w-7 h-7 rounded-full border border-amber-400/75 flex items-center justify-center transition-transform duration-75">
+            <div class="w-1 h-1 rounded-full bg-amber-300"></div>
+        </div>
+    </div>
+
+    <!-- SADELEŞTİRİLMİŞ OYUN İÇİ HUD -->
+    <div id="oyunHud" class="fixed inset-0 z-20 pointer-events-none hidden flex-col justify-between p-5 sm:p-7">
+        <!-- Üst Bar: Skor, Dalga ve Sağ Üst Kontroller -->
+        <div class="flex items-start justify-between w-full">
+            <div class="flex items-baseline gap-6 bg-black/45 backdrop-blur-md px-4 py-2.5 rounded border border-white/10">
+                <div>
+                    <div class="text-[10px] tracking-[0.25em] text-slate-400 uppercase font-semibold">SKOR</div>
+                    <div id="hudSkor" class="font-baslik text-3xl text-white tracking-wider leading-none mt-0.5">0</div>
+                </div>
+                <div class="h-7 w-[1px] bg-white/10"></div>
+                <div>
+                    <div class="text-[10px] tracking-[0.25em] text-slate-400 uppercase font-semibold">DALGA</div>
+                    <div id="hudDalga" class="font-baslik text-2xl text-sky-400 tracking-wider leading-none mt-0.5">1</div>
+                </div>
+                <div id="coopHudRozet" class="hidden items-center gap-2 pl-3 border-l border-white/10">
+                    <span id="coopBaglantiNokta" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span id="coopHudMetin" class="text-[11px] tracking-wider uppercase text-slate-300 font-medium">CO-OP BAĞLI</span>
+                </div>
+            </div>
+
+            <!-- Sağ Üst Minimal Butonlar -->
+            <div class="flex items-center gap-2 pointer-events-auto">
+                <button id="btnSesToggle" type="button" class="bg-black/50 hover:bg-black/80 text-slate-300 text-xs tracking-wider uppercase px-3 py-2 rounded border border-white/10 transition">
+                    SES: AÇIK
+                </button>
+                <button id="btnMenuDon" type="button" class="bg-black/50 hover:bg-black/80 text-slate-300 text-xs tracking-wider uppercase px-3 py-2 rounded border border-white/10 transition">
+                    MENÜ [ESC]
+                </button>
+            </div>
+        </div>
+
+        <!-- Orta Üst: Boss veya Co-op Kurtarma Uyarısı -->
+        <div id="ortaUyariMetni" class="self-center hidden bg-black/70 border border-red-500/40 px-5 py-1.5 rounded text-xs tracking-[0.2em] uppercase text-red-300 font-semibold">
+            AĞAÇLARIN ARASINDAN DEV YARMA ÇIKTI
+        </div>
+
+        <!-- Alt Bar: Pompalı ve Yuvarlanma (Dash) Durumu -->
+        <div class="flex items-end justify-between w-full">
+            <div class="bg-black/45 backdrop-blur-md px-4 py-3 rounded border border-white/10 min-w-[220px]">
+                <div class="flex items-center justify-between text-[10px] tracking-[0.2em] text-slate-400 uppercase font-semibold mb-1">
+                    <span>POMPALI MEKANİZMASI</span>
+                    <span id="hudPompaliDurum" class="text-amber-400">ATESE HAZIR</span>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-sm overflow-hidden mb-2.5">
+                    <div id="hudPompaliBar" class="h-full bg-amber-400 transition-all duration-75" style="width: 100%;"></div>
+                </div>
+
+                <div class="flex items-center justify-between text-[10px] tracking-[0.2em] text-slate-400 uppercase font-semibold mb-1">
+                    <span>YUVARLANMA [SPACE]</span>
+                    <span id="hudDashDurum" class="text-sky-400">HAZIR</span>
+                </div>
+                <div class="w-full h-1 bg-white/10 rounded-sm overflow-hidden">
+                    <div id="hudDashBar" class="h-full bg-sky-400 transition-all duration-75" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Mobil Dokunmatik Kontroller (Yalnızca Dokunmatik Cihazda Görünür) -->
+            <div id="mobilKontroller" class="hidden sm:hidden items-end gap-3 pointer-events-auto">
+                <div class="grid grid-cols-3 gap-1 w-28 h-28">
+                    <div></div>
+                    <button id="mobW" type="button" class="bg-black/60 border border-white/15 rounded text-xs font-bold active:bg-sky-700">W</button>
+                    <div></div>
+                    <button id="mobA" type="button" class="bg-black/60 border border-white/15 rounded text-xs font-bold active:bg-sky-700">A</button>
+                    <button id="mobS" type="button" class="bg-black/60 border border-white/15 rounded text-xs font-bold active:bg-sky-700">S</button>
+                    <button id="mobD" type="button" class="bg-black/60 border border-white/15 rounded text-xs font-bold active:bg-sky-700">D</button>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <button id="mobDash" type="button" class="bg-black/60 border border-sky-400/40 text-sky-300 px-3 py-2 rounded text-xs font-bold uppercase">YUVARLAN</button>
+                    <button id="mobAtes" type="button" class="bg-amber-600 text-black px-4 py-3 rounded text-xs font-bold uppercase">ATEŞLE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMASAL, SADE VE PREMİUM ANA MENÜ -->
+    <div id="anaMenuEkrani" class="fixed inset-0 z-30 flex items-center justify-start p-6 sm:p-14 md:p-20 bg-gradient-to-r from-black/85 via-black/50 to-transparent">
+        <div class="max-w-md w-full">
+            <!-- Üst Etiket -->
+            <div class="text-[11px] tracking-[0.35em] text-sky-400 uppercase font-semibold mb-2">
+                KARANLIK ORMAN HAYATTA KALMA
+            </div>
+
+            <!-- Oyun Başlığı -->
+            <h1 class="font-baslik text-6xl sm:text-7xl font-bold tracking-tight text-white leading-none">
+                DEĞMECANA <span class="text-sky-400">II</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-3 leading-relaxed border-l-2 border-sky-500/60 pl-3.5">
+                Ormanın karanlığında suyunu çalmak için ağaçlardan fırlayan yabaniler var. Sadece pompalısı olan bir damacanasın. Değdikleri an devrilirsin.
+            </p>
+
+            <!-- Ana Menü Seçenekleri -->
+            <div id="anaMenuButonGrubu" class="mt-8 flex flex-col gap-3">
+                <button id="btnSoloBasla" type="button" class="buton-birincil w-full py-4 px-6 rounded text-left flex items-center justify-between cursor-pointer">
+                    <div>
+                        <div class="font-baslik text-xl tracking-wider text-white uppercase">TEK OYUNCU</div>
+                        <div class="text-[11px] text-sky-100/80">Ormanda tek başına hayatta kal</div>
+                    </div>
+                    <span class="font-baslik text-lg text-white tracking-widest">BAŞLA</span>
+                </button>
+
+                <button id="btnCoopMenuAc" type="button" class="buton-ikincil w-full py-4 px-6 rounded text-left flex items-center justify-between cursor-pointer">
+                    <div>
+                        <div class="font-baslik text-xl tracking-wider text-slate-100 uppercase">ONLINE CO-OP</div>
+                        <div class="text-[11px] text-slate-400">WebRTC P2P oda kodu ile arkadaşınla oyna</div>
+                    </div>
+                    <span class="text-xs tracking-widest text-sky-400 uppercase font-semibold">BAĞLAN</span>
+                </button>
+            </div>
+
+            <!-- ONLINE WEBRTC CO-OP PANELİ (Tıklanınca Açılır) -->
+            <div id="webrtcPanel" class="hidden mt-6 panel-karanlik rounded-lg p-5 border border-white/15">
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+                    <div>
+                        <div class="font-baslik text-lg tracking-wider text-white uppercase">ONLINE WEBRTC CO-OP LOBİSİ</div>
+                        <div id="webrtcDurumMetni" class="text-[11px] text-slate-400">Oda kur veya arkadaşının kodunu gir</div>
+                    </div>
+                    <button id="btnCoopGeri" type="button" class="text-xs text-slate-400 hover:text-white uppercase tracking-wider px-2 py-1">
+                        GERİ
+                    </button>
+                </div>
+
+                <!-- Oda Kurma (Host) Bölümü -->
+                <div class="mb-4">
+                    <div class="flex gap-2">
+                        <button id="btnOdaKur" type="button" class="buton-birincil flex-1 py-2.5 px-4 rounded text-xs font-bold tracking-wider uppercase cursor-pointer">
+                            ODA OLUŞTUR (KURUCU)
+                        </button>
+                        <button id="btnKodKopyala" type="button" class="buton-ikincil hidden py-2.5 px-3 rounded text-xs font-semibold tracking-wider text-sky-300 uppercase cursor-pointer">
+                            KODU KOPYALA
+                        </button>
+                    </div>
+                    <div id="odaKoduKutusu" class="hidden mt-2.5 p-3 rounded bg-black/60 border border-sky-500/30 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400 uppercase tracking-wider">ODA KODUN:</span>
+                        <span id="odaKoduDeger" class="font-baslik text-xl tracking-[0.25em] text-sky-400 font-bold">-----</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 my-3">
+                    <div class="h-[1px] flex-1 bg-white/10"></div>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">VEYA ODAYA KATIL</span>
+                    <div class="h-[1px] flex-1 bg-white/10"></div>
+                </div>
+
+                <!-- Odaya Katılma (Client) Bölümü -->
+                <div class="flex gap-2">
+                    <input id="inputMisafirKod" type="text" maxlength="12" placeholder="ODA KODUNU GİR (ÖRN: 4829)" class="flex-1 bg-black/70 border border-white/15 rounded px-3 py-2.5 text-xs text-white tracking-widest uppercase focus:outline-none focus:border-sky-400">
+                    <button id="btnOdayaKatil" type="button" class="buton-ikincil py-2.5 px-5 rounded text-xs font-bold tracking-wider text-white uppercase cursor-pointer">
+                        KATIL
+                    </button>
+                </div>
+
+                <!-- Bağlantı Hazır Olduğunda veya Hemen Başlatma -->
+                <button id="btnCoopOyunBaslat" type="button" class="hidden mt-4 w-full py-3 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-baslik text-base tracking-widest uppercase cursor-pointer transition">
+                    CO-OP MAÇI BAŞLAT
+                </button>
+            </div>
+
+            <!-- Kontroller ve Rekor Alt Bilgi -->
+            <div class="mt-8 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
+                <div class="space-x-3">
+                    <span><strong class="text-slate-200">WASD</strong> HAREKET</span>
+                    <span><strong class="text-slate-200">SOL TIK</strong> POMPALI</span>
+                    <span><strong class="text-slate-200">SPACE</strong> YUVARLAN</span>
+                </div>
+                <div class="tracking-wider uppercase">
+                    REKOR: <strong id="menuRekor" class="text-white">0</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OYUN SONU (DEVRİLDİN) EKRANI -->
+    <div id="oyunSonuEkrani" class="fixed inset-0 z-30 hidden items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+        <div class="panel-karanlik rounded-lg max-w-md w-full p-8 text-center border border-red-900/50">
+            <div class="text-[11px] tracking-[0.35em] text-red-400/90 uppercase font-semibold mb-1">
+                SEBİL DEVRİLDİ
+            </div>
+            <h2 class="font-baslik text-5xl sm:text-6xl text-white tracking-wider uppercase">
+                DEĞDİLER
+            </h2>
+            <p id="oyunSonuAltYazi" class="text-xs text-slate-400 mt-2 mb-6">
+                Orman yabanileri damacanaya ulaştı ve suyu devirdi.
+            </p>
+
+            <div class="grid grid-cols-2 gap-3 bg-black/50 p-4 rounded border border-white/10 mb-6">
+                <div>
+                    <div class="text-[10px] tracking-[0.2em] text-slate-400 uppercase">ELDE EDİLEN SKOR</div>
+                    <div id="sonSkor" class="font-baslik text-3xl text-white mt-0.5">0</div>
+                </div>
+                <div>
+                    <div class="text-[10px] tracking-[0.2em] text-slate-400 uppercase">ULAŞILAN DALGA</div>
+                    <div id="sonDalga" class="font-baslik text-3xl text-sky-400 mt-0.5">1</div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="btnYenidenBasla" type="button" class="buton-birincil flex-1 py-3.5 px-5 rounded font-baslik text-base tracking-widest text-white uppercase cursor-pointer">
+                    YENİDEN DOLDUR
+                </button>
+                <button id="btnSonAnaMenu" type="button" class="buton-ikincil py-3.5 px-5 rounded font-baslik text-base tracking-widest text-slate-300 uppercase cursor-pointer">
+                    ANA MENÜ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // DEĞMECANA II - 3D HORROR-ACTION SURVIVAL & WEBRTC ONLINE CO-OP
+        // =========================================================================
+
+        // --- DOM Referansları ---
+        const canvas3D = document.getElementById('oyunAlani3D');
+        const ekranFlasi = document.getElementById('ekranFlasi');
+        const sinematikGirisBand = document.getElementById('sinematikGirisBand');
+        const sinematikAltYazi = document.getElementById('sinematikAltYazi');
+        const ozelNisangah = document.getElementById('ozelNisangah');
+        const nisangahHalka = document.getElementById('nisangahHalka');
+
+        const oyunHud = document.getElementById('oyunHud');
+        const hudSkor = document.getElementById('hudSkor');
+        const hudDalga = document.getElementById('hudDalga');
+        const coopHudRozet = document.getElementById('coopHudRozet');
+        const coopBaglantiNokta = document.getElementById('coopBaglantiNokta');
+        const coopHudMetin = document.getElementById('coopHudMetin');
+        const ortaUyariMetni = document.getElementById('ortaUyariMetni');
+        const hudPompaliDurum = document.getElementById('hudPompaliDurum');
+        const hudPompaliBar = document.getElementById('hudPompaliBar');
+        const hudDashDurum = document.getElementById('hudDashDurum');
+        const hudDashBar = document.getElementById('hudDashBar');
+        const mobilKontroller = document.getElementById('mobilKontroller');
+
+        const anaMenuEkrani = document.getElementById('anaMenuEkrani');
+        const anaMenuButonGrubu = document.getElementById('anaMenuButonGrubu');
+        const webrtcPanel = document.getElementById('webrtcPanel');
+        const webrtcDurumMetni = document.getElementById('webrtcDurumMetni');
+        const odaKoduKutusu = document.getElementById('odaKoduKutusu');
+        const odaKoduDeger = document.getElementById('odaKoduDeger');
+        const inputMisafirKod = document.getElementById('inputMisafirKod');
+        const btnCoopOyunBaslat = document.getElementById('btnCoopOyunBaslat');
+        const menuRekor = document.getElementById('menuRekor');
+
+        const oyunSonuEkrani = document.getElementById('oyunSonuEkrani');
+        const oyunSonuAltYazi = document.getElementById('oyunSonuAltYazi');
+        const sonSkor = document.getElementById('sonSkor');
+        const sonDalga = document.getElementById('sonDalga');
+
+        // --- Rekor Yükleme ---
+        let rekorSkor = 0;
+        try {
+            rekorSkor = parseInt(localStorage.getItem('degmecana2_rekor_v2') || '0', 10) || 0;
+        } catch (e) {}
+        menuRekor.innerText = rekorSkor;
+
+        // =========================================================================
+        // WEB AUDIO API PROSEDÜREL SES MOTORU (Pompalı, Pompa Çekme, Su, Et)
+        // =========================================================================
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let sesCtx = null;
+        let sesAcik = true;
+
+        function sesBaslat() {
+            if (!sesAcik) return;
+            try {
+                if (!sesCtx) sesCtx = new AudioCtx();
+                if (sesCtx.state === 'suspended') sesCtx.resume();
+            } catch (e) {}
+        }
+
+        function sesPompaliPatlama() {
+            if (!sesAcik || !sesCtx) return;
+            const t = sesCtx.currentTime;
+
+            // Tok alt bas patlama
+            const osc = sesCtx.createOscillator();
+            const gain = sesCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(135, t);
+            osc.frequency.exponentialRampToValueAtTime(28, t + 0.22);
+            gain.gain.setValueAtTime(0.6, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.24);
+            osc.connect(gain);
+            gain.connect(sesCtx.destination);
+            osc.start(t);
+            osc.stop(t + 0.24);
+
+            // Barut gürültüsü
+            const len = Math.floor(sesCtx.sampleRate * 0.22);
+            const buf = sesCtx.createBuffer(1, len, sesCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.35));
+            }
+            const noise = sesCtx.createBufferSource();
+            noise.buffer = buf;
+            const nGain = sesCtx.createGain();
+            nGain.gain.setValueAtTime(0.75, t);
+            nGain.gain.exponentialRampToValueAtTime(0.01, t + 0.22);
+            noise.connect(nGain);
+            nGain.connect(sesCtx.destination);
+            noise.start(t);
+
+            // 260ms sonra mekanik pompa çekme sesi (Chk-Chk)
+            setTimeout(() => sesPompaMekanizma(), 240);
+        }
+
+        function sesPompaMekanizma() {
+            if (!sesAcik || !sesCtx) return;
+            const t = sesCtx.currentTime;
+            [0, 0.085].forEach(gecikme => {
+                const osc = sesCtx.createOscillator();
+                const gain = sesCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(gecikme === 0 ? 520 : 680, t + gecikme);
+                osc.frequency.exponentialRampToValueAtTime(180, t + gecikme + 0.05);
+                gain.gain.setValueAtTime(0.22, t + gecikme);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + gecikme + 0.055);
+                osc.connect(gain);
+                gain.connect(sesCtx.destination);
+                osc.start(t + gecikme);
+                osc.stop(t + gecikme + 0.055);
+            });
+        }
+
+        function sesEtVurus(agirMi = false, parcalandiMi = false) {
+            if (!sesAcik || !sesCtx) return;
+            const t = sesCtx.currentTime;
+            const osc = sesCtx.createOscillator();
+            const gain = sesCtx.createGain();
+            osc.type = parcalandiMi ? 'sawtooth' : 'triangle';
+            osc.frequency.setValueAtTime(agirMi ? 75 : (parcalandiMi ? 140 : 115), t);
+            osc.frequency.exponentialRampToValueAtTime(18, t + (parcalandiMi ? 0.19 : 0.12));
+            gain.gain.setValueAtTime(parcalandiMi ? 0.78 : 0.55, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + (parcalandiMi ? 0.19 : 0.12));
+            osc.connect(gain);
+            gain.connect(sesCtx.destination);
+            osc.start(t);
+            osc.stop(t + (parcalandiMi ? 0.19 : 0.12));
+
+            if (parcalandiMi) {
+                const len = Math.floor(sesCtx.sampleRate * 0.14);
+                const buf = sesCtx.createBuffer(1, len, sesCtx.sampleRate);
+                const d = buf.getChannelData(0);
+                for (let i = 0; i < len; i++) {
+                    d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.35));
+                }
+                const n = sesCtx.createBufferSource();
+                n.buffer = buf;
+                const biquad = sesCtx.createBiquadFilter();
+                biquad.type = 'bandpass';
+                biquad.frequency.setValueAtTime(720, t);
+                const nGain = sesCtx.createGain();
+                nGain.gain.setValueAtTime(0.55, t);
+                nGain.gain.exponentialRampToValueAtTime(0.01, t + 0.14);
+                n.connect(biquad);
+                biquad.connect(nGain);
+                nGain.connect(sesCtx.destination);
+                n.start(t);
+            }
+        }
+
+        function sesDamacanaYuvarlanma() {
+            if (!sesAcik || !sesCtx) return;
+            const t = sesCtx.currentTime;
+            const osc = sesCtx.createOscillator();
+            const gain = sesCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(160, t);
+            osc.frequency.exponentialRampToValueAtTime(340, t + 0.14);
+            osc.frequency.exponentialRampToValueAtTime(110, t + 0.28);
+            gain.gain.setValueAtTime(0.32, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc.connect(gain);
+            gain.connect(sesCtx.destination);
+            osc.start(t);
+            osc.stop(t + 0.3);
+        }
+
+        // =========================================================================
+        // WEBRTC P2P (PEERJS) ONLINE CO-OP AĞ SİSTEMİ
+        // =========================================================================
+        let peer = null;
+        let veriKanali = null;
+        let agRol = 'YOK'; // 'YOK' | 'HOST' | 'CLIENT'
+        let aktifOdaKodu = '';
+        let agGonderimSayaci = 0;
+
+        function rastgeleOdaKoduUret() {
+            const karakterler = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+            let kod = '';
+            for (let i = 0; i < 5; i++) {
+                kod += karakterler[Math.floor(Math.random() * karakterler.length)];
+            }
+            return kod;
+        }
+
+        function webrtcOdaOlustur() {
+            sesBaslat();
+            if (typeof Peer === 'undefined') {
+                webrtcDurumMetni.innerText = 'WebRTC kütüphanesi yüklenemedi, yerel bağlantı deneniyor.';
+                return;
+            }
+            if (peer) peer.destroy();
+
+            aktifOdaKodu = rastgeleOdaKoduUret();
+            const peerId = 'degmecana2-oda-' + aktifOdaKodu.toLowerCase();
+            webrtcDurumMetni.innerText = 'Sunucu ile P2P kanal açılıyor...';
+
+            peer = new Peer(peerId, { debug: 0 });
+            peer.on('open', () => {
+                agRol = 'HOST';
+                odaKoduKutusu.classList.remove('hidden');
+                odaKoduDeger.innerText = aktifOdaKodu;
+                document.getElementById('btnKodKopyala').classList.remove('hidden');
+                webrtcDurumMetni.innerText = 'Oda hazır! Arkadaşının kodu girip bağlanması bekleniyor...';
+                btnCoopOyunBaslat.classList.remove('hidden');
+            });
+
+            peer.on('connection', (conn) => {
+                veriKanali = conn;
+                baglantiDinleyicileriniKur(conn);
+            });
+
+            peer.on('error', (err) => {
+                webrtcDurumMetni.innerText = 'Bağlantı uyarısı: ' + (err.type || 'Tekrar deneyin');
+            });
+        }
+
+        function webrtcOdayaKatil() {
+            sesBaslat();
+            const girilen = (inputMisafirKod.value || '').trim().toUpperCase();
+            if (girilen.length < 3) {
+                webrtcDurumMetni.innerText = 'Lütfen geçerli bir oda kodu girin.';
+                return;
+            }
+            if (typeof Peer === 'undefined') {
+                webrtcDurumMetni.innerText = 'WebRTC servisine ulaşılamadı.';
+                return;
+            }
+            if (peer) peer.destroy();
+
+            aktifOdaKodu = girilen;
+            webrtcDurumMetni.innerText = `${girilen} kodlu odaya bağlanılıyor...`;
+
+            peer = new Peer({ debug: 0 });
+            peer.on('open', () => {
+                agRol = 'CLIENT';
+                const hedefPeerId = 'degmecana2-oda-' + girilen.toLowerCase();
+                const conn = peer.connect(hedefPeerId, { reliable: false });
+                veriKanali = conn;
+                baglantiDinleyicileriniKur(conn);
+            });
+
+            peer.on('error', () => {
+                webrtcDurumMetni.innerText = 'Oda bulunamadı veya bağlantı reddedildi.';
+            });
+        }
+
+        function baglantiDinleyicileriniKur(conn) {
+            conn.on('open', () => {
+                webrtcDurumMetni.innerText = 'P2P WebRTC Bağlantısı Kuruldu! Maç başlatılıyor...';
+                coopHudRozet.classList.remove('hidden');
+                coopHudRozet.classList.add('flex');
+                coopBaglantiNokta.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                coopHudMetin.innerText = 'WEBRTC P2P • ' + aktifOdaKodu;
+
+                if (agRol === 'HOST') {
+                    conn.send({ tip: 'BASLAT', dalga: 1 });
+                    oyunuBaslat('COOP');
+                }
+            });
+
+            conn.on('data', (paket) => {
+                if (!paket || typeof paket !== 'object') return;
+                if (paket.tip === 'BASLAT') {
+                    oyunuBaslat('COOP');
+                } else if (paket.tip === 'OYUNCU_DURUM') {
+                    // Karşı oyuncunun (uzakDamacana) pozisyon, açı ve yuvarlanma durumu
+                    uzakDamacana.hedefX = paket.x;
+                    uzakDamacana.hedefZ = paket.z;
+                    uzakDamacana.aci = paket.aci;
+                    uzakDamacana.yuvarlanmaSuresi = paket.yuvarlanma;
+                    uzakDamacana.devrildi = paket.devrildi;
+                    if (paket.atesEtti) {
+                        uzakDamacana.gorselAtesEfekti(paket.aci);
+                    }
+                } else if (paket.tip === 'SAHNE_SENKRON' && agRol === 'CLIENT') {
+                    puan = paket.puan;
+                    dalga = paket.dalga;
+                    hudSkor.innerText = puan;
+                    hudDalga.innerText = dalga;
+                }
+            });
+
+            conn.on('close', () => {
+                coopBaglantiNokta.className = 'w-2 h-2 rounded-full bg-amber-400';
+                coopHudMetin.innerText = 'BAĞLANTI KOPTU (SOLO DEVAM)';
+            });
+        }
+
+        // =========================================================================
+        // THREE.JS 3D SAHNE VE OPTİMİZE EDİLMİŞ ORTAK GEOMETRİ/MATERYAL HAVUZU
+        // =========================================================================
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x030705);
+        scene.fog = new THREE.FogExp2(0x040906, 0.0145);
+
+        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 220);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+
+        // --- Işıklandırma ---
+        const hemiLight = new THREE.HemisphereLight(0x476b87, 0x0b140d, 0.58);
+        scene.add(hemiLight);
+
+        const ayIsigi = new THREE.DirectionalLight(0x93c5fd, 1.1);
+        ayIsigi.position.set(24, 48, 22);
+        ayIsigi.castShadow = true;
+        ayIsigi.shadow.mapSize.width = 1024;
+        ayIsigi.shadow.mapSize.height = 1024;
+        const dAlan = 42;
+        ayIsigi.shadow.camera.left = -dAlan;
+        ayIsigi.shadow.camera.right = dAlan;
+        ayIsigi.shadow.camera.top = dAlan;
+        ayIsigi.shadow.camera.bottom = -dAlan;
+        ayIsigi.shadow.camera.near = 10;
+        ayIsigi.shadow.camera.far = 115;
+        scene.add(ayIsigi);
+
+        // Oyuncu Çevresi Hafif Soğuk Su Parıltısı & Namlu Alevi Işığı
+        const sebilIsigi = new THREE.PointLight(0x38bdf8, 0.75, 14);
+        scene.add(sebilIsigi);
+
+        const namluIsigi = new THREE.PointLight(0xff9900, 0, 20);
+        scene.add(namluIsigi);
+
+        // --- ORTAK GEOMETRİ VE MATERYAL ÖNBELLEĞİ (Yüksek FPS Optimizasyonu) ---
+        const ARENA_YARICAP = 38;
+        const ORTAK_GEO = {
+            sacma: new THREE.SphereGeometry(0.13, 6, 6),
+            kovan: new THREE.CylinderGeometry(0.045, 0.045, 0.22, 6),
+            parcacik: new THREE.DodecahedronGeometry(0.14, 0),
+            kanLeke: new THREE.CircleGeometry(0.75, 9),
+            // Düşman eklemleri için paylaşımlı geometriler
+            kafa: new THREE.SphereGeometry(0.34, 12, 10),
+            cene: new THREE.BoxGeometry(0.32, 0.22, 0.34),
+            ustGovde: new THREE.CylinderGeometry(0.46, 0.36, 0.85, 10),
+            karin: new THREE.CylinderGeometry(0.35, 0.38, 0.55, 10),
+            omuzEklem: new THREE.SphereGeometry(0.17, 8, 8),
+            ustKol: new THREE.CylinderGeometry(0.14, 0.11, 0.62, 8),
+            altKol: new THREE.CylinderGeometry(0.11, 0.08, 0.62, 8),
+            uyluk: new THREE.CylinderGeometry(0.18, 0.13, 0.68, 8),
+            baldir: new THREE.CylinderGeometry(0.13, 0.09, 0.68, 8),
+            kutukKalkan: new THREE.CylinderGeometry(0.55, 0.55, 1.35, 8, 1, false, 0, Math.PI)
+        };
+        ORTAK_GEO.kanLeke.rotateX(-Math.PI / 2);
+        // Uzuvların kendi eklem noktalarından dönmesi için pivot kaydırma
+        ORTAK_GEO.ustKol.translate(0, -0.28, 0);
+        ORTAK_GEO.altKol.translate(0, -0.28, 0);
+        ORTAK_GEO.uyluk.translate(0, -0.32, 0);
+        ORTAK_GEO.baldir.translate(0, -0.32, 0);
+
+        const ORTAK_MAT = {
+            sacma: new THREE.MeshBasicMaterial({ color: 0xfde047 }),
+            kovan: new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 }),
+            kanKoyu: new THREE.MeshBasicMaterial({ color: 0x6b0f0f }),
+            kanAcik: new THREE.MeshBasicMaterial({ color: 0x991b1b }),
+            suDamla: new THREE.MeshBasicMaterial({ color: 0x7dd3fc }),
+            yaprakParca: new THREE.MeshBasicMaterial({ color: 0x166534 }),
+            gozSari: new THREE.MeshBasicMaterial({ color: 0xfef08a }),
+            gozKirmizi: new THREE.MeshBasicMaterial({ color: 0xef4444 }),
+            kutukKabuk: new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.95 })
+        };
+
+        // --- Zemin Dokusu ve Orman Açıklığı ---
+        function uretOrmanZeminDokusu() {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 512;
+            const g = c.getContext('2d');
+            g.fillStyle = '#0c160e';
+            g.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 4500; i++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                const r = Math.random() * 2.5 + 0.5;
+                g.fillStyle = Math.random() > 0.45 ? '#122115' : '#081009';
+                g.beginPath();
+                g.arc(x, y, r, 0, Math.PI * 2);
+                g.fill();
+            }
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(10, 10);
+            return tex;
+        }
+
+        const zeminMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(ARENA_YARICAP + 22, ARENA_YARICAP + 22, 1, 48),
+            new THREE.MeshStandardMaterial({ map: uretOrmanZeminDokusu(), roughness: 0.95, metalness: 0.02 })
+        );
+        zeminMesh.position.y = -0.5;
+        zeminMesh.receiveShadow = true;
+        scene.add(zeminMesh);
+
+        // --- 3D AĞAÇLAR, ÇALILAR VE AY IŞIĞI HÜZMELERİ ---
+        const agaclarVeCalilar = [];
+        const agacGovdeMat = new THREE.MeshStandardMaterial({ color: 0x261710, roughness: 0.95 });
+        const camYaprakMat = new THREE.MeshStandardMaterial({ color: 0x0f2412, roughness: 0.88 });
+        const caliYaprakMat = new THREE.MeshStandardMaterial({ color: 0x132a15, roughness: 0.88 });
+
+        function ekleOrmanAgaci(x, z, olcek = 1) {
+            const grup = new THREE.Group();
+            grup.position.set(x, 0, z);
+
+            const govde = new THREE.Mesh(new THREE.CylinderGeometry(0.42 * olcek, 0.72 * olcek, 3.6 * olcek, 8), agacGovdeMat);
+            govde.position.y = 1.8 * olcek;
+            govde.castShadow = true;
+            govde.receiveShadow = true;
+            grup.add(govde);
+
+            // 3 Katmanlı Sık Çam Dalları
+            const k1 = new THREE.Mesh(new THREE.ConeGeometry(2.5 * olcek, 4.0 * olcek, 8), camYaprakMat);
+            k1.position.y = 3.8 * olcek;
+            k1.castShadow = true;
+            grup.add(k1);
+
+            const k2 = new THREE.Mesh(new THREE.ConeGeometry(1.9 * olcek, 3.4 * olcek, 8), camYaprakMat);
+            k2.position.y = 5.7 * olcek;
+            k2.castShadow = true;
+            grup.add(k2);
+
+            const k3 = new THREE.Mesh(new THREE.ConeGeometry(1.2 * olcek, 2.6 * olcek, 8), camYaprakMat);
+            k3.position.y = 7.3 * olcek;
+            k3.castShadow = true;
+            grup.add(k3);
+
+            scene.add(grup);
+            return { x, z, grup, sallanma: 0 };
+        }
+
+        function ekleOrmanCalisi(x, z, olcek = 1) {
+            const grup = new THREE.Group();
+            grup.position.set(x, 0, z);
+            for (let i = 0; i < 4; i++) {
+                const r = (1.05 + (i % 2) * 0.3) * olcek;
+                const parca = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 1), caliYaprakMat);
+                const a = (i / 4) * Math.PI * 2;
+                parca.position.set(Math.cos(a) * 0.65 * olcek, r * 0.65, Math.sin(a) * 0.65 * olcek);
+                parca.castShadow = true;
+                parca.receiveShadow = true;
+                grup.add(parca);
+            }
+            scene.add(grup);
+            return { x, z, grup, sallanma: 0 };
+        }
+
+        // Çevre Ağaç Duvarı (28 Ağaç)
+        for (let i = 0; i < 28; i++) {
+            const aci = (i / 28) * Math.PI * 2;
+            const r = ARENA_YARICAP - 1.0 + (Math.random() * 2.2);
+            agaclarVeCalilar.push(ekleOrmanAgaci(Math.cos(aci) * r, Math.sin(aci) * r, 0.95 + Math.random() * 0.4));
+        }
+
+        // Saha İçi Pusulu Çalılar ve Ağaçlar
+        const pusuNoktalari = [
+            { x: -16, z: -13, t: 'C' },
+            { x: 16, z: -13, t: 'C' },
+            { x: 0, z: -19, t: 'A' },
+            { x: -18, z: 13, t: 'C' },
+            { x: 18, z: 13, t: 'C' },
+            { x: -10, z: 20, t: 'A' },
+            { x: 10, z: 20, t: 'A' },
+            { x: -23, z: 0, t: 'C' },
+            { x: 23, z: 0, t: 'C' }
+        ];
+        pusuNoktalari.forEach(n => {
+            if (n.t === 'A') agaclarVeCalilar.push(ekleOrmanAgaci(n.x, n.z, 0.88));
+            else agaclarVeCalilar.push(ekleOrmanCalisi(n.x, n.z, 1.1));
+        });
+
+        // Atmosferik Ay Işığı Hüzmeleri (Başlangıç animasyonundan sonra kapanır)
+        const huzmeMat = new THREE.MeshBasicMaterial({
+            color: 0x7dd3fc,
+            transparent: true,
+            opacity: 0.035,
+            depthWrite: false,
+            side: THREE.DoubleSide
+        });
+        const huzmeler = [];
+        for (let i = 0; i < 5; i++) {
+            const huzme = new THREE.Mesh(new THREE.ConeGeometry(4.5, 28, 12, 1, true), huzmeMat);
+            const a = (i / 5) * Math.PI * 2 + 0.4;
+            huzme.position.set(Math.cos(a) * 14, 13, Math.sin(a) * 14);
+            huzme.rotation.z = -0.18;
+            scene.add(huzme);
+            huzmeler.push(huzme);
+        }
+
+        // =========================================================================
+        // 3D DAMACANA SINIFI (Gerçekçi Silindirik Yuvarlanma Dash & Pompalı)
+        // =========================================================================
+        class Damacana {
+            constructor(renkHex, vurguHex, yerelMi = true) {
+                this.yerelMi = yerelMi;
+                this.x = 0;
+                this.z = 0;
+                this.hedefX = 0;
+                this.hedefZ = 0;
+                this.vx = 0;
+                this.vz = 0;
+                this.aci = 0;
+                this.yaricap = 1.1;
+
+                // Hareket ve Yuvarlanma (Roll Dash) Değişkenleri
+                this.hiz = 0.255;
+                this.yuvarlanmaSuresi = 0;
+                this.maxYuvarlanmaSuresi = 20;
+                this.yuvarlanmaBekleme = 0;
+                this.maxYuvarlanmaBekleme = 68;
+                this.yuvarlanmaYonX = 0;
+                this.yuvarlanmaYonZ = 1;
+                this.yuvarlanmaDonusAcisi = 0;
+
+                // Pompalı Değişkenleri
+                this.atesBekleme = 0;
+                this.maxAtesBekleme = 30;
+                this.sacmaSayisi = 11;
+                this.devrildi = false;
+                this.kurtarmaSayaci = 0;
+
+                this.grup = new THREE.Group();
+                this.olusturModel(renkHex, vurguHex);
+                scene.add(this.grup);
+            }
+
+            olusturModel(renkHex, vurguHex) {
+                // Yuvarlanma esnasında damacanayı yan yatırıp döndüren dış pivot
+                this.yuvarlanmaPivot = new THREE.Group();
+                this.grup.add(this.yuvarlanmaPivot);
+
+                // Gövde merkezi (Yuvarlanırken kendi ekseninde dönmesi için y=1.15 merkezli)
+                this.silindirMerkez = new THREE.Group();
+                this.silindirMerkez.position.y = 1.15;
+                this.yuvarlanmaPivot.add(this.silindirMerkez);
+
+                // 19L Polikarbonat Şeffaf Mavi Gövde
+                const polikarbonMat = new THREE.MeshPhysicalMaterial({
+                    color: renkHex,
+                    transparent: true,
+                    opacity: 0.82,
+                    roughness: 0.12,
+                    metalness: 0.08,
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.1
+                });
+
+                const anaSilindir = new THREE.Mesh(new THREE.CylinderGeometry(1.02, 0.98, 2.05, 24), polikarbonMat);
+                anaSilindir.castShadow = true;
+                anaSilindir.receiveShadow = true;
+                this.silindirMerkez.add(anaSilindir);
+
+                // Damacana Güçlendirme Boğumları (Kaburga Halkaları)
+                const bogumMat = new THREE.MeshStandardMaterial({
+                    color: vurguHex,
+                    roughness: 0.2,
+                    metalness: 0.25
+                });
+                [-0.52, 0, 0.52].forEach(yOfset => {
+                    const halka = new THREE.Mesh(new THREE.TorusGeometry(1.01, 0.065, 10, 24), bogumMat);
+                    halka.rotation.x = Math.PI / 2;
+                    halka.position.y = yOfset;
+                    this.silindirMerkez.add(halka);
+                });
+
+                // İçerideki Çalkalanan Su Kütlesi
+                const suMat = new THREE.MeshStandardMaterial({
+                    color: vurguHex,
+                    emissive: renkHex,
+                    emissiveIntensity: 0.4,
+                    roughness: 0.15
+                });
+                this.icSu = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.84, 1.65, 18), suMat);
+                this.icSu.position.y = -0.12;
+                this.silindirMerkez.add(this.icSu);
+
+                // Üst Daralan Omuz ve Beyaz Sebil Boynu
+                const omuz = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 1.0, 0.52, 24), polikarbonMat);
+                omuz.position.y = 1.28;
+                omuz.castShadow = true;
+                this.silindirMerkez.add(omuz);
+
+                const kapakMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.35 });
+                const boyun = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.42, 16), kapakMat);
+                boyun.position.y = 1.72;
+                this.silindirMerkez.add(boyun);
+
+                const emniyetKapak = new THREE.Mesh(new THREE.CylinderGeometry(0.41, 0.41, 0.16, 16), bogumMat);
+                emniyetKapak.position.y = 1.98;
+                this.silindirMerkez.add(emniyetKapak);
+
+                // --- AĞIR POMPALI TÜFEK (Hareketli Pompa Mekanizmalı) ---
+                this.silahGrup = new THREE.Group();
+                this.silahGrup.position.set(0.86, 0.25, 0.1);
+                this.silindirMerkez.add(this.silahGrup);
+
+                const cevizMat = new THREE.MeshStandardMaterial({ color: 0x5c240e, roughness: 0.75 });
+                const celikMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.82, roughness: 0.22 });
+                const kromMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, roughness: 0.18 });
+
+                // Dipçik ve Gövde
+                const dipcik = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.32, 0.95), cevizMat);
+                dipcik.position.set(0, -0.06, -0.45);
+                this.silahGrup.add(dipcik);
+
+                const mekanizmaKutusu = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.7), celikMat);
+                mekanizmaKutusu.position.set(0, 0.02, 0.25);
+                this.silahGrup.add(mekanizmaKutusu);
+
+                // Üst Namlu ve Alt Şarjör Borusu
+                const ustNamlu = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 1.95, 12), celikMat);
+                ustNamlu.rotation.x = Math.PI / 2;
+                ustNamlu.position.set(0, 0.11, 1.15);
+                this.silahGrup.add(ustNamlu);
+
+                const altBoru = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.55, 10), kromMat);
+                altBoru.rotation.x = Math.PI / 2;
+                altBoru.position.set(0, -0.04, 0.95);
+                this.silahGrup.add(altBoru);
+
+                // İleri-Geri Kayabilen Ahşap Pompa El Kundağı
+                this.pompaKundak = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.68, 12), cevizMat);
+                this.pompaKundak.rotation.x = Math.PI / 2;
+                this.pompaKundak.position.set(0, -0.04, 1.05);
+                this.silahGrup.add(this.pompaKundak);
+
+                // 3D Namlu Alevi
+                const alevGeo = new THREE.ConeGeometry(0.42, 1.15, 10);
+                alevGeo.rotateX(Math.PI / 2);
+                this.namluAlevi = new THREE.Mesh(alevGeo, new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.92 }));
+                this.namluAlevi.position.set(0, 0.11, 2.45);
+                this.namluAlevi.visible = false;
+                this.silahGrup.add(this.namluAlevi);
+                this.alevSayaci = 0;
+            }
+
+            sifirla(basX = 0, basZ = 0) {
+                this.x = basX;
+                this.z = basZ;
+                this.hedefX = basX;
+                this.hedefZ = basZ;
+                this.vx = 0;
+                this.vz = 0;
+                this.devrildi = false;
+                this.kurtarmaSayaci = 0;
+                this.yuvarlanmaSuresi = 0;
+                this.yuvarlanmaBekleme = 0;
+                this.atesBekleme = 0;
+                this.yuvarlanmaPivot.rotation.set(0, 0, 0);
+                this.silindirMerkez.rotation.set(0, 0, 0);
+                this.silindirMerkez.position.y = 1.15;
+                this.grup.position.set(this.x, 0, this.z);
+            }
+
+            yuvarlanmaBaslat(girilenX, girilenZ) {
+                if (this.devrildi || this.yuvarlanmaBekleme > 0 || this.yuvarlanmaSuresi > 0) return;
+
+                this.yuvarlanmaSuresi = this.maxYuvarlanmaSuresi;
+                this.yuvarlanmaBekleme = this.maxYuvarlanmaBekleme;
+                this.yuvarlanmaDonusAcisi = 0;
+
+                // Eğer yön tuşuna basılıysa o yöne, basılı değilse baktığı yöne yuvarlan
+                const boy = Math.hypot(girilenX, girilenZ);
+                if (boy > 0.05) {
+                    this.yuvarlanmaYonX = girilenX / boy;
+                    this.yuvarlanmaYonZ = girilenZ / boy;
+                } else {
+                    this.yuvarlanmaYonX = Math.sin(this.aci);
+                    this.yuvarlanmaYonZ = Math.cos(this.aci);
+                }
+
+                sesDamacanaYuvarlanma();
+
+                // Yuvarlanmaya başlarken yerden yaprak ve su damlası sıçrat
+                for (let i = 0; i < 10; i++) {
+                    parcacikEkle(this.x, 0.4, this.z, ORTAK_MAT.suDamla, 1.3, null, false);
+                }
+            }
+
+            gorselAtesEfekti(atisAcisi) {
+                this.silahGrup.position.z = -0.28;
+                this.alevSayaci = 3;
+                this.namluAlevi.visible = true;
+
+                // Pompa kundağı çekme animasyonu
+                setTimeout(() => {
+                    if (this.pompaKundak) this.pompaKundak.position.z = 0.68;
+                    setTimeout(() => {
+                        if (this.pompaKundak) this.pompaKundak.position.z = 1.05;
+                    }, 110);
+                }, 180);
+
+                const namluX = this.x + Math.sin(atisAcisi) * 2.15 + Math.cos(atisAcisi) * 0.82;
+                const namluZ = this.z + Math.cos(atisAcisi) * 2.15 - Math.sin(atisAcisi) * 0.82;
+
+                namluIsigi.position.set(namluX, 2.0, namluZ);
+                namluIsigi.intensity = 3.4;
+
+                // Boş Fişek Kovanı Fırlat
+                kovanFirlat(this.x + Math.cos(atisAcisi) * 0.9, 1.4, this.z - Math.sin(atisAcisi) * 0.9, atisAcisi + Math.PI / 2);
+            }
+
+            pompaliAtesle() {
+                if (this.devrildi || this.atesBekleme > 0 || this.yuvarlanmaSuresi > 4) return false;
+
+                this.atesBekleme = this.maxAtesBekleme;
+                sesPompaliPatlama();
+                this.gorselAtesEfekti(this.aci);
+
+                // Nişangah tepme efekti
+                nisangahHalka.style.transform = 'scale(1.55)';
+                setTimeout(() => { nisangahHalka.style.transform = 'scale(1)'; }, 120);
+
+                // Gerçekçi Pompalı Geri Tepmesi (Damacanayı geriye kaydırır ve hafif geriye eğer)
+                const tepmeGucu = 0.68;
+                this.vx -= Math.sin(this.aci) * tepmeGucu;
+                this.vz -= Math.cos(this.aci) * tepmeGucu;
+                this.silindirMerkez.rotation.x = -0.26;
+
+                const namluX = this.x + Math.sin(this.aci) * 2.15 + Math.cos(this.aci) * 0.82;
+                const namluZ = this.z + Math.cos(this.aci) * 2.15 - Math.sin(this.aci) * 0.82;
+
+                for (let i = 0; i < this.sacmaSayisi; i++) {
+                    const yayilim = (i - (this.sacmaSayisi - 1) / 2) * 0.062 + (Math.random() - 0.5) * 0.025;
+                    sacmaEkle(namluX, namluZ, this.aci + yayilim);
+                }
+
+                sarsintiEkle(0.58);
+                return true;
+            }
+
+            guncelleYerel(girilenX, girilenZ, hedefAci) {
+                if (this.atesBekleme > 0) this.atesBekleme--;
+                if (this.yuvarlanmaBekleme > 0) this.yuvarlanmaBekleme--;
+                if (this.alevSayaci > 0) {
+                    this.alevSayaci--;
+                    if (this.alevSayaci === 0) this.namluAlevi.visible = false;
+                }
+
+                this.silahGrup.position.z += (0.1 - this.silahGrup.position.z) * 0.22;
+
+                if (this.devrildi) {
+                    // Devrilmiş Damacana Yerde Yan Yatar
+                    this.silindirMerkez.rotation.z += (Math.PI / 2.15 - this.silindirMerkez.rotation.z) * 0.18;
+                    this.silindirMerkez.position.y += (0.95 - this.silindirMerkez.position.y) * 0.18;
+                    this.vx *= 0.82;
+                    this.vz *= 0.82;
+                    this.x += this.vx;
+                    this.z += this.vz;
+                    this.grup.position.set(this.x, 0, this.z);
+                    return;
+                }
+
+                // --- GERÇEK DAMACANA YUVARLANMA (ROLL DASH) ANİMASYONU ---
+                if (this.yuvarlanmaSuresi > 0) {
+                    this.yuvarlanmaSuresi--;
+                    const dashHiz = 0.58;
+                    this.x += this.yuvarlanmaYonX * dashHiz;
+                    this.z += this.yuvarlanmaYonZ * dashHiz;
+
+                    // Yuvarlanma yönü açısı
+                    const rAci = Math.atan2(this.yuvarlanmaYonX, this.yuvarlanmaYonZ);
+                    this.grup.rotation.y = rAci;
+
+                    // Damacana yan yatar (z ekseninde 90 derece) ve yerde silindir gibi döner!
+                    const ilerleme = 1 - (this.yuvarlanmaSuresi / this.maxYuvarlanmaSuresi);
+                    let yanYatis = Math.PI / 2;
+                    if (ilerleme < 0.2) yanYatis = (ilerleme / 0.2) * (Math.PI / 2);
+                    else if (ilerleme > 0.8) yanYatis = ((1 - ilerleme) / 0.2) * (Math.PI / 2);
+
+                    this.yuvarlanmaPivot.rotation.z = yanYatis;
+                    this.yuvarlanmaDonusAcisi -= 0.48;
+                    this.silindirMerkez.rotation.x = this.yuvarlanmaDonusAcisi;
+                    this.silindirMerkez.position.y = 1.02;
+                } else {
+                    // Normal Dik Hareket
+                    this.yuvarlanmaPivot.rotation.z *= 0.72;
+                    this.silindirMerkez.position.y += (1.15 - this.silindirMerkez.position.y) * 0.25;
+
+                    const boy = Math.hypot(girilenX, girilenZ);
+                    if (boy > 0.01) {
+                        const nx = girilenX / boy;
+                        const nz = girilenZ / boy;
+                        this.x += nx * this.hiz;
+                        this.z += nz * this.hiz;
+
+                        // Yürürken damacana ağırlığıyla hafif sağa sola salınır ve içindeki su çalkalanır
+                        const t = performance.now() * 0.014;
+                        this.silindirMerkez.rotation.z = Math.sin(t) * 0.075;
+                        this.icSu.rotation.z = -Math.sin(t) * 0.12;
+                    } else {
+                        this.silindirMerkez.rotation.z *= 0.8;
+                        this.icSu.rotation.z *= 0.85;
+                    }
+
+                    this.silindirMerkez.rotation.x *= 0.82;
+                    this.aci = hedefAci;
+                    this.grup.rotation.y = this.aci;
+                }
+
+                // Geri tepme ivmesini uygula
+                this.x += this.vx;
+                this.z += this.vz;
+                this.vx *= 0.82;
+                this.vz *= 0.82;
+
+                // Arena sınır kontrolü
+                const m = Math.hypot(this.x, this.z);
+                const maxR = ARENA_YARICAP - 2.0;
+                if (m > maxR) {
+                    const a = Math.atan2(this.x, this.z);
+                    this.x = Math.sin(a) * maxR;
+                    this.z = Math.cos(a) * maxR;
+                }
+
+                this.grup.position.set(this.x, 0, this.z);
+                sebilIsigi.position.set(this.x, 2.5, this.z);
+            }
+
+            guncelleUzak() {
+                if (this.alevSayaci > 0) {
+                    this.alevSayaci--;
+                    if (this.alevSayaci === 0) this.namluAlevi.visible = false;
+                }
+                this.silahGrup.position.z += (0.1 - this.silahGrup.position.z) * 0.22;
+
+                // Yumuşak Ağ İnterpolasyonu
+                this.x += (this.hedefX - this.x) * 0.35;
+                this.z += (this.hedefZ - this.z) * 0.35;
+                this.grup.position.set(this.x, 0, this.z);
+                this.grup.rotation.y = this.aci;
+
+                if (this.devrildi) {
+                    this.silindirMerkez.rotation.z += (Math.PI / 2.15 - this.silindirMerkez.rotation.z) * 0.2;
+                } else if (this.yuvarlanmaSuresi > 0) {
+                    this.yuvarlanmaPivot.rotation.z = Math.PI / 2;
+                    this.silindirMerkez.rotation.x -= 0.45;
+                } else {
+                    this.yuvarlanmaPivot.rotation.z *= 0.75;
+                    this.silindirMerkez.rotation.z *= 0.8;
+                    this.silindirMerkez.rotation.x *= 0.8;
+                }
+            }
+        }
+
+        // =========================================================================
+        // GELİŞTİRİLMİŞ EKLEMLİ 3D DÜŞMAN MODELLERİ VE 5 DAVRANIŞ ARKTİPİ
+        // =========================================================================
+        const tenMatPaleti = [
+            new THREE.MeshStandardMaterial({ color: 0xd6b49d, roughness: 0.78 }),
+            new THREE.MeshStandardMaterial({ color: 0xb88b6c, roughness: 0.78 }),
+            new THREE.MeshStandardMaterial({ color: 0x8f6246, roughness: 0.82 }),
+            new THREE.MeshStandardMaterial({ color: 0x6b4732, roughness: 0.85 }),
+            new THREE.MeshStandardMaterial({ color: 0x7c4333, roughness: 0.75 }) // Boss kızıl-kahve
+        ];
+
+        class OrmanYabanisi {
+            constructor(x, z, arktip = 'KOSUCU') {
+                this.x = x;
+                this.z = z;
+                this.vx = 0;
+                this.vz = 0;
+                this.arktip = arktip; // 'KOSUCU' | 'YANLAYICI' | 'SURUNGEN' | 'KUTUKLU' | 'DEV_YARMA'
+                this.isBoss = arktip === 'DEV_YARMA';
+                this.animFaz = Math.random() * 100;
+                this.yanlamaYonu = Math.random() > 0.5 ? 1 : -1;
+                this.sarsilmaSuresi = 0;
+                this.olumSavrulma = 0; // > 0 ise vurulup geriye uçarak ölüyordur
+
+                // Arktipe göre istatistikler
+                if (arktip === 'DEV_YARMA') {
+                    this.can = 6 + Math.floor(dalga * 1.5);
+                    this.kalip = 2.05;
+                    this.hiz = 0.145 + Math.min(0.06, dalga * 0.006);
+                } else if (arktip === 'KUTUKLU') {
+                    this.can = 2;
+                    this.kalip = 1.22;
+                    this.hiz = 0.165 + Math.min(0.06, dalga * 0.006);
+                } else if (arktip === 'SURUNGEN') {
+                    this.can = 1;
+                    this.kalip = 0.92;
+                    this.hiz = 0.235 + Math.min(0.08, dalga * 0.008);
+                } else if (arktip === 'YANLAYICI') {
+                    this.can = 1;
+                    this.kalip = 0.98;
+                    this.hiz = 0.21 + Math.min(0.07, dalga * 0.007);
+                } else {
+                    this.can = 1;
+                    this.kalip = 0.95 + Math.random() * 0.18;
+                    this.hiz = 0.19 + Math.min(0.075, dalga * 0.007);
+                }
+
+                this.yaricap = 0.82 * this.kalip;
+                this.grup = new THREE.Group();
+                this.olusturAnatomikModel();
+                this.grup.position.set(this.x, 0, this.z);
+                scene.add(this.grup);
+            }
+
+            olusturAnatomikModel() {
+                const matIndex = this.isBoss ? 4 : Math.floor(Math.random() * 4);
+                const mat = tenMatPaleti[matIndex];
+
+                this.anaPelvis = new THREE.Group();
+                this.anaPelvis.position.y = 1.25;
+                this.grup.add(this.anaPelvis);
+
+                // Alt Karın ve Göğüs Kafesi (Atletik/Anatomik V-Kesim Gövde)
+                const karin = new THREE.Mesh(ORTAK_GEO.karin, mat);
+                karin.position.y = 0.15;
+                karin.castShadow = true;
+                this.anaPelvis.add(karin);
+
+                this.ustGovde = new THREE.Mesh(ORTAK_GEO.ustGovde, mat);
+                this.ustGovde.position.y = 0.65;
+                this.ustGovde.castShadow = true;
+                this.anaPelvis.add(this.ustGovde);
+
+                // Kafa ve Çene
+                this.kafaGrup = new THREE.Group();
+                this.kafaGrup.position.y = 0.68;
+                this.ustGovde.add(this.kafaGrup);
+
+                const kafa = new THREE.Mesh(ORTAK_GEO.kafa, mat);
+                kafa.castShadow = true;
+                this.kafaGrup.add(kafa);
+
+                const cene = new THREE.Mesh(ORTAK_GEO.cene, mat);
+                cene.position.set(0, -0.16, 0.08);
+                this.kafaGrup.add(cene);
+
+                // Parlayan Gece Gözleri
+                const gozMat = this.isBoss ? ORTAK_MAT.gozKirmizi : ORTAK_MAT.gozSari;
+                const solGoz = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 6), gozMat);
+                solGoz.position.set(-0.11, 0.04, 0.31);
+                this.kafaGrup.add(solGoz);
+
+                const sagGoz = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 6), gozMat);
+                sagGoz.position.set(0.11, 0.04, 0.31);
+                this.kafaGrup.add(sagGoz);
+
+                // Çift Eklemli Kollar (Omuz -> Üst Kol -> Dirsek -> Alt Kol)
+                this.solOmuz = new THREE.Group();
+                this.solOmuz.position.set(-0.54, 0.32, 0);
+                this.ustGovde.add(this.solOmuz);
+                this.solOmuz.add(new THREE.Mesh(ORTAK_GEO.omuzEklem, mat));
+                const solUstKol = new THREE.Mesh(ORTAK_GEO.ustKol, mat);
+                solUstKol.castShadow = true;
+                this.solOmuz.add(solUstKol);
+                this.solDirsek = new THREE.Group();
+                this.solDirsek.position.y = -0.56;
+                this.solOmuz.add(this.solDirsek);
+                this.solDirsek.add(new THREE.Mesh(ORTAK_GEO.altKol, mat));
+
+                this.sagOmuz = new THREE.Group();
+                this.sagOmuz.position.set(0.54, 0.32, 0);
+                this.ustGovde.add(this.sagOmuz);
+                this.sagOmuz.add(new THREE.Mesh(ORTAK_GEO.omuzEklem, mat));
+                const sagUstKol = new THREE.Mesh(ORTAK_GEO.ustKol, mat);
+                sagUstKol.castShadow = true;
+                this.sagOmuz.add(sagUstKol);
+                this.sagDirsek = new THREE.Group();
+                this.sagDirsek.position.y = -0.56;
+                this.sagOmuz.add(this.sagDirsek);
+                this.sagDirsek.add(new THREE.Mesh(ORTAK_GEO.altKol, mat));
+
+                // Kütük Kalkanlı Yarma ise Göğsünün Önünde Kütük Tutar
+                if (this.arktip === 'KUTUKLU') {
+                    this.kutukMesh = new THREE.Mesh(ORTAK_GEO.kutukKalkan, ORTAK_MAT.kutukKabuk);
+                    this.kutukMesh.position.set(0, 0.1, 0.55);
+                    this.ustGovde.add(this.kutukMesh);
+                }
+
+                // Çift Eklemli Bacaklar (Kalça -> Uyluk -> Diz -> Baldır)
+                this.solKalca = new THREE.Group();
+                this.solKalca.position.set(-0.24, -0.08, 0);
+                this.anaPelvis.add(this.solKalca);
+                const solUyluk = new THREE.Mesh(ORTAK_GEO.uyluk, mat);
+                solUyluk.castShadow = true;
+                this.solKalca.add(solUyluk);
+                this.solDiz = new THREE.Group();
+                this.solDiz.position.y = -0.62;
+                this.solKalca.add(this.solDiz);
+                this.solDiz.add(new THREE.Mesh(ORTAK_GEO.baldir, mat));
+
+                this.sagKalca = new THREE.Group();
+                this.sagKalca.position.set(0.24, -0.08, 0);
+                this.anaPelvis.add(this.sagKalca);
+                const sagUyluk = new THREE.Mesh(ORTAK_GEO.uyluk, mat);
+                sagUyluk.castShadow = true;
+                this.sagKalca.add(sagUyluk);
+                this.sagDiz = new THREE.Group();
+                this.sagDiz.position.y = -0.62;
+                this.sagKalca.add(this.sagDiz);
+                this.sagDiz.add(new THREE.Mesh(ORTAK_GEO.baldir, mat));
+
+                // Dört Ayaklı Sürüngen ise gövdesini yere paralel yatır
+                if (this.arktip === 'SURUNGEN') {
+                    this.anaPelvis.position.y = 0.62;
+                    this.ustGovde.rotation.x = 1.25;
+                    this.kafaGrup.rotation.x = -0.95;
+                }
+
+                this.tenMat = mat;
+                this.grup.scale.set(this.kalip, this.kalip, this.kalip);
+            }
+
+            hedefDamacanayiBul() {
+                if (seciliMod === 'COOP' && uzakDamacana.grup.visible) {
+                    if (yerelDamacana.devrildi && !uzakDamacana.devrildi) return uzakDamacana;
+                    if (uzakDamacana.devrildi && !yerelDamacana.devrildi) return yerelDamacana;
+                    const m1 = Math.hypot(yerelDamacana.x - this.x, yerelDamacana.z - this.z);
+                    const m2 = Math.hypot(uzakDamacana.x - this.x, uzakDamacana.z - this.z);
+                    return m2 < m1 ? uzakDamacana : yerelDamacana;
+                }
+                return yerelDamacana;
+            }
+
+            pompaliDarbesiAl(hasar, mermiAcisi, yakinMesafeMi) {
+                if (this.olumSavrulma > 0) return;
+
+                this.can -= hasar;
+                const oldurucuMu = this.can <= 0;
+                sesEtVurus(this.isBoss, oldurucuMu);
+
+                // Nişangah vuruş onayı (Hitmarker)
+                nisangahHalka.style.borderColor = '#ef4444';
+                nisangahHalka.style.transform = oldurucuMu ? 'scale(1.75)' : 'scale(1.35)';
+                setTimeout(() => {
+                    nisangahHalka.style.borderColor = 'rgba(251, 191, 36, 0.75)';
+                    nisangahHalka.style.transform = 'scale(1)';
+                }, 110);
+
+                // Kütük taşıyan düşmanın ilk vuruşta kütüğü parçalanır
+                if (this.arktip === 'KUTUKLU' && this.kutukMesh && this.can === 1) {
+                    this.ustGovde.remove(this.kutukMesh);
+                    this.kutukMesh = null;
+                    for (let i = 0; i < 10; i++) {
+                        parcacikEkle(this.x, 1.3, this.z, ORTAK_MAT.yaprakParca, 1.6, mermiAcisi, false);
+                    }
+                }
+
+                // Ölmediyse bile ağır vuruşta kollarından biri kopabilir!
+                if (!oldurucuMu && !this.kolKoptu && Math.random() < 0.65) {
+                    this.kolKoptu = true;
+                    const solMu = Math.random() > 0.5;
+                    if (solMu && this.solOmuz) {
+                        this.solOmuz.visible = false;
+                        uzuvFirlat(this.x, 1.5 * this.kalip, this.z, ORTAK_GEO.ustKol, this.tenMat, this.kalip, mermiAcisi - 0.35, 1.35);
+                    } else if (this.sagOmuz) {
+                        this.sagOmuz.visible = false;
+                        uzuvFirlat(this.x, 1.5 * this.kalip, this.z, ORTAK_GEO.ustKol, this.tenMat, this.kalip, mermiAcisi + 0.35, 1.35);
+                    }
+                }
+
+                // Yoğun Kan ve Et Parçacıkları
+                const kanAdet = oldurucuMu ? (this.isBoss ? 28 : (yakinMesafeMi ? 22 : 15)) : 8;
+                for (let i = 0; i < kanAdet; i++) {
+                    const mat = Math.random() > 0.38 ? ORTAK_MAT.kanKoyu : ORTAK_MAT.kanAcik;
+                    parcacikEkle(this.x, (1.1 + Math.random() * 0.6) * this.kalip, this.z, mat, yakinMesafeMi ? 2.1 : 1.55, mermiAcisi, true);
+                }
+
+                if (oldurucuMu) {
+                    // --- TAM ANATOMİK PARÇALANMA (GORE / DISMEMBERMENT) ---
+                    const siddet = yakinMesafeMi ? 1.65 : 1.25;
+                    sarsintiEkle(this.isBoss ? 1.35 : (yakinMesafeMi ? 0.92 : 0.55));
+                    kameraFovTepme = yakinMesafeMi ? 2.4 : 1.4;
+                    vurusDuraksama = yakinMesafeMi ? 2 : 1;
+
+                    // 1. Kafa kopup döne döne fırlar
+                    uzuvFirlat(this.x, 1.95 * this.kalip, this.z, ORTAK_GEO.kafa, this.tenMat, this.kalip, mermiAcisi + (Math.random() - 0.5) * 0.4, siddet * 1.15);
+                    // 2. Sol ve Sağ Kollar yanlara savrulur
+                    if (this.solOmuz.visible) {
+                        uzuvFirlat(this.x - 0.4, 1.5 * this.kalip, this.z, ORTAK_GEO.ustKol, this.tenMat, this.kalip, mermiAcisi - 0.45, siddet);
+                    }
+                    if (this.sagOmuz.visible) {
+                        uzuvFirlat(this.x + 0.4, 1.5 * this.kalip, this.z, ORTAK_GEO.ustKol, this.tenMat, this.kalip, mermiAcisi + 0.45, siddet);
+                    }
+                    // 3. Göğüs / Gövde parçası ve kopan bacaklar
+                    uzuvFirlat(this.x, 1.35 * this.kalip, this.z, ORTAK_GEO.ustGovde, ORTAK_MAT.kanKoyu, this.kalip * 0.85, mermiAcisi, siddet * 0.95);
+                    uzuvFirlat(this.x - 0.25, 0.75 * this.kalip, this.z, ORTAK_GEO.uyluk, this.tenMat, this.kalip, mermiAcisi - 0.25, siddet * 0.85);
+                    uzuvFirlat(this.x + 0.25, 0.75 * this.kalip, this.z, ORTAK_GEO.uyluk, this.tenMat, this.kalip, mermiAcisi + 0.25, siddet * 0.85);
+
+                    // 4. Ekstra kanlı et parçaları (Meat Chunks)
+                    const etSayisi = this.isBoss ? 6 : (yakinMesafeMi ? 4 : 2);
+                    for (let k = 0; k < etSayisi; k++) {
+                        uzuvFirlat(
+                            this.x, (1.0 + Math.random() * 0.7) * this.kalip, this.z,
+                            ORTAK_GEO.omuzEklem,
+                            k % 2 === 0 ? ORTAK_MAT.kanAcik : ORTAK_MAT.kanKoyu,
+                            this.kalip * (1.1 + Math.random() * 0.5),
+                            mermiAcisi + (Math.random() - 0.5) * 0.9,
+                            siddet * (0.9 + Math.random() * 0.5)
+                        );
+                    }
+
+                    kanLekesiEkle(this.x, this.z, this.isBoss ? 1.65 : (yakinMesafeMi ? 1.25 : 0.95));
+
+                    // Düşman gövdesi anında parçalarına ayrıldığı için 1 kare sonra sahneden kaldırılır
+                    this.grup.visible = false;
+                    this.olumSavrulma = 1;
+                } else {
+                    // Sarsılma (Stagger) ve gövdenin mermi yönüne savrulması
+                    this.sarsilmaSuresi = 9;
+                    this.ustGovde.rotation.x = -0.45;
+                    const itis = this.isBoss ? 0.32 : 0.72;
+                    this.vx += Math.sin(mermiAcisi) * itis;
+                    this.vz += Math.cos(mermiAcisi) * itis;
+                }
+            }
+
+            guncelle() {
+                if (this.olumSavrulma > 0) {
+                    this.olumSavrulma--;
+                    return this.olumSavrulma === 0;
+                }
+
+                const hedef = this.hedefDamacanayiBul();
+                const dx = hedef.x - this.x;
+                const dz = hedef.z - this.z;
+                const mesafe = Math.hypot(dx, dz);
+                let yonAci = Math.atan2(dx, dz);
+
+                if (this.arktip === 'YANLAYICI' && mesafe > 5.5) {
+                    yonAci += 0.65 * this.yanlamaYonu;
+                }
+
+                const sarsilmaCarpan = this.sarsilmaSuresi > 0 ? 0.2 : 1.0;
+                if (this.sarsilmaSuresi > 0) this.sarsilmaSuresi--;
+
+                // Damacanaya çok yaklaştığında son bir atılma (Lunge) yapar
+                const atilmaCarpan = (mesafe < 4.5 && !this.isBoss) ? 1.22 : 1.0;
+
+                this.x += Math.sin(yonAci) * this.hiz * sarsilmaCarpan * atilmaCarpan + this.vx;
+                this.z += Math.cos(yonAci) * this.hiz * sarsilmaCarpan * atilmaCarpan + this.vz;
+                this.vx *= 0.78;
+                this.vz *= 0.78;
+
+                // --- EKLEMLİ KOŞU, SÜRÜNME VE ATILMA ANİMASYONLARI ---
+                this.animFaz += this.isBoss ? 0.16 : (this.arktip === 'SURUNGEN' ? 0.36 : 0.26);
+                const s = Math.sin(this.animFaz);
+                const c = Math.cos(this.animFaz);
+
+                if (this.arktip === 'SURUNGEN') {
+                    // Dört ayak üzerinde hızlı sürünme animasyonu
+                    this.solKalca.rotation.x = s * 0.85;
+                    this.sagKalca.rotation.x = -s * 0.85;
+                    this.solOmuz.rotation.x = -0.8 + c * 0.75;
+                    this.sagOmuz.rotation.x = -0.8 - c * 0.75;
+                    this.anaPelvis.position.y = 0.58 + Math.abs(s) * 0.18;
+                } else {
+                    // İki ayaklı organik koşu döngüsü (Kalça + Diz bükülmesi)
+                    this.solKalca.rotation.x = s * 0.82;
+                    this.solDiz.rotation.x = Math.max(0, -c * 0.95);
+                    this.sagKalca.rotation.x = -s * 0.82;
+                    this.sagDiz.rotation.x = Math.max(0, c * 0.95);
+
+                    this.anaPelvis.position.y = 1.22 + Math.abs(c) * 0.14;
+                    this.ustGovde.rotation.y = s * 0.16;
+                    this.ustGovde.rotation.x = mesafe < 5.0 ? 0.32 : 0.14; // Yaklaşınca öne eğilir
+
+                    if (this.arktip === 'KUTUKLU' && this.kutukMesh) {
+                        this.solOmuz.rotation.x = -1.1;
+                        this.sagOmuz.rotation.x = -1.1;
+                    } else if (mesafe < 5.5) {
+                        // Damacanayı yakalamak için iki kolunu öne uzatır!
+                        this.solOmuz.rotation.x = -1.45 + s * 0.25;
+                        this.sagOmuz.rotation.x = -1.45 - s * 0.25;
+                        this.solDirsek.rotation.x = -0.35;
+                        this.sagDirsek.rotation.x = -0.35;
+                    } else {
+                        // Normal koşu kol salınımı
+                        this.solOmuz.rotation.x = -s * 0.65;
+                        this.sagOmuz.rotation.x = s * 0.65;
+                        this.solDirsek.rotation.x = -0.65;
+                        this.sagDirsek.rotation.x = -0.65;
+                    }
+                }
+
+                this.grup.position.set(this.x, 0, this.z);
+                this.grup.rotation.y = Math.atan2(dx, dz);
+
+                // Yerel Damacanaya Değme Kontrolü (Yuvarlanmanın orta anında sıyrılabilir)
+                if (!yerelDamacana.devrildi && yerelDamacana.yuvarlanmaSuresi < 6) {
+                    const mYerel = Math.hypot(yerelDamacana.x - this.x, yerelDamacana.z - this.z);
+                    if (mYerel < yerelDamacana.yaricap + this.yaricap * 0.78) {
+                        damacanayaDegdiler();
+                    }
+                }
+
+                return false;
+            }
+
+            yokEt() {
+                scene.remove(this.grup);
+            }
+        }
+
+        // =========================================================================
+        // HAVUZLANMIŞ SAÇMA, BOŞ KOVAN, KAN PARÇACIĞI VE ZEMİN LEKELERİ
+        // =========================================================================
+        const mermiler = [];
+        const bosKovanlar = [];
+        const parcaliklar = [];
+        const zeminLekeleri = [];
+        const dusmanlar = [];
+
+        // --- SABİT HAVUZLU KOPAN UZUV VE ET SİSTEMİ (Sıfır GC / Yüksek Optimizasyon) ---
+        const UZUV_HAVUZ_BOYUTU = 64;
+        const uzuvHavuzu = [];
+        let uzuvHavuzIndex = 0;
+
+        for (let i = 0; i < UZUV_HAVUZ_BOYUTU; i++) {
+            const mesh = new THREE.Mesh(ORTAK_GEO.ustKol, ORTAK_MAT.kanKoyu);
+            mesh.castShadow = true;
+            mesh.visible = false;
+            scene.add(mesh);
+            uzuvHavuzu.push({
+                aktif: false,
+                x: 0, y: 0, z: 0,
+                vx: 0, vy: 0, vz: 0,
+                vrx: 0, vry: 0, vrz: 0,
+                sekmeSayisi: 0,
+                omur: 0,
+                mesh
+            });
+        }
+
+        function uzuvFirlat(x, y, z, geo, mat, olcek, yonAcisi, siddet = 1.2) {
+            const u = uzuvHavuzu[uzuvHavuzIndex];
+            uzuvHavuzIndex = (uzuvHavuzIndex + 1) % UZUV_HAVUZ_BOYUTU;
+
+            u.aktif = true;
+            u.x = x;
+            u.y = y;
+            u.z = z;
+            const sapma = yonAcisi + (Math.random() - 0.5) * 0.55;
+            const hiz = (0.26 + Math.random() * 0.36) * siddet;
+            u.vx = Math.sin(sapma) * hiz;
+            u.vz = Math.cos(sapma) * hiz;
+            u.vy = (0.16 + Math.random() * 0.24) * siddet;
+
+            u.vrx = (Math.random() - 0.5) * 0.45;
+            u.vry = (Math.random() - 0.5) * 0.45;
+            u.vrz = (Math.random() - 0.5) * 0.45;
+            u.sekmeSayisi = 0;
+            u.omur = 165;
+
+            u.mesh.geometry = geo;
+            u.mesh.material = mat;
+            u.mesh.scale.set(olcek, olcek, olcek);
+            u.mesh.position.set(x, y, z);
+            u.mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+            u.mesh.visible = true;
+        }
+
+        function sacmaEkle(x, z, aci) {
+            const mesh = new THREE.Mesh(ORTAK_GEO.sacma, ORTAK_MAT.sacma);
+            mesh.position.set(x, 1.38, z);
+            scene.add(mesh);
+            mermiler.push({
+                x, z, aci,
+                vx: Math.sin(aci) * 1.48,
+                vz: Math.cos(aci) * 1.48,
+                basX: x, basZ: z,
+                omur: 22,
+                mesh
+            });
+        }
+
+        function kovanFirlat(x, y, z, yanAci) {
+            if (bosKovanlar.length > 25) {
+                const eski = bosKovanlar.shift();
+                scene.remove(eski.mesh);
+            }
+            const mesh = new THREE.Mesh(ORTAK_GEO.kovan, ORTAK_MAT.kovan);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            bosKovanlar.push({
+                x, y, z,
+                vx: Math.sin(yanAci) * (0.12 + Math.random() * 0.08),
+                vy: 0.16 + Math.random() * 0.06,
+                vz: Math.cos(yanAci) * (0.12 + Math.random() * 0.08),
+                omur: 140,
+                mesh
+            });
+        }
+
+        function parcacikEkle(x, y, z, ortakMat, hizCarpan = 1, yonAcisi = null, kanMi = true) {
+            if (parcaliklar.length > 110) {
+                const eski = parcaliklar.shift();
+                scene.remove(eski.mesh);
+            }
+            const aci = yonAcisi !== null
+                ? yonAcisi + (Math.random() - 0.5) * 1.25
+                : Math.random() * Math.PI * 2;
+            const hiz = (0.12 + Math.random() * 0.34) * hizCarpan;
+            const mesh = new THREE.Mesh(ORTAK_GEO.parcacik, ortakMat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            parcaliklar.push({
+                x, y, z,
+                vx: Math.sin(aci) * hiz,
+                vy: 0.09 + Math.random() * 0.19,
+                vz: Math.cos(aci) * hiz,
+                kanMi,
+                lekeBirakti: false,
+                omur: 36,
+                mesh
+            });
+        }
+
+        function kanLekesiEkle(x, z, olcek = 1) {
+            if (zeminLekeleri.length > 75) {
+                const eski = zeminLekeleri.shift();
+                scene.remove(eski);
+            }
+            const leke = new THREE.Mesh(ORTAK_GEO.kanLeke, Math.random() > 0.4 ? ORTAK_MAT.kanKoyu : ORTAK_MAT.kanAcik);
+            const s = olcek * (0.75 + Math.random() * 0.5);
+            leke.scale.set(s, 1, s);
+            leke.position.set(x, 0.02 + Math.random() * 0.01, z);
+            scene.add(leke);
+            zeminLekeleri.push(leke);
+        }
+
+        // =========================================================================
+        // OYUN DURUMU, SİNEMATİK GİRİŞ VE DALGA YÖNETİMİ
+        // =========================================================================
+        const yerelDamacana = new Damacana(0x0284c7, 0x38bdf8, true);
+        const uzakDamacana = new Damacana(0xd97706, 0xfbbf24, false);
+        uzakDamacana.grup.visible = false;
+
+        let oyunDurumu = 'MENU'; // 'MENU' | 'ACILIS_ANIM' | 'OYUNDA' | 'BITTI'
+        let seciliMod = 'SOLO';  // 'SOLO' | 'COOP'
+        let acilisAnimSayaci = 0;
+
+        let puan = 0;
+        let dalga = 1;
+        let dalgaHedef = 10;
+        let dalgaUretilen = 0;
+        let dalgaKalan = 10;
+        let firlatmaSayaci = 0;
+        let sarsintiGucu = 0;
+        let kameraFovTepme = 0;
+        let vurusDuraksama = 0;
+
+        const tuslar = {};
+        const fare = { x: window.innerWidth / 2, y: window.innerHeight / 2, basili: false };
+        const dunyaHedef = new THREE.Vector3();
+
+        function sarsintiEkle(miktar) {
+            sarsintiGucu = Math.min(2.0, Math.max(sarsintiGucu, miktar));
+        }
+
+        function uyariGoster(metin) {
+            ortaUyariMetni.innerText = metin;
+            ortaUyariMetni.classList.remove('hidden');
+            setTimeout(() => { ortaUyariMetni.classList.add('hidden'); }, 3000);
+        }
+
+        function agactanDusmanFirlat() {
+            const kaynak = agaclarVeCalilar[Math.floor(Math.random() * agaclarVeCalilar.length)];
+            kaynak.sallanma = 1.0;
+            for (let i = 0; i < 5; i++) {
+                parcacikEkle(kaynak.x, 1.6, kaynak.z, ORTAK_MAT.yaprakParca, 1.0, null, false);
+            }
+
+            let arktip = 'KOSUCU';
+            const r = Math.random();
+            if (dalgaUretilen === dalgaHedef - 1 && dalga % 2 === 0) {
+                arktip = 'DEV_YARMA';
+                uyariGoster('AĞAÇLARIN ARASINDAN DEV YARMA ÇIKTI');
+            } else if (r < 0.14 && dalga >= 2) {
+                arktip = 'KUTUKLU';
+            } else if (r < 0.34 && dalga >= 2) {
+                arktip = 'SURUNGEN';
+            } else if (r < 0.62) {
+                arktip = 'YANLAYICI';
+            }
+
+            dusmanlar.push(new OrmanYabanisi(kaynak.x, kaynak.z, arktip));
+            dalgaUretilen++;
+        }
+
+        function oyunuBaslat(mod = 'SOLO') {
+            sesBaslat();
+            seciliMod = mod;
+            oyunDurumu = 'ACILIS_ANIM';
+            acilisAnimSayaci = 115; // ~1.9 saniyelik sinematik açılış
+
+            puan = 0;
+            dalga = 1;
+            dalgaHedef = 10;
+            dalgaUretilen = 0;
+            dalgaKalan = 10;
+            firlatmaSayaci = 0;
+
+            // Temizlik
+            dusmanlar.forEach(d => d.yokEt());
+            dusmanlar.length = 0;
+            mermiler.forEach(m => scene.remove(m.mesh));
+            mermiler.length = 0;
+            uzuvHavuzu.forEach(u => { u.aktif = false; u.mesh.visible = false; });
+
+            // Başlangıç animasyonunda ışık konileri açık başlar, animasyon bitince kapanır
+            huzmeMat.opacity = 0.035;
+            huzmeler.forEach(h => { h.visible = true; });
+
+            yerelDamacana.sifirla(mod === 'COOP' ? -2.2 : 0, 0);
+            // Açılış animasyonu için damacana yukarıdan zemine iner
+            yerelDamacana.grup.position.y = 8.5;
+
+            if (mod === 'COOP') {
+                uzakDamacana.sifirla(2.2, 0);
+                uzakDamacana.grup.visible = true;
+                coopHudRozet.classList.remove('hidden');
+                coopHudRozet.classList.add('flex');
+            } else {
+                uzakDamacana.grup.visible = false;
+                coopHudRozet.classList.add('hidden');
+            }
+
+            anaMenuEkrani.classList.add('hidden');
+            oyunSonuEkrani.classList.add('hidden');
+            sinematikGirisBand.classList.remove('hidden');
+            sinematikGirisBand.classList.add('flex');
+            sinematikAltYazi.innerText = mod === 'COOP' ? 'SIRT SIRTA HAYATTA KAL' : 'DEĞDİKLERİ AN BİTERSİN';
+
+            hudSkor.innerText = '0';
+            hudDalga.innerText = '1';
+
+            if (window.innerWidth < 640) {
+                mobilKontroller.classList.remove('hidden');
+                mobilKontroller.classList.add('flex');
+            }
+        }
+
+        function damacanayaDegdiler() {
+            if (yerelDamacana.devrildi) return;
+            yerelDamacana.devrildi = true;
+            sarsintiEkle(1.5);
+
+            ekranFlasi.style.opacity = '1';
+            setTimeout(() => { ekranFlasi.style.opacity = '0'; }, 350);
+
+            for (let i = 0; i < 24; i++) {
+                parcacikEkle(yerelDamacana.x, 1.3, yerelDamacana.z, ORTAK_MAT.suDamla, 1.8, null, false);
+            }
+
+            // Online Co-op'ta karşı oyuncu ayaktaysa kurtarabilir, değilse oyun biter
+            if (seciliMod === 'COOP' && uzakDamacana.grup.visible && !uzakDamacana.devrildi) {
+                uyariGoster('DEVRİLDİN • ARKADAŞIN YANINA GELİP KALDIRABİLİR');
+            } else {
+                oyunuBitir();
+            }
+        }
+
+        function oyunuBitir() {
+            oyunDurumu = 'BITTI';
+            oyunHud.classList.add('hidden');
+            ozelNisangah.classList.add('hidden');
+            sonSkor.innerText = puan;
+            sonDalga.innerText = dalga;
+            oyunSonuEkrani.classList.remove('hidden');
+            oyunSonuEkrani.classList.add('flex');
+        }
+
+        // --- Fare Raycaster ---
+        const raycaster = new THREE.Raycaster();
+        const fareNDC = new THREE.Vector2();
+        const atisDuzlemi = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.35);
+
+        function guncelleFareDunyaNoktasi() {
+            fareNDC.x = (fare.x / window.innerWidth) * 2 - 1;
+            fareNDC.y = -(fare.y / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(fareNDC, camera);
+            raycaster.ray.intersectPlane(atisDuzlemi, dunyaHedef);
+        }
+
+        // =========================================================================
+        // ANA OYUN VE RENDER DÖNGÜSÜ
+        // =========================================================================
+        function oyunDongusu() {
+            requestAnimationFrame(oyunDongusu);
+
+            // Ağaç ve Çalı Sallantıları
+            for (const ac of agaclarVeCalilar) {
+                if (ac.sallanma > 0) {
+                    ac.sallanma = Math.max(0, ac.sallanma - 0.045);
+                    ac.grup.rotation.z = Math.sin(performance.now() * 0.045) * 0.2 * ac.sallanma;
+                    ac.grup.rotation.x = Math.cos(performance.now() * 0.045) * 0.14 * ac.sallanma;
+                } else {
+                    ac.grup.rotation.z = 0;
+                    ac.grup.rotation.x = 0;
+                }
+            }
+
+            if (namluIsigi.intensity > 0) {
+                namluIsigi.intensity = Math.max(0, namluIsigi.intensity - 0.5);
+            }
+
+            // 1. DURUM: MENÜ SİNEMATİK ORMAN KAMERASI
+            if (oyunDurumu === 'MENU') {
+                const t = performance.now() * 0.0003;
+                yerelDamacana.x = 3.2;
+                yerelDamacana.z = 1.5;
+                yerelDamacana.grup.position.set(3.2, 0, 1.5);
+                yerelDamacana.grup.rotation.y = -0.55 + Math.sin(t * 2) * 0.08;
+                sebilIsigi.position.set(3.2, 2.5, 1.5);
+
+                camera.position.set(-4.5 + Math.sin(t) * 1.8, 3.6, 8.8 + Math.cos(t) * 1.2);
+                camera.lookAt(1.8, 1.4, 0.5);
+                renderer.render(scene, camera);
+                return;
+            }
+
+            // 2. DURUM: MİNİ AÇILIŞ SİNEMATİK ANİMASYONU
+            if (oyunDurumu === 'ACILIS_ANIM') {
+                acilisAnimSayaci--;
+                const p = 1 - (acilisAnimSayaci / 115); // 0 -> 1
+
+                // Damacana yukarıdan hızla iner ve yere oturur
+                if (p < 0.45) {
+                    const inisP = p / 0.45;
+                    yerelDamacana.grup.position.y = (1 - inisP * inisP) * 8.5;
+                } else {
+                    yerelDamacana.grup.position.y = 0;
+                }
+
+                // 55. karede pompalı kurma sesi ve animasyonu
+                if (acilisAnimSayaci === 55) {
+                    sesPompaMekanizma();
+                    yerelDamacana.pompaKundak.position.z = 0.65;
+                    setTimeout(() => { yerelDamacana.pompaKundak.position.z = 1.05; }, 140);
+                    sarsintiEkle(0.45);
+                }
+
+                // Başlangıç animasyonunun son kısmında ışık konilerini yumuşakça söndür
+                if (p > 0.55) {
+                    huzmeMat.opacity = Math.max(0, 0.035 * (1 - (p - 0.55) / 0.45));
+                }
+
+                // Kamera ağaçların arasından oyun açısına süzülür
+                const camY = 12 + p * 21;
+                const camZ = 11 + p * 16;
+                camera.position.set(Math.sin((1 - p) * 1.2) * 8, camY, camZ);
+                camera.lookAt(0, 1.0, 0);
+
+                if (acilisAnimSayaci <= 0) {
+                    oyunDurumu = 'OYUNDA';
+                    // Haritadaki ışık konilerini tamamen kapat
+                    huzmeMat.opacity = 0;
+                    huzmeler.forEach(h => { h.visible = false; });
+                    sinematikGirisBand.classList.add('hidden');
+                    sinematikGirisBand.classList.remove('flex');
+                    oyunHud.classList.remove('hidden');
+                    oyunHud.classList.add('flex');
+                    ozelNisangah.classList.remove('hidden');
+                }
+
+                renderer.render(scene, camera);
+                return;
+            }
+
+            // 3. DURUM: AKTİF OYUN
+            if (oyunDurumu === 'OYUNDA') {
+                let gx = 0, gz = 0;
+                if (tuslar['w'] || tuslar['arrowup']) gz -= 1;
+                if (tuslar['s'] || tuslar['arrowdown']) gz += 1;
+                if (tuslar['a'] || tuslar['arrowleft']) gx -= 1;
+                if (tuslar['d'] || tuslar['arrowright']) gx += 1;
+
+                guncelleFareDunyaNoktasi();
+                const hedefAci = Math.atan2(dunyaHedef.x - yerelDamacana.x, dunyaHedef.z - yerelDamacana.z);
+                yerelDamacana.guncelleYerel(gx, gz, hedefAci);
+
+                let atesYapildi = false;
+                if (fare.basili) {
+                    atesYapildi = yerelDamacana.pompaliAtesle();
+                }
+
+                // Online Co-op Uzak Oyuncu Güncellemesi & Canlandırma
+                if (seciliMod === 'COOP' && uzakDamacana.grup.visible) {
+                    uzakDamacana.guncelleUzak();
+
+                    // Arkadaşın devrilmişse yanına gidip kaldır
+                    if (yerelDamacana.devrildi && !uzakDamacana.devrildi) {
+                        if (Math.hypot(yerelDamacana.x - uzakDamacana.x, yerelDamacana.z - uzakDamacana.z) < 3.6) {
+                            yerelDamacana.kurtarmaSayaci++;
+                            if (yerelDamacana.kurtarmaSayaci > 60) {
+                                yerelDamacana.devrildi = false;
+                                yerelDamacana.kurtarmaSayaci = 0;
+                                yerelDamacana.silindirMerkez.rotation.z = 0;
+                                uyariGoster('YENİDEN DOLDURULDUN VE AYAĞA KALKTIN');
+                            }
+                        }
+                    }
+
+                    // WebRTC Veri Gönderimi
+                    agGonderimSayaci++;
+                    if (veriKanali && veriKanali.open && (agGonderimSayaci % 2 === 0 || atesYapildi)) {
+                        veriKanali.send({
+                            tip: 'OYUNCU_DURUM',
+                            x: yerelDamacana.x,
+                            z: yerelDamacana.z,
+                            aci: yerelDamacana.aci,
+                            yuvarlanma: yerelDamacana.yuvarlanmaSuresi,
+                            devrildi: yerelDamacana.devrildi,
+                            atesEtti: atesYapildi
+                        });
+                    }
+                }
+
+                // Dalga Düşman Çıkışı
+                if (dalgaUretilen < dalgaHedef) {
+                    firlatmaSayaci++;
+                    const aralik = Math.max(20, Math.floor(66 - dalga * 4.5));
+                    if (firlatmaSayaci >= aralik) {
+                        firlatmaSayaci = 0;
+                        agactanDusmanFirlat();
+                    }
+                }
+
+                // Saçmalar ve Çarpışmalar
+                for (let i = mermiler.length - 1; i >= 0; i--) {
+                    const m = mermiler[i];
+                    m.x += m.vx;
+                    m.z += m.vz;
+                    m.omur--;
+                    m.mesh.position.set(m.x, 1.38, m.z);
+
+                    let vurdu = false;
+                    for (let j = dusmanlar.length - 1; j >= 0; j--) {
+                        const d = dusmanlar[j];
+                        if (d.olumSavrulma > 0) continue;
+                        if (Math.hypot(m.x - d.x, m.z - d.z) < d.yaricap + 0.3) {
+                            const katEdilen = Math.hypot(m.x - m.basX, m.z - m.basZ);
+                            const yakinMi = katEdilen < 8.5;
+                            d.pompaliDarbesiAl(1, m.aci, yakinMi);
+                            vurdu = true;
+
+                            if (d.can <= 0) {
+                                puan += d.isBoss ? 50 : 10;
+                                hudSkor.innerText = puan;
+                                if (puan > rekorSkor) {
+                                    rekorSkor = puan;
+                                    menuRekor.innerText = rekorSkor;
+                                    try { localStorage.setItem('degmecana2_rekor_v2', String(rekorSkor)); } catch (err) {}
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    if (vurdu || m.omur <= 0 || Math.hypot(m.x, m.z) > ARENA_YARICAP + 4) {
+                        scene.remove(m.mesh);
+                        mermiler.splice(i, 1);
+                    }
+                }
+
+                // Düşman Güncellemesi
+                for (let i = dusmanlar.length - 1; i >= 0; i--) {
+                    const silinsinMi = dusmanlar[i].guncelle();
+                    if (silinsinMi) {
+                        dusmanlar[i].yokEt();
+                        dusmanlar.splice(i, 1);
+                        dalgaKalan--;
+
+                        // Dalga Temizlendi mi?
+                        if (dalgaKalan <= 0 && dusmanlar.length === 0) {
+                            dalga++;
+                            dalgaHedef = 10 + dalga * 4;
+                            dalgaUretilen = 0;
+                            dalgaKalan = dalgaHedef;
+                            hudDalga.innerText = dalga;
+                            uyariGoster(`DALGA ${dalga} BAŞLIYOR`);
+                            if (veriKanali && veriKanali.open && agRol === 'HOST') {
+                                veriKanali.send({ tip: 'SAHNE_SENKRON', puan, dalga });
+                            }
+                        }
+                    }
+                }
+
+                // Kopan Uzuv ve Et Parçaları Fizikleri (Havuzlu)
+                for (let i = 0; i < UZUV_HAVUZ_BOYUTU; i++) {
+                    const u = uzuvHavuzu[i];
+                    if (!u.aktif) continue;
+
+                    u.x += u.vx;
+                    u.y += u.vy;
+                    u.z += u.vz;
+                    u.vy -= 0.022;
+
+                    if (u.y <= 0.16) {
+                        u.y = 0.16;
+                        if (u.sekmeSayisi < 2 && Math.abs(u.vy) > 0.06) {
+                            u.vy = -u.vy * 0.42;
+                            u.vx *= 0.68;
+                            u.vz *= 0.68;
+                            u.sekmeSayisi++;
+                            if (u.sekmeSayisi === 1 && Math.random() < 0.65) {
+                                kanLekesiEkle(u.x, u.z, 0.65);
+                            }
+                        } else {
+                            u.vy = 0;
+                            u.vx *= 0.72;
+                            u.vz *= 0.72;
+                            u.vrx *= 0.6;
+                            u.vry *= 0.6;
+                            u.vrz *= 0.6;
+                        }
+                    } else {
+                        u.mesh.rotation.x += u.vrx;
+                        u.mesh.rotation.y += u.vry;
+                        u.mesh.rotation.z += u.vrz;
+                    }
+
+                    u.mesh.position.set(u.x, u.y, u.z);
+                    u.omur--;
+                    if (u.omur <= 0) {
+                        u.aktif = false;
+                        u.mesh.visible = false;
+                    }
+                }
+
+                // Boş Kovan Fizikleri
+                for (let i = bosKovanlar.length - 1; i >= 0; i--) {
+                    const k = bosKovanlar[i];
+                    k.x += k.vx;
+                    k.y += k.vy;
+                    k.z += k.vz;
+                    k.vy -= 0.015;
+                    if (k.y <= 0.08) {
+                        k.y = 0.08;
+                        k.vy = 0;
+                        k.vx *= 0.6;
+                        k.vz *= 0.6;
+                    } else {
+                        k.mesh.rotation.x += 0.25;
+                        k.mesh.rotation.z += 0.2;
+                    }
+                    k.mesh.position.set(k.x, k.y, k.z);
+                    k.omur--;
+                    if (k.omur <= 0) {
+                        scene.remove(k.mesh);
+                        bosKovanlar.splice(i, 1);
+                    }
+                }
+
+                // Kan ve Yaprak Parçacıkları
+                for (let i = parcaliklar.length - 1; i >= 0; i--) {
+                    const p = parcaliklar[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.z += p.vz;
+                    p.vy -= 0.018;
+                    if (p.y <= 0.08) {
+                        p.y = 0.08;
+                        p.vy = 0;
+                        p.vx *= 0.5;
+                        p.vz *= 0.5;
+                        if (p.kanMi && !p.lekeBirakti && Math.random() < 0.25) {
+                            p.lekeBirakti = true;
+                            kanLekesiEkle(p.x, p.z, 0.55);
+                        }
+                    }
+                    p.mesh.position.set(p.x, p.y, p.z);
+                    p.omur--;
+                    if (p.omur <= 0) {
+                        scene.remove(p.mesh);
+                        parcaliklar.splice(i, 1);
+                    }
+                }
+
+                // HUD Barları Güncellemesi
+                const pOran = Math.round((1 - yerelDamacana.atesBekleme / yerelDamacana.maxAtesBekleme) * 100);
+                hudPompaliBar.style.width = pOran + '%';
+                hudPompaliDurum.innerText = yerelDamacana.atesBekleme <= 0 ? 'ATESE HAZIR' : 'POMPALANIYOR';
+
+                const dOran = Math.round((1 - yerelDamacana.yuvarlanmaBekleme / yerelDamacana.maxYuvarlanmaBekleme) * 100);
+                hudDashBar.style.width = dOran + '%';
+                hudDashDurum.innerText = yerelDamacana.yuvarlanmaBekleme <= 0 ? 'HAZIR' : 'BEKLE';
+
+                // Kamera Takibi ve Sarsıntı
+                let sx = 0, sy = 0, sz = 0;
+                if (sarsintiGucu > 0.01) {
+                    sx = (Math.random() - 0.5) * sarsintiGucu;
+                    sy = (Math.random() - 0.5) * sarsintiGucu;
+                    sz = (Math.random() - 0.5) * sarsintiGucu;
+                    sarsintiGucu *= 0.83;
+                } else {
+                    sarsintiGucu = 0;
+                }
+
+                if (kameraFovTepme > 0.02) {
+                    camera.fov = 48 - kameraFovTepme;
+                    camera.updateProjectionMatrix();
+                    kameraFovTepme *= 0.76;
+                } else if (camera.fov !== 48) {
+                    camera.fov = 48;
+                    camera.updateProjectionMatrix();
+                    kameraFovTepme = 0;
+                }
+
+                camera.position.x += (yerelDamacana.x * 0.65 - camera.position.x) * 0.1 + sx;
+                camera.position.y += (33 - camera.position.y) * 0.1 + sy;
+                camera.position.z += (yerelDamacana.z * 0.65 + 27 - camera.position.z) * 0.1 + sz;
+                camera.lookAt(yerelDamacana.x * 0.55, 1.0, yerelDamacana.z * 0.55);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // =========================================================================
+        // GİRDİ VE OLAY DİNLEYİCİLERİ
+        // =========================================================================
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            tuslar[k] = true;
+
+            if (oyunDurumu === 'OYUNDA') {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    let gx = 0, gz = 0;
+                    if (tuslar['w'] || tuslar['arrowup']) gz -= 1;
+                    if (tuslar['s'] || tuslar['arrowdown']) gz += 1;
+                    if (tuslar['a'] || tuslar['arrowleft']) gx -= 1;
+                    if (tuslar['d'] || tuslar['arrowright']) gx += 1;
+                    yerelDamacana.yuvarlanmaBaslat(gx, gz);
+                } else if (e.key === 'Escape') {
+                    anaMenuyeDon();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            tuslar[e.key.toLowerCase()] = false;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            fare.x = e.clientX;
+            fare.y = e.clientY;
+            ozelNisangah.style.left = fare.x + 'px';
+            ozelNisangah.style.top = fare.y + 'px';
+        });
+
+        canvas3D.addEventListener('mousedown', (e) => {
+            sesBaslat();
+            if (oyunDurumu !== 'OYUNDA') return;
+            if (e.button === 0) {
+                fare.basili = true;
+                const atesEtti = yerelDamacana.pompaliAtesle();
+                if (atesEtti && veriKanali && veriKanali.open) {
+                    veriKanali.send({
+                        tip: 'OYUNCU_DURUM',
+                        x: yerelDamacana.x,
+                        z: yerelDamacana.z,
+                        aci: yerelDamacana.aci,
+                        yuvarlanma: yerelDamacana.yuvarlanmaSuresi,
+                        devrildi: yerelDamacana.devrildi,
+                        atesEtti: true
+                    });
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 0) fare.basili = false;
+        });
+
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Menü ve Buton Etkileşimleri ---
+        function anaMenuyeDon() {
+            oyunDurumu = 'MENU';
+            oyunHud.classList.add('hidden');
+            oyunSonuEkrani.classList.add('hidden');
+            ozelNisangah.classList.add('hidden');
+            anaMenuEkrani.classList.remove('hidden');
+            yerelDamacana.sifirla(3.2, 1.5);
+            uzakDamacana.grup.visible = false;
+            huzmeMat.opacity = 0.035;
+            huzmeler.forEach(h => { h.visible = true; });
+        }
+
+        document.getElementById('btnSoloBasla').addEventListener('click', () => oyunuBaslat('SOLO'));
+
+        document.getElementById('btnCoopMenuAc').addEventListener('click', () => {
+            anaMenuButonGrubu.classList.add('hidden');
+            webrtcPanel.classList.remove('hidden');
+        });
+
+        document.getElementById('btnCoopGeri').addEventListener('click', () => {
+            webrtcPanel.classList.add('hidden');
+            anaMenuButonGrubu.classList.remove('hidden');
+        });
+
+        document.getElementById('btnOdaKur').addEventListener('click', () => webrtcOdaOlustur());
+
+        document.getElementById('btnKodKopyala').addEventListener('click', () => {
+            if (!aktifOdaKodu) return;
+            try {
+                navigator.clipboard.writeText(aktifOdaKodu);
+            } catch (e) {
+                const gecici = document.createElement('input');
+                gecici.value = aktifOdaKodu;
+                document.body.appendChild(gecici);
+                gecici.select();
+                document.execCommand('copy');
+                document.body.removeChild(gecici);
+            }
+            document.getElementById('btnKodKopyala').innerText = 'KOPYALANDI';
+        });
+
+        document.getElementById('btnOdayaKatil').addEventListener('click', () => webrtcOdayaKatil());
+
+        btnCoopOyunBaslat.addEventListener('click', () => {
+            if (veriKanali && veriKanali.open) {
+                veriKanali.send({ tip: 'BASLAT', dalga: 1 });
+            }
+            oyunuBaslat('COOP');
+        });
+
+        document.getElementById('btnSesToggle').addEventListener('click', (e) => {
+            sesAcik = !sesAcik;
+            e.currentTarget.innerText = sesAcik ? 'SES: AÇIK' : 'SES: KAPALI';
+        });
+
+        document.getElementById('btnMenuDon').addEventListener('click', () => anaMenuyeDon());
+        document.getElementById('btnYenidenBasla').addEventListener('click', () => oyunuBaslat(seciliMod));
+        document.getElementById('btnSonAnaMenu').addEventListener('click', () => anaMenuyeDon());
+
+        // Mobil Buton Bağlantıları
+        function baglaMobil(id, tus) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); tuslar[tus] = true; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); tuslar[tus] = false; });
+        }
+        baglaMobil('mobW', 'w');
+        baglaMobil('mobA', 'a');
+        baglaMobil('mobS', 's');
+        baglaMobil('mobD', 'd');
+        document.getElementById('mobDash').addEventListener('click', () => yerelDamacana.yuvarlanmaBaslat(0, 0));
+        document.getElementById('mobAtes').addEventListener('click', () => {
+            sesBaslat();
+            yerelDamacana.pompaliAtesle();
+        });
+
+        window.onload = () => {
+            oyunDongusu();
+        };
+    </script>
+</body>
+</html>
